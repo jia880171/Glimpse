@@ -4,7 +4,10 @@ const double pulseAmplitude = 3;
 const Color themeColor = Color.fromRGBO(255, 253, 244, 1.0);
 // const Color themeColor = Color(0x33EDA4A9);
 // const Color redJP = Color(0x33DA8DA5);
-const Color redJP = Color(0x0CE54977);
+const Color redJP = Color(0xFFFEBFCD);
+const Color target = Color.fromRGBO(225, 225, 225, 1.0);
+
+const Color border = Color(0x00000000);
 
 
 const Color themeColorDent = Color.fromRGBO(246, 244, 229, 0.3);
