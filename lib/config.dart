@@ -9,6 +9,18 @@ const Color target = Color.fromRGBO(225, 225, 225, 1.0);
 
 const Color border = Color(0x00000000);
 
+// const Color backGroundWhite = Color(0xffe5e5e5);
+const Color backGroundWhite = Color(0xfff1f1f0);
+const Color ticketWhite = Color(0xfff8f8f8);
+// const Color memoWhite = Color(0x0FD36300);
+const Color memoWhite = Color(0xFDCC2AB);
+
+// const Color floatBlue = Color(0xFF989DBD);
+const Color floatBlue = Color(0xFF9FC99D);
+const Color flagRed = Color(0xFFb97f82);
+
+
+
 
 const Color themeColorDent = Color.fromRGBO(246, 244, 229, 0.3);
 const Color themeGrey = Color.fromRGBO(190, 189, 185, 1.0);

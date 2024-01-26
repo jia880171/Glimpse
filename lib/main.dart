@@ -9,7 +9,9 @@ import 'package:flutter_neumorphic/flutter_neumorphic.dart';
 import 'package:geolocator/geolocator.dart';
 import './config.dart' as config;
 import './ticket.dart';
+import './attraction.dart';
 import './ticket_db.dart';
+import './attraction_db.dart';
 
 void main() {
   runApp(const MyApp());
@@ -61,29 +63,41 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   bool isChasingMode = true;
-
   bool hideUsedTickets = false;
+
+  Attraction _targetAttraction = new Attraction(
+      sequenceNumber: 0,
+      name: 'Default',
+      memo: 'Default',
+      date: '19930312',
+      longitude: 130.0,
+      latitude: 25.0,
+      arrivalTime: '199303121',
+      departureTime: '19931312',
+      arrivalStation: 'tokyo',
+      departureStation: 'tokyo',
+      isVisited: false,
+      isNavigating: false);
+
+  void updateTargetAttraction(Attraction attraction) {
+    setState(() {
+      print('====== updating target');
+      _targetAttraction = attraction;
+    });
+  }
 
   final DatabaseHelper databaseHelper = DatabaseHelper();
   List<Ticket> tickets = []; // Store fetched tickets
 
-  final List<String> usernames = [
-    '淺草雷門',
-    '晴空塔',
-    '麻布',
-    'The bellwoods',
-    'User5',
-    'User6',
-    'User7',
-    'User8',
-    'User9',
-    'User10',
-  ];
+  final AttractionDatabaseHelper attractionDatabaseHelper =
+      AttractionDatabaseHelper();
+  List<Attraction> attractions = [];
 
   @override
   void initState() {
     super.initState();
     fetchTickets(); // Fetch tickets when the widget is initialized
+    fetchAttractions();
   }
 
   Future<void> fetchTickets() async {
@@ -94,75 +108,160 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  Future<void> fetchAttractions() async {
+    print('====== fetchAttractions: ');
+
+    List<Attraction> fetchedAttractions =
+        await attractionDatabaseHelper.getAttractions();
+    setState(() {
+      attractions = fetchedAttractions;
+      print('====== fetched attractions: ');
+
+      // refresh target
+      for (Attraction attraction in attractions) {
+        if (attraction.isNavigating == true) {
+          updateTargetAttraction(attraction);
+        }
+      }
+    });
+  }
+
   void toggleChasingMode() {
     setState(() {
       isChasingMode = !isChasingMode;
     });
   }
 
-  void clickAddNewTicketButton(BuildContext context, double screenHeight, double screenWidth) async {
-    FloatCardView floatCardView = FloatCardView(
-      widgetHeight: screenHeight * 0.5,
-      screenWidth: screenWidth,
-      cardWidth: screenWidth * 0.7,
-    );
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('New Ticket'),
-          content: floatCardView,
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Close'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final newTicket = Ticket(
-                  memo: floatCardView.memoController.text,
-                  date: floatCardView.dateController.text,
-                  departureTime: floatCardView.departureTimeController.text,
-                  arrivalTime: floatCardView.arrivalTimeController.text,
-                  trainName: floatCardView.trainNameController.text,
-                  trainNumber: floatCardView.trainNumberController.text,
-                  carNumber: floatCardView.carNumberController.text,
-                  row: floatCardView.rowNumberController.text,
-                  seat: floatCardView.seatNumberController.text,
-                  departureStation: floatCardView.departureStationController.text,
-                  arrivalStation: floatCardView.arrivalStationController.text,
-                  isUsed: false,
-                );
+  void clickAddNewTicketButton(
+      BuildContext context, double screenHeight, double screenWidth) async {
+    if (isChasingMode) {
+      FloatAttractionCardView floatAttractionCardView = FloatAttractionCardView(
+        widgetHeight: screenHeight * 0.5,
+        screenWidth: screenWidth,
+        cardWidth: screenWidth * 0.7,
+      );
 
-                print('newTicket as: ${newTicket.arrivalStation}');
-                print('newTicket ds: ${newTicket.departureStation}');
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('New Attraction'),
+            content: floatAttractionCardView,
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('Close'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  double? latitude;
+                  double? longitude;
+                  final locationText =
+                      floatAttractionCardView.locationController.text;
+                  final locationValues = locationText.split(',');
+                  if (locationValues.length == 2) {
+                    latitude = double.tryParse(locationValues[0].trim());
+                    longitude = double.tryParse(locationValues[1].trim());
+                  }
 
-                await databaseHelper.insertTicket(newTicket);
+                  final newAttraction = Attraction.withAutoIncrement(
+                    name: floatAttractionCardView.nameController.text,
+                    memo: floatAttractionCardView.memoController.text,
+                    date: floatAttractionCardView.dateController.text,
+                    latitude: latitude ?? 0.0,
+                    longitude: longitude ?? 0.0,
+                    departureTime:
+                        floatAttractionCardView.departureTimeController.text,
+                    arrivalTime:
+                        floatAttractionCardView.arrivalTimeController.text,
+                    departureStation:
+                        floatAttractionCardView.departureStationController.text,
+                    arrivalStation:
+                        floatAttractionCardView.arrivalStationController.text,
+                    isVisited: false,
+                    isNavigating: false,
+                  );
 
-                fetchTickets();
+                  await attractionDatabaseHelper
+                      .insertAttraction(newAttraction);
 
-                Navigator.of(context).pop();
-              },
-              child: Text('Create'),
-            ),
-          ],
-        );
-      },
-    );
+                  fetchAttractions();
+
+                  Navigator.of(context).pop();
+                },
+                child: Text('Create'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      FloatCardView floatCardView = FloatCardView(
+        widgetHeight: screenHeight * 0.5,
+        screenWidth: screenWidth,
+        cardWidth: screenWidth * 0.7,
+      );
+
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('New Ticket'),
+            content: floatCardView,
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('Close'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final newTicket = Ticket(
+                    memo: floatCardView.memoController.text,
+                    date: floatCardView.dateController.text,
+                    departureTime: floatCardView.departureTimeController.text,
+                    arrivalTime: floatCardView.arrivalTimeController.text,
+                    trainName: floatCardView.trainNameController.text,
+                    trainNumber: floatCardView.trainNumberController.text,
+                    carNumber: floatCardView.carNumberController.text,
+                    row: floatCardView.rowNumberController.text,
+                    seat: floatCardView.seatNumberController.text,
+                    departureStation:
+                        floatCardView.departureStationController.text,
+                    arrivalStation: floatCardView.arrivalStationController.text,
+                    isUsed: false,
+                  );
+
+                  await databaseHelper.insertTicket(newTicket);
+
+                  fetchTickets();
+
+                  Navigator.of(context).pop();
+                },
+                child: Text('Create'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
-    TicketsView ticketsView = TicketsView(hideUsedTickets, screenHeight * 0.5, screenWidth, screenWidth * 0.8, tickets);
+    TicketsView ticketsView = TicketsView(hideUsedTickets, screenHeight * 0.5,
+        screenWidth, screenWidth * 0.8, tickets);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark, // Dark status bar icons (like time, battery)
+        statusBarIconBrightness:
+            Brightness.dark, // Dark status bar icons (like time, battery)
       ),
       child: Scaffold(
         // appBar: AppBar(
@@ -170,19 +269,34 @@ class _MyHomePageState extends State<MyHomePage> {
         //   // the App.build method, and use it to set our appbar title.
         //   title: Text(widget.title),
         // ),
-        body: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(height: screenHeight * 0.08),
-            Stack(
+        body: SingleChildScrollView(
+          child: Container(
+            height: screenHeight,
+            color: config.backGroundWhite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                ChasingView(toggleChasingMode, screenHeight, screenWidth, screenHeight * 0.38, 20.0, 10.0),
+                SizedBox(height: screenHeight * 0.08),
+                Stack(
+                  children: [
+                    ChasingView(toggleChasingMode, screenHeight, screenWidth,
+                        screenHeight * 0.38, 20.0, 10.0, _targetAttraction),
+                  ],
+                ),
+                if (isChasingMode)
+                  HeadingText(_targetAttraction, clickAddNewTicketButton),
+                if (isChasingMode)
+                  BottomTouristList(
+                      screenHeight,
+                      screenWidth,
+                      attractions,
+                      attractionDatabaseHelper,
+                      _targetAttraction,
+                      updateTargetAttraction),
+                if (!isChasingMode) ticketsView
               ],
             ),
-            if (isChasingMode) const CenterTopText(),
-            if (isChasingMode) BottomTouristList(screenHeight, screenWidth, usernames),
-            if (!isChasingMode) ticketsView
-          ],
+          ),
         ),
 
         floatingActionButton: FloatingActionButton(
@@ -190,82 +304,149 @@ class _MyHomePageState extends State<MyHomePage> {
             clickAddNewTicketButton(context, screenHeight, screenWidth);
           },
           tooltip: 'Increment',
+          backgroundColor: config.floatBlue,
           child: const Icon(Icons.add),
         ), // This trailing comma makes auto-formatting nicer for build methods.
+        floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
       ),
     );
   }
 }
 
-class CenterTopText extends StatelessWidget {
+class HeadingText extends StatefulWidget {
+  Attraction targetAttraction;
+  Function(BuildContext context, double screenHeight, double screenWidth)
+      clickAddNewTicketButton;
+
+  HeadingText(this.targetAttraction, this.clickAddNewTicketButton, {Key? key})
+      : super(key: key);
+
+  @override
+  _HeadingText createState() => _HeadingText();
+}
+
+class _HeadingText extends State<HeadingText> {
   static const double topFontSize = 40;
-  const CenterTopText({Key? key}) : super(key: key);
+
+  // const CenterTopText({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
-    return Stack(
-      children: <Widget>[
-        SizedBox(
-          width: screenWidth,
-          height: screenHeight * 0.2,
-        ),
-        // Aligning the text to the middle-top
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start, // Align text to top
-              children: <Widget>[
-                SizedBox(height: screenHeight * 0.02),
-                Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Row(
-                    //center this row horizontally
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const <Widget>[
-                      Text(
-                        'Japan',
-                        style: TextStyle(fontSize: topFontSize, fontFamily: 'Open-Sans'),
-                      ),
-                      SizedBox(width: 8.0), // Add some space between texts
-                      Text(',', style: TextStyle(fontSize: topFontSize)),
-                      Text(
-                        'Tokyo',
-                        style: TextStyle(fontSize: topFontSize, fontFamily: 'Open-Sans', fontWeight: FontWeight.w500, fontStyle: FontStyle.italic),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                    padding: const EdgeInsets.all(8.0),
+    return Container(
+      width: screenWidth,
+      height: screenHeight * 0.2,
+      // color: Colors.red,
+      child: Stack(
+        children: <Widget>[
+          // Aligning the text to the middle-top
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start, // Align text to top
+                children: <Widget>[
+                  SizedBox(height: screenHeight * 0.02),
+                  Padding(
+                    padding: const EdgeInsets.all(4.0),
                     child: Row(
+                      //center this row horizontally
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text('新宿御苑', style: TextStyle(fontSize: 25, fontFamily: 'Open-Sans', fontWeight: FontWeight.w300)),
+                      children: const <Widget>[
+                        Text(
+                          'Heading',
+                          style: TextStyle(
+                              fontSize: topFontSize, fontFamily: 'Open-Sans'),
+                        ),
+                        SizedBox(width: 8.0), // Add some space between texts
+                        // Text(',', style: TextStyle(fontSize: topFontSize)),
+                        // Text(
+                        //   '...',
+                        //   style: TextStyle(
+                        //       fontSize: topFontSize,
+                        //       fontFamily: 'Open-Sans',
+                        //       fontWeight: FontWeight.w500,
+                        //       fontStyle: FontStyle.italic),
+                        // ),
                       ],
-                    )),
-              ],
+                    ),
+                  ),
+                  Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(widget.targetAttraction.name,
+                              style: TextStyle(
+                                  fontSize: 25,
+                                  fontFamily: 'Open-Sans',
+                                  fontWeight: FontWeight.w300)),
+                        ],
+                      )),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+
+          // Positioned(
+          //   right: screenWidth * 0.06,
+          //   // top: screenHeight * 0.07,
+          //   bottom: screenWidth * 0.06,
+          //   child: SizedBox(
+          //     height: screenHeight * 0.06,
+          //     width: screenHeight * 0.06,
+          //     child: Center(
+          //       child: NeumorphicButton(
+          //         style: NeumorphicStyle(
+          //           depth: 1.5,
+          //           color: config.floatBlue,
+          //         ),
+          //         onPressed: () {
+          //           widget.clickAddNewTicketButton(context, screenHeight, screenWidth);
+          //         },
+          //         child: Center(
+          //           child: NeumorphicIcon(
+          //             style: NeumorphicStyle(
+          //               depth: 1,
+          //               color: config.backGroundWhite,
+          //             ),
+          //             Icons.add,
+          //             size: screenHeight * 0.02,
+          //           ),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // )
+        ],
+      ),
     );
   }
 }
 
 class ChasingView extends StatefulWidget {
-  final double ChasingViewHeight;
-  final double screenWidth;
-  final double screenHeight;
-  final double sensorDegree;
-  final double heading;
-  final VoidCallback toggleChasingMode;
+  double ChasingViewHeight;
+  double screenWidth;
+  double screenHeight;
+  double sensorDegree;
+  double heading;
 
-  const ChasingView(this.toggleChasingMode, this.screenHeight, this.screenWidth, this.ChasingViewHeight, this.sensorDegree, this.heading, {Key? key}) : super(key: key);
+  Attraction targetAttraction;
+  VoidCallback toggleChasingMode;
+
+  ChasingView(
+      this.toggleChasingMode,
+      this.screenHeight,
+      this.screenWidth,
+      this.ChasingViewHeight,
+      this.sensorDegree,
+      this.heading,
+      this.targetAttraction,
+      {Key? key})
+      : super(key: key);
 
   @override
   _ChasingViewState createState() => _ChasingViewState();
@@ -278,7 +459,8 @@ class _ChasingViewState extends State<ChasingView> {
   double userLatitude = 0.0;
   double userLongitude = 0.0;
 
-  DisplayBottle target = DisplayBottle('Taiwan', 80, 150, 24.397630, 121.264331);
+  DisplayBottle target =
+      DisplayBottle('Taiwan', 80, 150, 24.397630, 121.264331);
   double _currentHeading = 0.0;
   late StreamSubscription<CompassEvent> _compassStreamSubscription;
 
@@ -296,39 +478,43 @@ class _ChasingViewState extends State<ChasingView> {
     target = bottles[0];
 
     super.initState();
-    _getUserLocation(target);
+    _getUserLocation(widget.targetAttraction);
     _initCompass();
 
     // Set up a periodic timer to call _getUserLocation every 5 seconds
-    _timer = Timer.periodic(Duration(seconds: fetchLocationIntervalSeconds), (timer) {
-      _getUserLocation(target);
+    _timer = Timer.periodic(Duration(seconds: fetchLocationIntervalSeconds),
+        (timer) {
+      _getUserLocation(widget.targetAttraction);
     });
   }
 
-  Future<void> _getUserLocation(DisplayBottle target) async {
+  Future<void> _getUserLocation(Attraction targetAttraction) async {
     try {
       LocationPermission permission = await Geolocator.checkPermission();
 
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
           // Handle location permission denied
           return;
         }
       }
 
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
 
       setState(() {
         userLatitude = position.latitude;
         userLongitude = position.longitude;
       });
 
-      target.distance = await Geolocator.distanceBetween(
+      targetAttraction.distance = await Geolocator.distanceBetween(
             userLatitude,
             userLongitude,
-            target.latitude,
-            target.longitude,
+            targetAttraction.latitude,
+            targetAttraction.longitude,
           ) /
           1000;
     } catch (e) {
@@ -373,8 +559,16 @@ class _ChasingViewState extends State<ChasingView> {
 
     // display subsequent two items.
     for (int i = 0; i < bottles.length; i++) {
-      double leftX = centerX + AngleCalculator().radiusProjector(bottles[i].bearingAngle + _currentHeading, targetRadiusToCenter).dx;
-      double topY = centerY - AngleCalculator().radiusProjector(bottles[i].bearingAngle + _currentHeading, targetRadiusToCenter).dy;
+      double leftX = centerX +
+          AngleCalculator()
+              .radiusProjector(bottles[i].bearingAngle + _currentHeading,
+                  targetRadiusToCenter)
+              .dx;
+      double topY = centerY -
+          AngleCalculator()
+              .radiusProjector(bottles[i].bearingAngle + _currentHeading,
+                  targetRadiusToCenter)
+              .dy;
       targets.add(Positioned(
         left: leftX,
         top: topY,
@@ -388,12 +582,15 @@ class _ChasingViewState extends State<ChasingView> {
               lightSource: neumorphicLightSource,
             ),
             child: Container(
-                color: Colors.white,
+                color: config.backGroundWhite,
                 width: smallSensorRadius * 2,
                 height: smallSensorRadius * 2,
                 child: Align(
                   alignment: Alignment.center,
-                  child: Text('${bottles[i].distance}M️', style: TextStyle(fontSize: 0.36 * smallSensorRadius, fontWeight: FontWeight.bold)),
+                  child: Text('${bottles[i].distance}M️',
+                      style: TextStyle(
+                          fontSize: 0.36 * smallSensorRadius,
+                          fontWeight: FontWeight.bold)),
                 ))),
       ));
     }
@@ -430,12 +627,12 @@ class _ChasingViewState extends State<ChasingView> {
                   // color: config.themeColor,
                   // depth: -10,
                   // border: NeumorphicBorder(
-                  //   color: Colors.white10,
+                  //   color: config.backGroundWhite10,
                   //   width: 2,
                   // )
                 ),
                 child: Container(
-                  color: Colors.white,
+                  color: config.backGroundWhite,
                   width: (backgroundRadius * 2),
                   height: (backgroundRadius * 2),
                 )),
@@ -450,11 +647,11 @@ class _ChasingViewState extends State<ChasingView> {
                   boxShape: const NeumorphicBoxShape.circle(),
                   intensity: 0.8,
                   lightSource: neumorphicLightSource,
-                  color: Colors.white,
+                  color: config.backGroundWhite,
                   depth: -5,
                 ),
                 child: Container(
-                  color: Colors.white,
+                  color: config.backGroundWhite,
                   width: (dentRadius * 2),
                   height: (dentRadius * 2),
                 )),
@@ -470,7 +667,7 @@ class _ChasingViewState extends State<ChasingView> {
                     intensity: 0.8,
                     depth: 3,
                     lightSource: neumorphicLightSource,
-                    color: Colors.white,
+                    color: config.backGroundWhite,
                     border: NeumorphicBorder(
                       color: config.border,
                       width: 0.3,
@@ -498,7 +695,8 @@ class _ChasingViewState extends State<ChasingView> {
                             decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 image: DecorationImage(
-                                  image: AssetImage('assets/images/monitor.png'),
+                                  image:
+                                      AssetImage('assets/images/monitor.png'),
                                   fit: BoxFit.cover,
                                 )),
                           ),
@@ -513,20 +711,23 @@ class _ChasingViewState extends State<ChasingView> {
                               height: 100,
                               child: Center(
                                 child: Text(
-                                  target.distance.toStringAsFixed(3),
+                                  (widget.targetAttraction.distance != null)
+                                      ? widget.targetAttraction.distance!
+                                          .toStringAsFixed(3)
+                                      : 'calc...',
                                   overflow: TextOverflow.clip,
                                   maxLines: 1,
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    fontSize: 35,
+                                    fontSize: widget.screenWidth * 0.05,
                                     fontWeight: FontWeight.w500,
-                                    fontFamily: 'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                    fontFamily:
+                                        'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
                                   ),
                                 ),
                               )),
                         ),
 
-                        // KM
                         Positioned(
                           left: sensorRadius * 1.3,
                           bottom: sensorRadius * 0.7,
@@ -540,7 +741,8 @@ class _ChasingViewState extends State<ChasingView> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w500,
-                                    fontFamily: 'Open-Sans', // Replace 'SecondFontFamily' with your desired font family
+                                    fontFamily:
+                                        'Open-Sans', // Replace 'SecondFontFamily' with your desired font family
                                   ),
                                 ),
                               )),
@@ -568,16 +770,24 @@ class _ChasingViewState extends State<ChasingView> {
                       children: [
                         Align(
                           alignment: Alignment.topCenter,
-                          child: Text('N', style: TextStyle(color: Colors.black, fontSize: widget.screenHeight * 0.025)),
+                          child: Text('N',
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: widget.screenHeight * 0.025)),
                         ),
-
                         Align(
                           alignment: Alignment.center,
                           child: Row(
                             children: [
-                              Text('－', style: TextStyle(color: Colors.black, fontSize: widget.screenHeight * 0.02)),
+                              Text('－',
+                                  style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: widget.screenHeight * 0.02)),
                               const Spacer(),
-                              Text('－', style: TextStyle(color: Colors.black, fontSize: widget.screenHeight * 0.02)),
+                              Text('－',
+                                  style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: widget.screenHeight * 0.02)),
                             ],
                           ),
                         ),
@@ -594,20 +804,38 @@ class _ChasingViewState extends State<ChasingView> {
   }
 }
 
-class BottomTouristList extends StatelessWidget {
-  final List<String> usernames;
-  final double screenWidth;
-  final double screenHeight;
+class BottomTouristList extends StatefulWidget {
+  List<Attraction> attractions;
+  double screenWidth;
+  double screenHeight;
+  AttractionDatabaseHelper attractionDatabaseHelper;
 
-  const BottomTouristList(this.screenHeight, this.screenWidth, this.usernames, {Key? key}) : super(key: key);
+  // int targetIndex;
+  Attraction targetAttraction;
+  Function(Attraction) updateTargetAttraction;
 
+  BottomTouristList(
+    this.screenHeight,
+    this.screenWidth,
+    this.attractions,
+    this.attractionDatabaseHelper,
+    this.targetAttraction,
+    this.updateTargetAttraction, {
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  _BottomTouristListState createState() => _BottomTouristListState();
+}
+
+class _BottomTouristListState extends State<BottomTouristList> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: screenHeight * 0.3,
+      height: widget.screenHeight * 0.3,
       child: ListView.builder(
         padding: EdgeInsets.zero,
-        itemCount: usernames.length,
+        itemCount: widget.attractions.length,
         itemBuilder: (BuildContext context, int index) {
           return Container(
             decoration: BoxDecoration(
@@ -625,8 +853,123 @@ class BottomTouristList extends StatelessWidget {
               ),
             ),
             child: ListTile(
-              title: Text(usernames[index]),
-              // You can customize the ListTile or add more widgets here
+              title: Text(widget.attractions[index].name),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: widget.screenHeight * 0.05,
+                    child: NeumorphicButton(
+                      style: NeumorphicStyle(
+                        depth:
+                            widget.attractions[index].isNavigating ? -1.5 : 1.5,
+                        color: config.backGroundWhite,
+                      ),
+                      onPressed: () async {
+                        print('');
+                        print('====== $index is clicked');
+                        widget.attractions[index].isNavigating = true;
+                        await widget.attractionDatabaseHelper
+                            .updateAttraction(widget.attractions[index]);
+
+                        for (int i = 0; i < widget.attractions.length; i++) {
+                          if (i != index &&
+                              widget.attractions[i].isNavigating == true) {
+                            widget.attractions[i].isNavigating = false;
+                            await widget.attractionDatabaseHelper
+                                .updateAttraction(widget.attractions[i]);
+                          }
+                        }
+
+                        // updateTarget
+                        widget
+                            .updateTargetAttraction(widget.attractions[index]);
+
+                        // Fetch the updated list of attractions from the database
+                        List<Attraction> updatedAttractions = await widget
+                            .attractionDatabaseHelper
+                            .getAttractions();
+                        for (int i = 0; i < updatedAttractions.length; i++) {
+                          print(
+                              '====== ${updatedAttractions[i].id}, ${updatedAttractions[i].isNavigating}');
+                        }
+
+                        setState(() {
+                          // to make sure UI works perfectly
+                          for (int i = 0; i < widget.attractions.length; i++) {
+                            widget.attractions[i].isNavigating = false;
+                          }
+                          widget.attractions[index].isNavigating = true;
+                          widget.updateTargetAttraction(
+                              widget.attractions[index]);
+                        });
+                      },
+                      child: Center(
+                        child: NeumorphicIcon(
+                          style: NeumorphicStyle(
+                            depth: 1,
+                            color: config.flagRed,
+                          ),
+                          Icons.flag_circle,
+                          size: widget.screenHeight * 0.03,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: widget.screenWidth * 0.03,
+                  ),
+                  SizedBox(
+                    height: widget.screenHeight * 0.05,
+                    child: NeumorphicButton(
+                      style: NeumorphicStyle(
+                        depth:
+                            widget.attractions[index].isNavigating ? -1.5 : 1.5,
+                        color: config.backGroundWhite,
+                      ),
+                      onPressed: () async {
+                        widget.attractions[index].isNavigating = true;
+                        await widget.attractionDatabaseHelper
+                            .updateAttraction(widget.attractions[index]);
+
+                        for (int i = 0; i < widget.attractions.length; i++) {
+                          if (i != index &&
+                              widget.attractions[i].isNavigating == true) {
+                            widget.attractions[i].isNavigating = false;
+                            await widget.attractionDatabaseHelper
+                                .updateAttraction(widget.attractions[i]);
+                          }
+                        }
+
+                        // updateTarget
+                        widget
+                            .updateTargetAttraction(widget.attractions[index]);
+                        
+                        setState(() {
+                          // to make sure UI works perfectly
+                          for (int i = 0; i < widget.attractions.length; i++) {
+                            widget.attractions[i].isNavigating = false;
+                          }
+                          widget.attractions[index].isNavigating = true;
+                          widget.updateTargetAttraction(
+                              widget.attractions[index]);
+                        });
+                      },
+                      child: Center(
+                        child: NeumorphicIcon(
+                          style: NeumorphicStyle(
+                            depth: 1,
+                            color: Colors.grey,
+                          ),
+                          Icons.navigation,
+                          size: widget.screenHeight * 0.03,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              //... Your ListTile content
             ),
           );
         },
@@ -661,11 +1004,14 @@ class TicketsView extends StatefulWidget {
   @override
   _TicketsViewState createState() => _TicketsViewState();
 
-  static List<Ticket> getTicketsToDisplay(List<Ticket> tickets, [bool isHideUsedTickets = false]) {
+  static List<Ticket> getTicketsToDisplay(List<Ticket> tickets,
+      [bool isHideUsedTickets = false]) {
     print('====== allTickets: ');
     printTickets(tickets);
 
-    List<Ticket> ticketsToDisplay = isHideUsedTickets ? tickets.where((ticket) => ticket.isUsed == false).toList() : tickets;
+    List<Ticket> ticketsToDisplay = isHideUsedTickets
+        ? tickets.where((ticket) => ticket.isUsed == false).toList()
+        : tickets;
 
     print('====== tickets to display');
     printTickets(ticketsToDisplay);
@@ -676,7 +1022,8 @@ class TicketsView extends StatefulWidget {
   // Print all Ticket objects in the list
   static void printTickets(List<Ticket> tickets) {
     for (Ticket ticket in tickets) {
-      print('Ticket ID: ${ticket.id}, departureStation: ${ticket.departureStation}');
+      print(
+          'Ticket ID: ${ticket.id}, departureStation: ${ticket.departureStation}');
     }
   }
 }
@@ -702,7 +1049,9 @@ class _TicketsViewState extends State<TicketsView> {
                     const Spacer(),
                     Text(
                       backgroundHint,
-                      style: TextStyle(fontSize: widget.cardWidth * 0.05, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: widget.cardWidth * 0.05,
+                          fontWeight: FontWeight.bold),
                     )
                   ],
                 ),
@@ -716,7 +1065,8 @@ class _TicketsViewState extends State<TicketsView> {
                       if (index == 0) {
                         print('====== length: 0');
                         return Padding(
-                          padding: EdgeInsets.fromLTRB(widget.cardWidth * 0.2, 0, 0, 0),
+                          padding: EdgeInsets.fromLTRB(
+                              widget.cardWidth * 0.2, 0, 0, 0),
                           child: Row(
                             children: [
                               Container(
@@ -724,7 +1074,7 @@ class _TicketsViewState extends State<TicketsView> {
                               ),
                               Card(
                                   elevation: 2.5,
-                                  color: config.bottleSheet,
+                                  color: config.ticketWhite,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10.0),
                                     // side: const BorderSide(color: Colors.black, width: 0)
@@ -737,27 +1087,51 @@ class _TicketsViewState extends State<TicketsView> {
                                         children: [
                                           Card(
                                             shape: BeveledRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10.5),
+                                              borderRadius:
+                                                  BorderRadius.circular(10.5),
                                               // side: const BorderSide(
                                               //     color: Colors.black, width: 0.15),
                                             ),
                                             child: Container(
-                                                decoration: BoxDecoration(color: Color(0x0FD36300), borderRadius: BorderRadius.circular(10.5)),
+                                                decoration: BoxDecoration(
+                                                    color: config.memoWhite,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10.5)),
                                                 // color: Colors.blueGrey,
                                                 width: widget.cardWidth,
-                                                height: widget.widgetHeight * 0.5,
+                                                height:
+                                                    widget.widgetHeight * 0.5,
                                                 child: Padding(
-                                                  padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                                                  padding:
+                                                      const EdgeInsets.fromLTRB(
+                                                          5, 5, 5, 5),
                                                   child: Column(
                                                     children: [
                                                       Container(
-                                                          height: widget.widgetHeight * 0.39,
-                                                          child: SingleChildScrollView(
-                                                              child: Padding(
-                                                            padding: const EdgeInsets.fromLTRB(20, 5, 15, 5),
+                                                          height: widget
+                                                                  .widgetHeight *
+                                                              0.39,
+                                                          child:
+                                                              SingleChildScrollView(
+                                                                  child:
+                                                                      Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                        .fromLTRB(
+                                                                    20,
+                                                                    5,
+                                                                    15,
+                                                                    5),
                                                             child: Text(
-                                                              widget.ticketsToDisplay[index].memo,
-                                                              style: const TextStyle(fontSize: 16),
+                                                              widget
+                                                                  .ticketsToDisplay[
+                                                                      index]
+                                                                  .memo,
+                                                              style:
+                                                                  const TextStyle(
+                                                                      fontSize:
+                                                                          16),
                                                             ),
                                                           ))),
                                                       Spacer(),
@@ -769,10 +1143,21 @@ class _TicketsViewState extends State<TicketsView> {
                                                           children: [
                                                             Spacer(),
                                                             Padding(
-                                                              padding: EdgeInsets.fromLTRB(0, 0, widget.cardWidth * 0.05, 0),
+                                                              padding: EdgeInsets
+                                                                  .fromLTRB(
+                                                                      0,
+                                                                      0,
+                                                                      widget.cardWidth *
+                                                                          0.05,
+                                                                      0),
                                                               child: Text(
-                                                                widget.ticketsToDisplay[index].date,
-                                                                style: TextStyle(fontFamily: 'Ds-Digi'),
+                                                                widget
+                                                                    .ticketsToDisplay[
+                                                                        index]
+                                                                    .date,
+                                                                style: TextStyle(
+                                                                    fontFamily:
+                                                                        'Ds-Digi'),
                                                               ),
                                                             )
                                                           ],
@@ -791,7 +1176,14 @@ class _TicketsViewState extends State<TicketsView> {
                                             child: Row(
                                               children: [
                                                 // Departure
-                                                TimeContainer(widgetHeight: widget.widgetHeight, cardWidth: widget.cardWidth, label: '発', time: widget.ticketsToDisplay[index].departureTime),
+                                                TimeContainer(
+                                                    widgetHeight:
+                                                        widget.widgetHeight,
+                                                    cardWidth: widget.cardWidth,
+                                                    label: '発',
+                                                    time: widget
+                                                        .ticketsToDisplay[index]
+                                                        .departureTime),
 
                                                 Expanded(
                                                     // color: Colors.red,
@@ -799,28 +1191,70 @@ class _TicketsViewState extends State<TicketsView> {
                                                     child: Column(
                                                   children: [
                                                     Text(
-                                                      widget.ticketsToDisplay[index].trainName + '   -   ' + widget.ticketsToDisplay[index].trainNumber + '   号',
-                                                      style: TextStyle(fontSize: widget.widgetHeight * 0.02, fontWeight: FontWeight.bold, fontFamily: 'Ds-digi'),
+                                                      widget
+                                                              .ticketsToDisplay[
+                                                                  index]
+                                                              .trainName +
+                                                          '   -   ' +
+                                                          widget
+                                                              .ticketsToDisplay[
+                                                                  index]
+                                                              .trainNumber +
+                                                          '   号',
+                                                      style: TextStyle(
+                                                          fontSize: widget
+                                                                  .widgetHeight *
+                                                              0.02,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily:
+                                                              'Ds-digi'),
                                                     ),
                                                     Divider(
-                                                      indent: widget.cardWidth * 0.05,
-                                                      endIndent: widget.cardWidth * 0.05,
+                                                      indent: widget.cardWidth *
+                                                          0.05,
+                                                      endIndent:
+                                                          widget.cardWidth *
+                                                              0.05,
                                                       color: Colors.black,
                                                     ),
                                                     Text(
-                                                      widget.ticketsToDisplay[index].carNumber +
+                                                      widget
+                                                              .ticketsToDisplay[
+                                                                  index]
+                                                              .carNumber +
                                                           '   号車   ' +
-                                                          widget.ticketsToDisplay[index].row +
+                                                          widget
+                                                              .ticketsToDisplay[
+                                                                  index]
+                                                              .row +
                                                           '   番   ' +
-                                                          widget.ticketsToDisplay[index].seat +
+                                                          widget
+                                                              .ticketsToDisplay[
+                                                                  index]
+                                                              .seat +
                                                           '   席',
-                                                      style: TextStyle(fontSize: widget.widgetHeight * 0.02, fontWeight: FontWeight.bold, fontFamily: 'Ds-digi'),
+                                                      style: TextStyle(
+                                                          fontSize: widget
+                                                                  .widgetHeight *
+                                                              0.02,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily:
+                                                              'Ds-digi'),
                                                     ),
                                                   ],
                                                 )),
 
                                                 // Arrival
-                                                TimeContainer(widgetHeight: widget.widgetHeight, cardWidth: widget.cardWidth, label: '着', time: widget.ticketsToDisplay[index].arrivalTime), // Arrival
+                                                TimeContainer(
+                                                    widgetHeight:
+                                                        widget.widgetHeight,
+                                                    cardWidth: widget.cardWidth,
+                                                    label: '着',
+                                                    time: widget
+                                                        .ticketsToDisplay[index]
+                                                        .arrivalTime), // Arrival
                                               ],
                                             ),
                                           ),
@@ -840,9 +1274,25 @@ class _TicketsViewState extends State<TicketsView> {
                                                 Spacer(),
                                                 Container(
                                                   // color: Colors.red,
-                                                  height: widget.widgetHeight * 0.1,
-                                                  child: Text(widget.ticketsToDisplay[index].departureStation + '---' + widget.ticketsToDisplay[index].arrivalStation,
-                                                      style: TextStyle(height: 1, fontSize: widget.widgetHeight * 0.06, fontWeight: FontWeight.bold)),
+                                                  height:
+                                                      widget.widgetHeight * 0.1,
+                                                  child: Text(
+                                                      widget
+                                                              .ticketsToDisplay[
+                                                                  index]
+                                                              .departureStation +
+                                                          '---' +
+                                                          widget
+                                                              .ticketsToDisplay[
+                                                                  index]
+                                                              .arrivalStation,
+                                                      style: TextStyle(
+                                                          height: 1,
+                                                          fontSize: widget
+                                                                  .widgetHeight *
+                                                              0.06,
+                                                          fontWeight:
+                                                              FontWeight.bold)),
                                                 ),
                                                 Spacer()
                                               ],
@@ -857,8 +1307,10 @@ class _TicketsViewState extends State<TicketsView> {
                                           DottedLine(
                                             direction: Axis.horizontal,
                                             lineLength: widget.cardWidth * 0.9,
-                                            lineThickness: widget.widgetHeight * 0.012,
-                                            dashLength: widget.widgetHeight * 0.012,
+                                            lineThickness:
+                                                widget.widgetHeight * 0.012,
+                                            dashLength:
+                                                widget.widgetHeight * 0.012,
                                             dashColor: Colors.black,
                                             // dashGradient: const [Colors.red, Colors.blue],
                                             dashRadius: 100.0,
@@ -888,15 +1340,30 @@ class _TicketsViewState extends State<TicketsView> {
                                                   // ),
                                                   Container(
                                                     // color: Colors.red,
-                                                    width: widget.cardWidth * 0.15,
+                                                    width:
+                                                        widget.cardWidth * 0.15,
                                                     child: RotatedBox(
                                                         quarterTurns: 3,
                                                         child: Column(
                                                           children: [
                                                             // ## bottle location
-                                                            Text('JAPAN', style: TextStyle(fontSize: widget.widgetHeight * 0.03, fontWeight: FontWeight.bold)),
+                                                            Text('JAPAN',
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        widget.widgetHeight *
+                                                                            0.03,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold)),
                                                             // ## bottle location
-                                                            Text('Tokyo', style: TextStyle(fontSize: widget.widgetHeight * 0.025, fontWeight: FontWeight.bold)),
+                                                            Text('Tokyo',
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        widget.widgetHeight *
+                                                                            0.025,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold)),
                                                           ],
                                                         )),
                                                   ),
@@ -904,21 +1371,41 @@ class _TicketsViewState extends State<TicketsView> {
                                                   Container(
                                                     child: NeumorphicButton(
                                                         style: NeumorphicStyle(
-                                                          lightSource: LightSource.topLeft,
-                                                          shape: NeumorphicShape.flat,
-                                                          boxShape: NeumorphicBoxShape.circle(),
+                                                          lightSource:
+                                                              LightSource
+                                                                  .topLeft,
+                                                          shape: NeumorphicShape
+                                                              .flat,
+                                                          boxShape:
+                                                              NeumorphicBoxShape
+                                                                  .circle(),
                                                           intensity: 1,
-                                                          color: Colors.white,
-                                                          depth: widget.ticketsToDisplay[index].isUsed ? -1.5 : 1.5,
+                                                          color: config
+                                                              .backGroundWhite,
+                                                          depth: widget
+                                                                  .ticketsToDisplay[
+                                                                      index]
+                                                                  .isUsed
+                                                              ? -1.5
+                                                              : 1.5,
                                                         ),
                                                         onPressed: () async {
-                                                          final ticket = widget.ticketsToDisplay[index];
-                                                          ticket.isUsed = !ticket.isUsed;
+                                                          final ticket = widget
+                                                                  .ticketsToDisplay[
+                                                              index];
+                                                          ticket.isUsed =
+                                                              !ticket.isUsed;
 
-                                                          await DatabaseHelper().updateTicket(ticket);
+                                                          await DatabaseHelper()
+                                                              .updateTicket(
+                                                                  ticket);
 
                                                           setState(() {
-                                                            widget.ticketsToDisplay[index].isUsed = ticket.isUsed;
+                                                            widget
+                                                                    .ticketsToDisplay[
+                                                                        index]
+                                                                    .isUsed =
+                                                                ticket.isUsed;
                                                           });
                                                         },
                                                         child: Center(
@@ -926,8 +1413,11 @@ class _TicketsViewState extends State<TicketsView> {
                                                           '濟',
                                                           style: TextStyle(
                                                             // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
-                                                            fontSize: widget.widgetHeight * 0.05,
-                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: widget
+                                                                    .widgetHeight *
+                                                                0.05,
+                                                            fontWeight:
+                                                                FontWeight.bold,
                                                           ),
                                                         ))),
                                                   ),
@@ -935,31 +1425,43 @@ class _TicketsViewState extends State<TicketsView> {
                                                   Container(
                                                     child: NeumorphicButton(
                                                         style: NeumorphicStyle(
-                                                          lightSource: LightSource.topLeft,
-                                                          shape: NeumorphicShape.flat,
-                                                          boxShape: NeumorphicBoxShape.circle(),
+                                                          lightSource:
+                                                              LightSource
+                                                                  .topLeft,
+                                                          shape: NeumorphicShape
+                                                              .flat,
+                                                          boxShape:
+                                                              NeumorphicBoxShape
+                                                                  .circle(),
                                                           intensity: 0.8,
-                                                          color: Colors.white,
+                                                          color: config
+                                                              .backGroundWhite,
                                                           depth: 1,
                                                         ),
-                                                        onPressed: () async {
-                                                        },
+                                                        onPressed: () async {},
                                                         child: Center(
                                                             child: Text(
                                                           '修',
                                                           style: TextStyle(
                                                             // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
-                                                            fontSize: widget.widgetHeight * 0.05,
-                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: widget
+                                                                    .widgetHeight *
+                                                                0.05,
+                                                            fontWeight:
+                                                                FontWeight.bold,
                                                           ),
                                                         ))),
                                                   ),
                                                   Spacer(),
                                                   Container(
                                                     // color: Colors.red,
-                                                    width: widget.cardWidth * 0.4,
-                                                    height: widget.widgetHeight * 0.14,
-                                                    child: Row(children: barcode),
+                                                    width:
+                                                        widget.cardWidth * 0.4,
+                                                    height:
+                                                        widget.widgetHeight *
+                                                            0.14,
+                                                    child:
+                                                        Row(children: barcode),
                                                   )
                                                 ],
                                               ),
@@ -978,7 +1480,7 @@ class _TicketsViewState extends State<TicketsView> {
                           // color: config.redJP,
                           child: Card(
                               elevation: 2.5,
-                              color: config.bottleSheet,
+                              color: config.ticketWhite,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10.0),
                                 // side: const BorderSide(color: Colors.black, width: 0)
@@ -991,27 +1493,45 @@ class _TicketsViewState extends State<TicketsView> {
                                     children: [
                                       Card(
                                         shape: BeveledRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10.5),
+                                          borderRadius:
+                                              BorderRadius.circular(10.5),
                                           // side: const BorderSide(
                                           //     color: Colors.black, width: 0.15),
                                         ),
                                         child: Container(
-                                            decoration: BoxDecoration(color: Color(0x0FD36300), borderRadius: BorderRadius.circular(10.5)),
+                                            decoration: BoxDecoration(
+                                                color: config.memoWhite,
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                        10.5)),
                                             // color: Colors.blueGrey,
                                             width: widget.cardWidth,
                                             height: widget.widgetHeight * 0.5,
                                             child: Padding(
-                                              padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      5, 5, 5, 5),
                                               child: Column(
                                                 children: [
                                                   Container(
-                                                      height: widget.widgetHeight * 0.39,
-                                                      child: SingleChildScrollView(
-                                                          child: Padding(
-                                                        padding: const EdgeInsets.fromLTRB(20, 5, 15, 5),
+                                                      height:
+                                                          widget.widgetHeight *
+                                                              0.39,
+                                                      child:
+                                                          SingleChildScrollView(
+                                                              child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                    .fromLTRB(
+                                                                20, 5, 15, 5),
                                                         child: Text(
-                                                          widget.ticketsToDisplay[index].memo,
-                                                          style: const TextStyle(fontSize: 16),
+                                                          widget
+                                                              .ticketsToDisplay[
+                                                                  index]
+                                                              .memo,
+                                                          style:
+                                                              const TextStyle(
+                                                                  fontSize: 16),
                                                         ),
                                                       ))),
                                                   Spacer(),
@@ -1023,10 +1543,20 @@ class _TicketsViewState extends State<TicketsView> {
                                                       children: [
                                                         Spacer(),
                                                         Padding(
-                                                          padding: EdgeInsets.fromLTRB(0, 0, widget.cardWidth * 0.05, 0),
+                                                          padding: EdgeInsets
+                                                              .fromLTRB(
+                                                                  0,
+                                                                  0,
+                                                                  widget.cardWidth *
+                                                                      0.05,
+                                                                  0),
                                                           child: Text(
-                                                            widget.tickets[index].date,
-                                                            style: TextStyle(fontFamily: 'Ds-Digi'),
+                                                            widget
+                                                                .tickets[index]
+                                                                .date,
+                                                            style: TextStyle(
+                                                                fontFamily:
+                                                                    'Ds-Digi'),
                                                           ),
                                                         )
                                                       ],
@@ -1045,7 +1575,13 @@ class _TicketsViewState extends State<TicketsView> {
                                         child: Row(
                                           children: [
                                             // Departure
-                                            TimeContainer(widgetHeight: widget.widgetHeight, cardWidth: widget.cardWidth, label: '発', time: widget.tickets[index].departureTime),
+                                            TimeContainer(
+                                                widgetHeight:
+                                                    widget.widgetHeight,
+                                                cardWidth: widget.cardWidth,
+                                                label: '発',
+                                                time: widget.tickets[index]
+                                                    .departureTime),
 
                                             Expanded(
                                                 // color: Colors.red,
@@ -1053,23 +1589,63 @@ class _TicketsViewState extends State<TicketsView> {
                                                 child: Column(
                                               children: [
                                                 Text(
-                                                  widget.ticketsToDisplay[index].trainName + '   -   ' + widget.ticketsToDisplay[index].trainNumber + '   号',
-                                                  style: TextStyle(fontSize: widget.widgetHeight * 0.02, fontWeight: FontWeight.bold, fontFamily: 'Ds-digi'),
+                                                  widget.ticketsToDisplay[index]
+                                                          .trainName +
+                                                      '   -   ' +
+                                                      widget
+                                                          .ticketsToDisplay[
+                                                              index]
+                                                          .trainNumber +
+                                                      '   号',
+                                                  style: TextStyle(
+                                                      fontSize:
+                                                          widget.widgetHeight *
+                                                              0.02,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontFamily: 'Ds-digi'),
                                                 ),
                                                 Divider(
-                                                  indent: widget.cardWidth * 0.05,
-                                                  endIndent: widget.cardWidth * 0.05,
+                                                  indent:
+                                                      widget.cardWidth * 0.05,
+                                                  endIndent:
+                                                      widget.cardWidth * 0.05,
                                                   color: Colors.black,
                                                 ),
                                                 Text(
-                                                  widget.ticketsToDisplay[index].carNumber + '   号車   ' + widget.ticketsToDisplay[index].row + '   番   ' + widget.ticketsToDisplay[index].seat + '   席',
-                                                  style: TextStyle(fontSize: widget.widgetHeight * 0.02, fontWeight: FontWeight.bold, fontFamily: 'Ds-digi'),
+                                                  widget.ticketsToDisplay[index]
+                                                          .carNumber +
+                                                      '   号車   ' +
+                                                      widget
+                                                          .ticketsToDisplay[
+                                                              index]
+                                                          .row +
+                                                      '   番   ' +
+                                                      widget
+                                                          .ticketsToDisplay[
+                                                              index]
+                                                          .seat +
+                                                      '   席',
+                                                  style: TextStyle(
+                                                      fontSize:
+                                                          widget.widgetHeight *
+                                                              0.02,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontFamily: 'Ds-digi'),
                                                 ),
                                               ],
                                             )),
 
                                             // Arrival
-                                            TimeContainer(widgetHeight: widget.widgetHeight, cardWidth: widget.cardWidth, label: '着', time: widget.ticketsToDisplay[index].arrivalTime), // Arrival
+                                            TimeContainer(
+                                                widgetHeight:
+                                                    widget.widgetHeight,
+                                                cardWidth: widget.cardWidth,
+                                                label: '着',
+                                                time: widget
+                                                    .ticketsToDisplay[index]
+                                                    .arrivalTime), // Arrival
                                           ],
                                         ),
                                       ),
@@ -1090,8 +1666,21 @@ class _TicketsViewState extends State<TicketsView> {
                                             Container(
                                               // color: Colors.red,
                                               height: widget.widgetHeight * 0.1,
-                                              child: Text(widget.ticketsToDisplay[index].departureStation + '---' + widget.ticketsToDisplay[index].arrivalStation,
-                                                  style: TextStyle(height: 1, fontSize: widget.widgetHeight * 0.06, fontWeight: FontWeight.bold)),
+                                              child: Text(
+                                                  widget.ticketsToDisplay[index]
+                                                          .departureStation +
+                                                      '---' +
+                                                      widget
+                                                          .ticketsToDisplay[
+                                                              index]
+                                                          .arrivalStation,
+                                                  style: TextStyle(
+                                                      height: 1,
+                                                      fontSize:
+                                                          widget.widgetHeight *
+                                                              0.06,
+                                                      fontWeight:
+                                                          FontWeight.bold)),
                                             ),
                                             Spacer()
                                           ],
@@ -1106,7 +1695,8 @@ class _TicketsViewState extends State<TicketsView> {
                                       DottedLine(
                                         direction: Axis.horizontal,
                                         lineLength: widget.cardWidth * 0.9,
-                                        lineThickness: widget.widgetHeight * 0.012,
+                                        lineThickness:
+                                            widget.widgetHeight * 0.012,
                                         dashLength: widget.widgetHeight * 0.012,
                                         dashColor: Colors.black,
                                         // dashGradient: const [Colors.red, Colors.blue],
@@ -1143,9 +1733,23 @@ class _TicketsViewState extends State<TicketsView> {
                                                     child: Column(
                                                       children: [
                                                         // ## bottle location
-                                                        Text('JAPAN', style: TextStyle(fontSize: widget.widgetHeight * 0.03, fontWeight: FontWeight.bold)),
+                                                        Text('JAPAN',
+                                                            style: TextStyle(
+                                                                fontSize: widget
+                                                                        .widgetHeight *
+                                                                    0.03,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold)),
                                                         // ## bottle location
-                                                        Text('Tokyo', style: TextStyle(fontSize: widget.widgetHeight * 0.025, fontWeight: FontWeight.bold)),
+                                                        Text('Tokyo',
+                                                            style: TextStyle(
+                                                                fontSize: widget
+                                                                        .widgetHeight *
+                                                                    0.025,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold)),
                                                       ],
                                                     )),
                                               ),
@@ -1153,21 +1757,39 @@ class _TicketsViewState extends State<TicketsView> {
                                               Container(
                                                 child: NeumorphicButton(
                                                     style: NeumorphicStyle(
-                                                      lightSource: LightSource.topLeft,
-                                                      shape: NeumorphicShape.flat,
-                                                      boxShape: NeumorphicBoxShape.circle(),
+                                                      lightSource:
+                                                          LightSource.topLeft,
+                                                      shape:
+                                                          NeumorphicShape.flat,
+                                                      boxShape:
+                                                          NeumorphicBoxShape
+                                                              .circle(),
                                                       intensity: 1,
-                                                      color: Colors.white,
-                                                      depth: widget.ticketsToDisplay[index].isUsed ? -1.5 : 1.5,
+                                                      color: config
+                                                          .backGroundWhite,
+                                                      depth: widget
+                                                              .ticketsToDisplay[
+                                                                  index]
+                                                              .isUsed
+                                                          ? -1.5
+                                                          : 1.5,
                                                     ),
                                                     onPressed: () async {
-                                                      final ticket = widget.ticketsToDisplay[index];
-                                                      ticket.isUsed = !ticket.isUsed;
+                                                      final ticket = widget
+                                                              .ticketsToDisplay[
+                                                          index];
+                                                      ticket.isUsed =
+                                                          !ticket.isUsed;
 
-                                                      await DatabaseHelper().updateTicket(ticket);
+                                                      await DatabaseHelper()
+                                                          .updateTicket(ticket);
 
                                                       setState(() {
-                                                        widget.ticketsToDisplay[index].isUsed = ticket.isUsed;
+                                                        widget
+                                                                .ticketsToDisplay[
+                                                                    index]
+                                                                .isUsed =
+                                                            ticket.isUsed;
                                                       });
                                                     },
                                                     child: Center(
@@ -1175,8 +1797,11 @@ class _TicketsViewState extends State<TicketsView> {
                                                       '濟',
                                                       style: TextStyle(
                                                         // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
-                                                        fontSize: widget.widgetHeight * 0.05,
-                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: widget
+                                                                .widgetHeight *
+                                                            0.05,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                       ),
                                                     ))),
                                               ),
@@ -1184,11 +1809,16 @@ class _TicketsViewState extends State<TicketsView> {
                                               Container(
                                                 child: NeumorphicButton(
                                                     style: NeumorphicStyle(
-                                                      lightSource: LightSource.topLeft,
-                                                      shape: NeumorphicShape.flat,
-                                                      boxShape: NeumorphicBoxShape.circle(),
+                                                      lightSource:
+                                                          LightSource.topLeft,
+                                                      shape:
+                                                          NeumorphicShape.flat,
+                                                      boxShape:
+                                                          NeumorphicBoxShape
+                                                              .circle(),
                                                       intensity: 0.8,
-                                                      color: Colors.white,
+                                                      color: config
+                                                          .backGroundWhite,
                                                       depth: 1,
                                                     ),
                                                     onPressed: () async {
@@ -1209,8 +1839,11 @@ class _TicketsViewState extends State<TicketsView> {
                                                       '修',
                                                       style: TextStyle(
                                                         // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
-                                                        fontSize: widget.widgetHeight * 0.05,
-                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: widget
+                                                                .widgetHeight *
+                                                            0.05,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                       ),
                                                     ))),
                                               ),
@@ -1219,7 +1852,8 @@ class _TicketsViewState extends State<TicketsView> {
                                               Container(
                                                 // color: Colors.red,
                                                 width: widget.cardWidth * 0.4,
-                                                height: widget.widgetHeight * 0.14,
+                                                height:
+                                                    widget.widgetHeight * 0.14,
                                                 child: Row(children: barcode),
                                               )
                                             ],
@@ -1232,7 +1866,8 @@ class _TicketsViewState extends State<TicketsView> {
                               )),
                         );
                       } else {
-                        print('====== else length: $widget.ticketsToDisplay.length');
+                        print(
+                            '====== else length: $widget.ticketsToDisplay.length');
                         return SizedBox();
                       }
                     },
@@ -1255,7 +1890,10 @@ class _TicketsViewState extends State<TicketsView> {
                           SizedBox(
                             width: widget.screenWidth * 0.05,
                           ),
-                          Text('隱藏已使用車票', style: TextStyle(fontSize: widget.screenWidth * 0.02, fontWeight: FontWeight.bold)),
+                          Text('隱藏已使用車票',
+                              style: TextStyle(
+                                  fontSize: widget.screenWidth * 0.02,
+                                  fontWeight: FontWeight.bold)),
                           Spacer(),
                         ],
                       ),
@@ -1280,9 +1918,14 @@ class _TicketsViewState extends State<TicketsView> {
                                 setState(() {
                                   print('===== setSate hideUsedTickets');
                                   widget.isHideUsedTickets = value;
-                                  widget.ticketsToDisplay = TicketsView.getTicketsToDisplay(widget.tickets, widget.isHideUsedTickets);
-                                  print('HideUsedTickets is ${widget.isHideUsedTickets}');
-                                  print('ticketsToDisplay: $widget.ticketsToDisplay');
+                                  widget.ticketsToDisplay =
+                                      TicketsView.getTicketsToDisplay(
+                                          widget.tickets,
+                                          widget.isHideUsedTickets);
+                                  print(
+                                      'HideUsedTickets is ${widget.isHideUsedTickets}');
+                                  print(
+                                      'ticketsToDisplay: $widget.ticketsToDisplay');
                                 });
                               },
                             ),
@@ -1307,7 +1950,11 @@ class _TicketsViewState extends State<TicketsView> {
         barcodeWidth += widthPercentage;
         barcode.add(
           VerticalDivider(
-            thickness: widget.cardWidth * 0.4 * widthPercentage * math.Random().nextInt(10) * 0.1,
+            thickness: widget.cardWidth *
+                0.4 *
+                widthPercentage *
+                math.Random().nextInt(10) *
+                0.1,
             width: widget.cardWidth * 0.4 * widthPercentage,
             color: Colors.black,
           ),
@@ -1348,7 +1995,8 @@ class FloatCardView extends StatelessWidget {
     required this.cardWidth,
   })  : memoController = TextEditingController(),
         dateController = TextEditingController(
-          text: '${DateTime.now().year}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().day.toString().padLeft(2, '0')}',
+          text:
+              '${DateTime.now().year}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().day.toString().padLeft(2, '0')}',
         ),
         departureTimeController = TextEditingController(),
         arrivalTimeController = TextEditingController(),
@@ -1371,7 +2019,11 @@ class FloatCardView extends StatelessWidget {
       barcodeWidth += widthPercentage;
       barcode.add(
         VerticalDivider(
-          thickness: cardWidth * 0.4 * widthPercentage * math.Random().nextInt(10) * 0.1,
+          thickness: cardWidth *
+              0.4 *
+              widthPercentage *
+              math.Random().nextInt(10) *
+              0.1,
           width: cardWidth * 0.4 * widthPercentage,
           color: Colors.black,
         ),
@@ -1404,7 +2056,9 @@ class FloatCardView extends StatelessWidget {
                     ),
 
                     child: Container(
-                        decoration: BoxDecoration(color: Color(0x0FD36300), borderRadius: BorderRadius.circular(10.5)),
+                        decoration: BoxDecoration(
+                            color: Color(0x0FD36300),
+                            borderRadius: BorderRadius.circular(10.5)),
                         width: cardWidth,
                         height: widgetHeight * 0.5,
                         child: Padding(
@@ -1415,7 +2069,8 @@ class FloatCardView extends StatelessWidget {
                                   height: widgetHeight * 0.3,
                                   child: SingleChildScrollView(
                                       child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(20, 5, 15, 5),
+                                    padding:
+                                        const EdgeInsets.fromLTRB(20, 5, 15, 5),
                                     child: TextField(
                                       controller: memoController,
                                       decoration: InputDecoration(
@@ -1437,7 +2092,8 @@ class FloatCardView extends StatelessWidget {
                                   children: [
                                     Spacer(),
                                     Padding(
-                                        padding: EdgeInsets.fromLTRB(0, 0, cardWidth * 0.05, 0),
+                                        padding: EdgeInsets.fromLTRB(
+                                            0, 0, cardWidth * 0.05, 0),
                                         child: SizedBox(
                                           width: cardWidth * 0.35,
                                           child: TextField(
@@ -1446,7 +2102,9 @@ class FloatCardView extends StatelessWidget {
                                               hintText: '2024/01/12',
                                               border: InputBorder.none,
                                             ),
-                                            style: TextStyle(fontFamily: 'Ds-Digi', fontSize: 16),
+                                            style: TextStyle(
+                                                fontFamily: 'Ds-Digi',
+                                                fontSize: 16),
                                             onChanged: (value) {
                                               // Handle the input text change here if needed
                                             },
@@ -1760,7 +2418,10 @@ class FloatCardView extends StatelessWidget {
                                   hintText: '東京',
                                   border: InputBorder.none,
                                 ),
-                                style: TextStyle(height: 1, fontSize: widgetHeight * 0.05, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    height: 1,
+                                    fontSize: widgetHeight * 0.05,
+                                    fontWeight: FontWeight.bold),
                                 onChanged: (value) {
                                   // Handle the input text change here if needed
                                 },
@@ -1769,7 +2430,10 @@ class FloatCardView extends StatelessWidget {
                           )),
                           Text(
                             '---',
-                            style: TextStyle(height: 1, fontSize: widgetHeight * 0.06, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                height: 1,
+                                fontSize: widgetHeight * 0.06,
+                                fontWeight: FontWeight.bold),
                           ),
                           Expanded(
                               child: Center(
@@ -1782,7 +2446,10 @@ class FloatCardView extends StatelessWidget {
                                   hintText: '秋田',
                                   border: InputBorder.none,
                                 ),
-                                style: TextStyle(height: 1, fontSize: widgetHeight * 0.05, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    height: 1,
+                                    fontSize: widgetHeight * 0.05,
+                                    fontWeight: FontWeight.bold),
                                 onChanged: (value) {
                                   // Handle the input text change here if needed
                                 },
@@ -1835,9 +2502,473 @@ class FloatCardView extends StatelessWidget {
                                 child: Column(
                                   children: [
                                     // ## bottle location
-                                    Text('JAPAN', style: TextStyle(fontSize: widgetHeight * 0.03, fontWeight: FontWeight.bold)),
+                                    Text('JAPAN',
+                                        style: TextStyle(
+                                            fontSize: widgetHeight * 0.03,
+                                            fontWeight: FontWeight.bold)),
                                     // ## bottle location
-                                    Text('Tokyo', style: TextStyle(fontSize: widgetHeight * 0.025, fontWeight: FontWeight.bold)),
+                                    Text('Tokyo',
+                                        style: TextStyle(
+                                            fontSize: widgetHeight * 0.025,
+                                            fontWeight: FontWeight.bold)),
+                                  ],
+                                )),
+                          ),
+                          Spacer(),
+                          Container(
+                            // color: Colors.red,
+                            width: cardWidth * 0.4,
+                            height: widgetHeight * 0.14,
+                            child: Row(children: barcode),
+                          )
+                        ],
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          )),
+    );
+  }
+}
+
+class FloatAttractionCardView extends StatelessWidget {
+  final double widgetHeight;
+  final double screenWidth;
+  final double cardWidth;
+  final List<Widget> barcode;
+
+  final TextEditingController nameController;
+  final TextEditingController memoController;
+
+  final TextEditingController locationController;
+  final TextEditingController dateController;
+  final TextEditingController departureTimeController;
+  final TextEditingController arrivalTimeController;
+
+  final TextEditingController departureStationController;
+  final TextEditingController arrivalStationController;
+
+  FloatAttractionCardView({
+    Key? key,
+    required this.widgetHeight,
+    required this.screenWidth,
+    required this.cardWidth,
+  })  : nameController = TextEditingController(),
+        memoController = TextEditingController(),
+        locationController = TextEditingController(),
+        dateController = TextEditingController(
+          text:
+              '${DateTime.now().year}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().day.toString().padLeft(2, '0')}',
+        ),
+        departureTimeController = TextEditingController(),
+        arrivalTimeController = TextEditingController(),
+        departureStationController = TextEditingController(),
+        arrivalStationController = TextEditingController(),
+        barcode = _generateBarcode(cardWidth),
+        super(key: key);
+
+  static List<Widget> _generateBarcode(double cardWidth) {
+    List<Widget> barcode = [];
+    double barcodeWidth = 0;
+
+    while (barcodeWidth < 0.9) {
+      double widthPercentage = math.Random().nextInt(10) * 0.006;
+      barcodeWidth += widthPercentage;
+      barcode.add(
+        VerticalDivider(
+          thickness: cardWidth *
+              0.4 *
+              widthPercentage *
+              math.Random().nextInt(10) *
+              0.1,
+          width: cardWidth * 0.4 * widthPercentage,
+          color: Colors.black,
+        ),
+      );
+    }
+
+    return barcode;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Card(
+          elevation: 2.5,
+          color: config.bottleSheet,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          child: Container(
+            height: widgetHeight,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
+              child: Column(
+                children: [
+                  Card(
+                    // color: config.bottleSheet,
+                    // color: Colors.red,
+                    shape: BeveledRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.5),
+                    ),
+
+                    child: Container(
+                        decoration: BoxDecoration(
+                            color: Color(0x0FD36300),
+                            borderRadius: BorderRadius.circular(10.5)),
+                        width: cardWidth,
+                        height: widgetHeight * 0.5,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                          child: Column(
+                            children: [
+                              Container(
+                                  height: widgetHeight * 0.25,
+                                  child: SingleChildScrollView(
+                                      child: Padding(
+                                    padding:
+                                        const EdgeInsets.fromLTRB(20, 5, 15, 5),
+                                    child: TextField(
+                                      controller: memoController,
+                                      decoration: InputDecoration(
+                                        hintText: 'Leave your memo here',
+                                        border: InputBorder.none,
+                                      ),
+                                      style: const TextStyle(fontSize: 16),
+                                      onChanged: (value) {
+                                        // Handle the input text change here if needed
+                                      },
+                                    ),
+                                  ))),
+                              Spacer(),
+
+                              // date
+                              Container(
+                                height: widgetHeight * 0.05,
+                                width: cardWidth,
+                                // color: Colors.green,
+                                child: Row(
+                                  children: [
+                                    Spacer(),
+                                    Container(
+                                      width: cardWidth * 0.8,
+                                      // color: Colors.red,
+                                      alignment: Alignment.bottomCenter,
+                                      child: TextField(
+                                        controller: dateController,
+                                        textAlign: TextAlign.right,
+                                        decoration: InputDecoration(
+                                          hintText: '2024/01/12',
+                                          border: InputBorder.none,
+                                        ),
+                                        style: TextStyle(
+                                            fontFamily: 'Ds-Digi',
+                                            fontSize: 16),
+                                        onChanged: (value) {
+                                          // Handle the input text change here if needed
+                                        },
+                                      ),
+                                    ),
+                                    Spacer(),
+                                  ],
+                                ),
+                              ),
+
+                              // location
+                              Container(
+                                height: widgetHeight * 0.05,
+                                width: cardWidth,
+                                child: Row(
+                                  children: [
+                                    Spacer(),
+                                    Container(
+                                      width: cardWidth * 0.8,
+                                      // color: Colors.green,
+                                      child: TextField(
+                                        controller: locationController,
+                                        textAlign: TextAlign.right,
+                                        decoration: InputDecoration(
+                                          hintText: '35.6226077, 139.7210550',
+                                          border: InputBorder.none,
+                                        ),
+                                        style: TextStyle(
+                                            fontFamily: 'Ds-Digi',
+                                            fontSize: 16),
+                                        onChanged: (value) {
+                                          // Handle the input text change here if needed
+                                        },
+                                      ),
+                                    ),
+                                    Spacer(),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ),
+
+                  // Departure Time --- Arrival Time
+                  Container(
+                    // color: Colors.green,
+                    height: widgetHeight * 0.13,
+                    width: cardWidth,
+                    child: Row(
+                      children: [
+                        // Departure
+                        Container(
+                          // color: Colors.green,
+                          width: cardWidth * 0.2,
+                          height: widgetHeight * 0.13,
+                          child: Column(
+                            children: [
+                              Container(
+                                height: widgetHeight * 0.08,
+                                child: Row(
+                                  children: [
+                                    Spacer(),
+                                    Text(
+                                      '到',
+                                      style: TextStyle(
+                                        fontSize: widgetHeight * 0.05,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Spacer(),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                width: cardWidth * 0.2,
+                                height: widgetHeight * 0.03,
+                                // color: Colors.red,
+                                child: Center(
+                                  child: TextField(
+                                    controller: departureTimeController,
+                                    textAlign: TextAlign.center,
+                                    decoration: InputDecoration(
+                                      hintText: '07:36',
+                                      border: InputBorder.none,
+                                    ),
+                                    style: TextStyle(
+                                      fontFamily: 'Ds-Digi',
+                                      fontSize: widgetHeight * 0.02,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    onChanged: (value) {
+                                      // Handle the input text change here if needed
+                                    },
+                                  ),
+                                ),
+                              ),
+                              Spacer(),
+                            ],
+                          ),
+                        ),
+
+                        Expanded(
+                            child: Column(
+                          children: [
+                            SizedBox(height: widgetHeight * 0.03),
+                            Container(
+                              height: widgetHeight * 0.06,
+                              // color: Colors.green,
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  // Center horizontally
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  // Center vertically
+                                  children: [
+                                    Container(
+                                      width: cardWidth * 0.4,
+                                      // height: widgetHeight * 0.05,
+                                      // color: Colors.red,
+                                      child: TextField(
+                                        controller: departureStationController,
+                                        textAlign: TextAlign.center,
+                                        decoration: InputDecoration(
+                                          hintText: '最近車站',
+                                          border: InputBorder.none,
+                                        ),
+                                        style: TextStyle(
+                                            height: 1,
+                                            fontSize: widgetHeight * 0.03,
+                                            fontWeight: FontWeight.bold),
+                                        onChanged: (value) {
+                                          // Handle the input text change here if needed
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Container(
+                              height: widgetHeight * 0.005,
+                              child: Center(
+                                child: Divider(
+                                  indent: cardWidth * 0.05,
+                                  endIndent: cardWidth * 0.05,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                            Container(
+                                // height: widgetHeight * 0.03,
+                                // // color: Colors.green,
+                                // child: Center(),
+                                ),
+                          ],
+                        )),
+
+                        // Arrival
+                        Container(
+                          // color: Colors.green,
+                          width: cardWidth * 0.2,
+                          height: widgetHeight * 0.13,
+                          child: Column(
+                            children: [
+                              Container(
+                                height: widgetHeight * 0.08,
+                                child: Row(
+                                  children: [
+                                    Spacer(),
+                                    Text(
+                                      '離',
+                                      style: TextStyle(
+                                        fontSize: widgetHeight * 0.05,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Spacer(),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                width: cardWidth * 0.2,
+                                height: widgetHeight * 0.03,
+                                // color: Colors.red,
+                                child: Center(
+                                  child: TextField(
+                                    controller: arrivalTimeController,
+                                    textAlign: TextAlign.center,
+                                    decoration: InputDecoration(
+                                      hintText: '07:36',
+                                      border: InputBorder.none,
+                                    ),
+                                    style: TextStyle(
+                                      fontFamily: 'Ds-Digi',
+                                      fontSize: widgetHeight * 0.02,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    onChanged: (value) {
+                                      // Handle the input text change here if needed
+                                    },
+                                  ),
+                                ),
+                              ),
+                              Spacer(),
+                            ],
+                          ),
+                        ), // Arrival
+                      ],
+                    ),
+                  ),
+
+                  Container(
+                    height: widgetHeight * 0.015,
+                  ),
+
+                  // location --- location
+                  Container(
+                    width: cardWidth,
+                    // color: Colors.red,
+                    height: widgetHeight * 0.1,
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        // Center horizontally
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        // Center vertically
+                        children: [
+                          Container(
+                            width: cardWidth * 0.5,
+                            height: widgetHeight * 0.1,
+                            // color: Colors.green,
+                            child: TextField(
+                              controller: nameController,
+                              textAlign: TextAlign.center,
+                              decoration: InputDecoration(
+                                hintText: '景點名',
+                                border: InputBorder.none,
+                              ),
+                              style: TextStyle(
+                                  height: 1,
+                                  fontSize: widgetHeight * 0.05,
+                                  fontWeight: FontWeight.bold),
+                              onChanged: (value) {
+                                // Handle the input text change here if needed
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // spacer
+                  Container(
+                    height: widgetHeight * 0.02,
+                  ),
+
+                  DottedLine(
+                    direction: Axis.horizontal,
+                    lineLength: cardWidth * 0.9,
+                    lineThickness: cardWidth * 0.012,
+                    dashLength: cardWidth * 0.012,
+                    dashColor: Colors.black,
+                    // dashGradient: const [Colors.red, Colors.blue],
+                    dashRadius: 100.0,
+                    // dashGapLength: 0.003,
+                    // dashGapColor: Colors.transparent,
+                    // dashGapGradient: const [Colors.red, Colors.blue],
+                    // dashGapRadius: 0.0,
+                  ),
+
+                  // spacer
+                  Container(
+                    height: widgetHeight * 0.02,
+                  ),
+
+                  Container(
+                    // color: config.bottom,
+                    height: widgetHeight * 0.14,
+                    width: cardWidth,
+                    child: Container(
+                      // color: Colors.green,
+                      child: Row(
+                        // mainAxisAlignment: ,
+                        children: [
+                          Container(
+                            // color: Colors.red,
+                            width: cardWidth * 0.15,
+                            child: RotatedBox(
+                                quarterTurns: 3,
+                                child: Column(
+                                  children: [
+                                    // ## bottle location
+                                    Text('JAPAN',
+                                        style: TextStyle(
+                                            fontSize: widgetHeight * 0.03,
+                                            fontWeight: FontWeight.bold)),
+                                    // ## bottle location
+                                    Text('Tokyo',
+                                        style: TextStyle(
+                                            fontSize: widgetHeight * 0.025,
+                                            fontWeight: FontWeight.bold)),
                                   ],
                                 )),
                           ),
@@ -1900,7 +3031,10 @@ class TimeContainer extends StatelessWidget {
           ),
           Text(
             time,
-            style: TextStyle(fontSize: widgetHeight * 0.02, fontWeight: FontWeight.bold, fontFamily: 'Ds-digi'),
+            style: TextStyle(
+                fontSize: widgetHeight * 0.02,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Ds-digi'),
           ),
           Spacer(),
         ],
@@ -1930,5 +3064,6 @@ class DisplayBottle {
   double latitude;
   double longitude;
 
-  DisplayBottle(this.name, this.bearingAngle, this.distance, this.latitude, this.longitude);
+  DisplayBottle(this.name, this.bearingAngle, this.distance, this.latitude,
+      this.longitude);
 }
