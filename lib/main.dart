@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -5,7 +7,9 @@ import 'package:dotted_line/dotted_line.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
-import 'package:flutter_neumorphic/flutter_neumorphic.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
+
+// import 'package:flutter_neumorphic/flutter_neumorphic.dart';
 import 'package:geolocator/geolocator.dart';
 import './config.dart' as config;
 import './ticket.dart';
@@ -65,7 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool isChasingMode = true;
   bool hideUsedTickets = false;
 
-  Attraction _targetAttraction = new Attraction(
+  Attraction _targetAttraction = Attraction(
       sequenceNumber: 0,
       name: 'Default',
       memo: 'Default',
@@ -145,14 +149,14 @@ class _MyHomePageState extends State<MyHomePage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('New Attraction'),
+            title: const Text('New Attraction'),
             content: floatAttractionCardView,
             actions: <Widget>[
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: Text('Close'),
+                child: const Text('Close'),
               ),
               TextButton(
                 onPressed: () async {
@@ -189,16 +193,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
                   fetchAttractions();
 
+                  // ignore: use_build_context_synchronously
                   Navigator.of(context).pop();
                 },
-                child: Text('Create'),
+                child: const Text('Create'),
               ),
             ],
           );
         },
       );
     } else {
-      FloatCardView floatCardView = FloatCardView(
+      EditableTicketView floatCardView = EditableTicketView(
         widgetHeight: screenHeight * 0.5,
         screenWidth: screenWidth,
         cardWidth: screenWidth * 0.7,
@@ -208,15 +213,17 @@ class _MyHomePageState extends State<MyHomePage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('New Ticket'),
+            title: const Text('New Ticket'),
             content: floatCardView,
             actions: <Widget>[
+              // close button
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: Text('Close'),
+                child: const Text('Close'),
               ),
+              // create button
               TextButton(
                 onPressed: () async {
                   final newTicket = Ticket(
@@ -241,7 +248,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                   Navigator.of(context).pop();
                 },
-                child: Text('Create'),
+                child: const Text('Create'),
               ),
             ],
           );
@@ -254,11 +261,11 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
-    TicketsView ticketsView = TicketsView(hideUsedTickets, screenHeight * 0.5,
+    TicketsView ticketsView = TicketsView(hideUsedTickets, screenHeight * 0.6,
         screenWidth, screenWidth * 0.8, tickets);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
+      value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness:
             Brightness.dark, // Dark status bar icons (like time, battery)
@@ -274,26 +281,87 @@ class _MyHomePageState extends State<MyHomePage> {
             height: screenHeight,
             color: config.backGroundWhite,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              // mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(height: screenHeight * 0.08),
                 Stack(
                   children: [
-                    ChasingView(toggleChasingMode, screenHeight, screenWidth,
-                        screenHeight * 0.38, 20.0, 10.0, _targetAttraction),
+                    Container(
+                      height: screenHeight,
+                      // color: Colors.red,
+                    ),
+                    Positioned(
+                      top: screenHeight * 0.1,
+                      left: 0,
+                      right: 0,
+                      child: Stack(
+                        children: [
+                          ChasingView(
+                              toggleChasingMode,
+                              screenHeight,
+                              screenWidth,
+                              screenHeight * 0.38,
+                              20.0,
+                              10.0,
+                              _targetAttraction),
+                        ],
+                      ),
+                    ),
+                    if (isChasingMode)
+                      Positioned(
+                        top: screenHeight * 0.5,
+                        left: 0,
+                        right: 0,
+                        height: screenHeight,
+                        child: Column(
+                          children: [
+                            HeadingText(
+                                _targetAttraction, clickAddNewTicketButton),
+                            BottomTouristList(
+                                screenHeight,
+                                screenWidth,
+                                attractions,
+                                attractionDatabaseHelper,
+                                _targetAttraction,
+                                updateTargetAttraction)
+                          ],
+                        ),
+                      ),
+                    if (!isChasingMode)
+                      Positioned(
+                        top: screenHeight * 0.25,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          color: Color.fromARGB(100, 255, 255, 255),
+                          child: Column(
+                            children: [
+                              SizedBox(height: screenHeight * 0.05),
+                              ticketsView,
+                              SizedBox(height: screenHeight * 0.05)
+                            ],
+                          ),
+                        ),
+                      )
                   ],
                 ),
-                if (isChasingMode)
-                  HeadingText(_targetAttraction, clickAddNewTicketButton),
-                if (isChasingMode)
-                  BottomTouristList(
-                      screenHeight,
-                      screenWidth,
-                      attractions,
-                      attractionDatabaseHelper,
-                      _targetAttraction,
-                      updateTargetAttraction),
-                if (!isChasingMode) ticketsView
+                // if (isChasingMode)
+                //   Column(
+                //     children: [
+                //       HeadingText(_targetAttraction, clickAddNewTicketButton),
+                //       BottomTouristList(
+                //           screenHeight,
+                //           screenWidth,
+                //           attractions,
+                //           attractionDatabaseHelper,
+                //           _targetAttraction,
+                //           updateTargetAttraction)
+                //     ],
+                //   ),
+                // if (!isChasingMode)
+                //   Positioned(
+                //     top: 0,
+                //     child: ticketsView,
+                //   )
               ],
             ),
           ),
@@ -825,6 +893,7 @@ class BottomTouristList extends StatefulWidget {
   }) : super(key: key);
 
   @override
+  // ignore: library_private_types_in_public_api
   _BottomTouristListState createState() => _BottomTouristListState();
 }
 
@@ -841,12 +910,12 @@ class _BottomTouristListState extends State<BottomTouristList> {
             decoration: BoxDecoration(
               border: Border(
                 top: index == 0
-                    ? BorderSide(
+                    ? const BorderSide(
                         color: Colors.grey, // Customize the color as needed
                         width: 0.5, // Customize the width as needed
                       )
                     : BorderSide.none,
-                bottom: BorderSide(
+                bottom: const BorderSide(
                   color: Colors.grey, // Customize the color as needed
                   width: 0.5, // Customize the width as needed
                 ),
@@ -857,56 +926,25 @@ class _BottomTouristListState extends State<BottomTouristList> {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // visited icon
                   SizedBox(
                     height: widget.screenHeight * 0.05,
                     child: NeumorphicButton(
                       style: NeumorphicStyle(
-                        depth:
-                            widget.attractions[index].isNavigating ? -1.5 : 1.5,
+                        depth: widget.attractions[index].isVisited ? -1.5 : 1.5,
                         color: config.backGroundWhite,
                       ),
                       onPressed: () async {
-                        print('');
-                        print('====== $index is clicked');
-                        widget.attractions[index].isNavigating = true;
+                        setState(() {
+                          widget.attractions[index].isVisited =
+                              !widget.attractions[index].isVisited;
+                        });
                         await widget.attractionDatabaseHelper
                             .updateAttraction(widget.attractions[index]);
-
-                        for (int i = 0; i < widget.attractions.length; i++) {
-                          if (i != index &&
-                              widget.attractions[i].isNavigating == true) {
-                            widget.attractions[i].isNavigating = false;
-                            await widget.attractionDatabaseHelper
-                                .updateAttraction(widget.attractions[i]);
-                          }
-                        }
-
-                        // updateTarget
-                        widget
-                            .updateTargetAttraction(widget.attractions[index]);
-
-                        // Fetch the updated list of attractions from the database
-                        List<Attraction> updatedAttractions = await widget
-                            .attractionDatabaseHelper
-                            .getAttractions();
-                        for (int i = 0; i < updatedAttractions.length; i++) {
-                          print(
-                              '====== ${updatedAttractions[i].id}, ${updatedAttractions[i].isNavigating}');
-                        }
-
-                        setState(() {
-                          // to make sure UI works perfectly
-                          for (int i = 0; i < widget.attractions.length; i++) {
-                            widget.attractions[i].isNavigating = false;
-                          }
-                          widget.attractions[index].isNavigating = true;
-                          widget.updateTargetAttraction(
-                              widget.attractions[index]);
-                        });
                       },
                       child: Center(
                         child: NeumorphicIcon(
-                          style: NeumorphicStyle(
+                          style: const NeumorphicStyle(
                             depth: 1,
                             color: config.flagRed,
                           ),
@@ -919,6 +957,8 @@ class _BottomTouristListState extends State<BottomTouristList> {
                   SizedBox(
                     width: widget.screenWidth * 0.03,
                   ),
+
+                  // Navifation icon
                   SizedBox(
                     height: widget.screenHeight * 0.05,
                     child: NeumorphicButton(
@@ -928,36 +968,27 @@ class _BottomTouristListState extends State<BottomTouristList> {
                         color: config.backGroundWhite,
                       ),
                       onPressed: () async {
+                        for (int i = 0; i < widget.attractions.length; i++) {
+                          widget.attractions[i].isNavigating = false;
+                          await widget.attractionDatabaseHelper
+                              .updateAttraction(widget.attractions[i]);
+                        }
                         widget.attractions[index].isNavigating = true;
                         await widget.attractionDatabaseHelper
                             .updateAttraction(widget.attractions[index]);
 
-                        for (int i = 0; i < widget.attractions.length; i++) {
-                          if (i != index &&
-                              widget.attractions[i].isNavigating == true) {
-                            widget.attractions[i].isNavigating = false;
-                            await widget.attractionDatabaseHelper
-                                .updateAttraction(widget.attractions[i]);
-                          }
-                        }
-
-                        // updateTarget
-                        widget
-                            .updateTargetAttraction(widget.attractions[index]);
-                        
                         setState(() {
-                          // to make sure UI works perfectly
-                          for (int i = 0; i < widget.attractions.length; i++) {
-                            widget.attractions[i].isNavigating = false;
-                          }
-                          widget.attractions[index].isNavigating = true;
                           widget.updateTargetAttraction(
                               widget.attractions[index]);
+                          // for (int i = 0; i < widget.attractions.length; i++) {
+                          //   widget
+                          //       .updateTargetAttraction(widget.attractions[i]);
+                          // }
                         });
                       },
                       child: Center(
                         child: NeumorphicIcon(
-                          style: NeumorphicStyle(
+                          style: const NeumorphicStyle(
                             depth: 1,
                             color: Colors.grey,
                           ),
@@ -969,7 +1000,6 @@ class _BottomTouristListState extends State<BottomTouristList> {
                   ),
                 ],
               ),
-              //... Your ListTile content
             ),
           );
         },
@@ -1006,15 +1036,9 @@ class TicketsView extends StatefulWidget {
 
   static List<Ticket> getTicketsToDisplay(List<Ticket> tickets,
       [bool isHideUsedTickets = false]) {
-    print('====== allTickets: ');
-    printTickets(tickets);
-
     List<Ticket> ticketsToDisplay = isHideUsedTickets
         ? tickets.where((ticket) => ticket.isUsed == false).toList()
         : tickets;
-
-    print('====== tickets to display');
-    printTickets(ticketsToDisplay);
 
     return ticketsToDisplay;
   }
@@ -1037,6 +1061,7 @@ class _TicketsViewState extends State<TicketsView> {
     generateBarcode(barcode);
 
     return Container(
+        // color: Colors.white,
         height: widget.widgetHeight,
         child: Stack(
           children: [
@@ -1063,18 +1088,14 @@ class _TicketsViewState extends State<TicketsView> {
                     itemCount: widget.ticketsToDisplay.length,
                     itemBuilder: (context, index) {
                       if (index == 0) {
-                        print('====== length: 0');
                         return Padding(
                           padding: EdgeInsets.fromLTRB(
-                              widget.cardWidth * 0.2, 0, 0, 0),
+                              widget.cardWidth * 0.7, 0, 0, 0),
                           child: Row(
                             children: [
-                              Container(
-                                width: widget.cardWidth * 0.7,
-                              ),
                               Card(
                                   elevation: 2.5,
-                                  color: config.ticketWhite,
+                                  color: config.ticketBackground,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10.0),
                                     // side: const BorderSide(color: Colors.black, width: 0)
@@ -1082,7 +1103,8 @@ class _TicketsViewState extends State<TicketsView> {
                                   child: Container(
                                     height: widget.widgetHeight,
                                     child: Padding(
-                                      padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
+                                      padding:
+                                          const EdgeInsets.fromLTRB(0, 0, 0, 0),
                                       child: Column(
                                         children: [
                                           Card(
@@ -1118,7 +1140,7 @@ class _TicketsViewState extends State<TicketsView> {
                                                                       Padding(
                                                             padding:
                                                                 const EdgeInsets
-                                                                        .fromLTRB(
+                                                                    .fromLTRB(
                                                                     20,
                                                                     5,
                                                                     15,
@@ -1155,7 +1177,7 @@ class _TicketsViewState extends State<TicketsView> {
                                                                     .ticketsToDisplay[
                                                                         index]
                                                                     .date,
-                                                                style: TextStyle(
+                                                                style: const TextStyle(
                                                                     fontFamily:
                                                                         'Ds-Digi'),
                                                               ),
@@ -1191,16 +1213,7 @@ class _TicketsViewState extends State<TicketsView> {
                                                     child: Column(
                                                   children: [
                                                     Text(
-                                                      widget
-                                                              .ticketsToDisplay[
-                                                                  index]
-                                                              .trainName +
-                                                          '   -   ' +
-                                                          widget
-                                                              .ticketsToDisplay[
-                                                                  index]
-                                                              .trainNumber +
-                                                          '   号',
+                                                      '${widget.ticketsToDisplay[index].trainName}   -   ${widget.ticketsToDisplay[index].trainNumber}   号',
                                                       style: TextStyle(
                                                           fontSize: widget
                                                                   .widgetHeight *
@@ -1219,21 +1232,7 @@ class _TicketsViewState extends State<TicketsView> {
                                                       color: Colors.black,
                                                     ),
                                                     Text(
-                                                      widget
-                                                              .ticketsToDisplay[
-                                                                  index]
-                                                              .carNumber +
-                                                          '   号車   ' +
-                                                          widget
-                                                              .ticketsToDisplay[
-                                                                  index]
-                                                              .row +
-                                                          '   番   ' +
-                                                          widget
-                                                              .ticketsToDisplay[
-                                                                  index]
-                                                              .seat +
-                                                          '   席',
+                                                      '${widget.ticketsToDisplay[index].carNumber}   号車   ${widget.ticketsToDisplay[index].row}   番   ${widget.ticketsToDisplay[index].seat}   席',
                                                       style: TextStyle(
                                                           fontSize: widget
                                                                   .widgetHeight *
@@ -1277,15 +1276,7 @@ class _TicketsViewState extends State<TicketsView> {
                                                   height:
                                                       widget.widgetHeight * 0.1,
                                                   child: Text(
-                                                      widget
-                                                              .ticketsToDisplay[
-                                                                  index]
-                                                              .departureStation +
-                                                          '---' +
-                                                          widget
-                                                              .ticketsToDisplay[
-                                                                  index]
-                                                              .arrivalStation,
+                                                      '${widget.ticketsToDisplay[index].departureStation}---${widget.ticketsToDisplay[index].arrivalStation}',
                                                       style: TextStyle(
                                                           height: 1,
                                                           fontSize: widget
@@ -1312,12 +1303,7 @@ class _TicketsViewState extends State<TicketsView> {
                                             dashLength:
                                                 widget.widgetHeight * 0.012,
                                             dashColor: Colors.black,
-                                            // dashGradient: const [Colors.red, Colors.blue],
                                             dashRadius: 100.0,
-                                            // dashGapLength: 0.003,
-                                            // dashGapColor: Colors.transparent,
-                                            // dashGapGradient: const [Colors.red, Colors.blue],
-                                            // dashGapRadius: 0.0,
                                           ),
 
                                           // spacer
@@ -1332,14 +1318,8 @@ class _TicketsViewState extends State<TicketsView> {
                                             child: Container(
                                               // color: Colors.green,
                                               child: Row(
-                                                // mainAxisAlignment: ,
                                                 children: [
-                                                  // Container(
-                                                  //   color: Colors.red,
-                                                  //   width: screenWidth * 0.2,
-                                                  // ),
                                                   Container(
-                                                    // color: Colors.red,
                                                     width:
                                                         widget.cardWidth * 0.15,
                                                     child: RotatedBox(
@@ -1355,19 +1335,9 @@ class _TicketsViewState extends State<TicketsView> {
                                                                     fontWeight:
                                                                         FontWeight
                                                                             .bold)),
-                                                            // ## bottle location
-                                                            Text('Tokyo',
-                                                                style: TextStyle(
-                                                                    fontSize:
-                                                                        widget.widgetHeight *
-                                                                            0.025,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold)),
                                                           ],
                                                         )),
                                                   ),
-                                                  // Spacer(),
                                                   Container(
                                                     child: NeumorphicButton(
                                                         style: NeumorphicStyle(
@@ -1377,17 +1347,17 @@ class _TicketsViewState extends State<TicketsView> {
                                                           shape: NeumorphicShape
                                                               .flat,
                                                           boxShape:
-                                                              NeumorphicBoxShape
+                                                              const NeumorphicBoxShape
                                                                   .circle(),
-                                                          intensity: 1,
+                                                          intensity: 0.8,
                                                           color: config
-                                                              .backGroundWhite,
+                                                              .ticketBackground,
                                                           depth: widget
                                                                   .ticketsToDisplay[
                                                                       index]
                                                                   .isUsed
-                                                              ? -1.5
-                                                              : 1.5,
+                                                              ? -2
+                                                              : 2,
                                                         ),
                                                         onPressed: () async {
                                                           final ticket = widget
@@ -1415,43 +1385,41 @@ class _TicketsViewState extends State<TicketsView> {
                                                             // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
                                                             fontSize: widget
                                                                     .widgetHeight *
-                                                                0.05,
+                                                                0.02,
                                                             fontWeight:
                                                                 FontWeight.bold,
                                                           ),
                                                         ))),
                                                   ),
                                                   Spacer(),
-                                                  Container(
-                                                    child: NeumorphicButton(
-                                                        style: NeumorphicStyle(
-                                                          lightSource:
-                                                              LightSource
-                                                                  .topLeft,
-                                                          shape: NeumorphicShape
-                                                              .flat,
-                                                          boxShape:
-                                                              NeumorphicBoxShape
-                                                                  .circle(),
-                                                          intensity: 0.8,
-                                                          color: config
-                                                              .backGroundWhite,
-                                                          depth: 1,
+                                                  NeumorphicButton(
+                                                      style:
+                                                          const NeumorphicStyle(
+                                                        lightSource:
+                                                            LightSource.topLeft,
+                                                        shape: NeumorphicShape
+                                                            .flat,
+                                                        boxShape:
+                                                            NeumorphicBoxShape
+                                                                .circle(),
+                                                        intensity: 0.6,
+                                                        color: config
+                                                            .ticketBackground,
+                                                        depth: 1,
+                                                      ),
+                                                      onPressed: () async {},
+                                                      child: Center(
+                                                          child: Text(
+                                                        '修',
+                                                        style: TextStyle(
+                                                          // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
+                                                          fontSize: widget
+                                                                  .widgetHeight *
+                                                              0.02,
+                                                          fontWeight:
+                                                              FontWeight.bold,
                                                         ),
-                                                        onPressed: () async {},
-                                                        child: Center(
-                                                            child: Text(
-                                                          '修',
-                                                          style: TextStyle(
-                                                            // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
-                                                            fontSize: widget
-                                                                    .widgetHeight *
-                                                                0.05,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                          ),
-                                                        ))),
-                                                  ),
+                                                      ))),
                                                   Spacer(),
                                                   Container(
                                                     // color: Colors.red,
@@ -1475,413 +1443,366 @@ class _TicketsViewState extends State<TicketsView> {
                           ),
                         );
                       } else if (index >= 1) {
-                        print('====== length: $widget.ticketsToDisplay.length');
-                        return Container(
-                          // color: config.redJP,
-                          child: Card(
-                              elevation: 2.5,
-                              color: config.ticketWhite,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                                // side: const BorderSide(color: Colors.black, width: 0)
-                              ),
-                              child: Container(
-                                height: widget.widgetHeight,
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
-                                  child: Column(
-                                    children: [
-                                      Card(
-                                        shape: BeveledRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10.5),
-                                          // side: const BorderSide(
-                                          //     color: Colors.black, width: 0.15),
-                                        ),
-                                        child: Container(
-                                            decoration: BoxDecoration(
-                                                color: config.memoWhite,
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                        10.5)),
-                                            // color: Colors.blueGrey,
-                                            width: widget.cardWidth,
-                                            height: widget.widgetHeight * 0.5,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.fromLTRB(
-                                                      5, 5, 5, 5),
-                                              child: Column(
-                                                children: [
-                                                  Container(
-                                                      height:
-                                                          widget.widgetHeight *
-                                                              0.39,
-                                                      child:
-                                                          SingleChildScrollView(
-                                                              child: Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                    .fromLTRB(
-                                                                20, 5, 15, 5),
-                                                        child: Text(
-                                                          widget
-                                                              .ticketsToDisplay[
-                                                                  index]
-                                                              .memo,
-                                                          style:
-                                                              const TextStyle(
-                                                                  fontSize: 16),
-                                                        ),
-                                                      ))),
-                                                  Spacer(),
-
-                                                  // date
-                                                  Container(
-                                                    width: widget.cardWidth,
-                                                    child: Row(
-                                                      children: [
-                                                        Spacer(),
-                                                        Padding(
-                                                          padding: EdgeInsets
-                                                              .fromLTRB(
-                                                                  0,
-                                                                  0,
-                                                                  widget.cardWidth *
-                                                                      0.05,
-                                                                  0),
-                                                          child: Text(
-                                                            widget
-                                                                .tickets[index]
-                                                                .date,
-                                                            style: TextStyle(
-                                                                fontFamily:
-                                                                    'Ds-Digi'),
-                                                          ),
-                                                        )
-                                                      ],
-                                                    ),
-                                                  )
-                                                ],
-                                              ),
-                                            )),
+                        // ticket
+                        return Card(
+                            elevation: 2.5,
+                            color: config.ticketBackground,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.0),
+                              // side: const BorderSide(color: Colors.black, width: 0)
+                            ),
+                            child: SizedBox(
+                              height: widget.widgetHeight,
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+                                child: Column(
+                                  children: [
+                                    // memo
+                                    Card(
+                                      shape: BeveledRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10.5),
+                                        // side: const BorderSide(
+                                        //     color: Colors.black, width: 0.15),
                                       ),
-
-                                      // Departure Time --- Arrival Time
-                                      Container(
-                                        // color: Colors.red,
-                                        height: widget.widgetHeight * 0.13,
-                                        width: widget.cardWidth,
-                                        child: Row(
-                                          children: [
-                                            // Departure
-                                            TimeContainer(
-                                                widgetHeight:
-                                                    widget.widgetHeight,
-                                                cardWidth: widget.cardWidth,
-                                                label: '発',
-                                                time: widget.tickets[index]
-                                                    .departureTime),
-
-                                            Expanded(
-                                                // color: Colors.red,
-                                                // width: widget.cardWidth * 0.6,
-                                                child: Column(
+                                      child: Container(
+                                          decoration: BoxDecoration(
+                                              color: config.memoWhite,
+                                              borderRadius:
+                                                  BorderRadius.circular(10.5)),
+                                          // color: Colors.blueGrey,
+                                          width: widget.cardWidth,
+                                          height: widget.widgetHeight * 0.5,
+                                          child: Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                                5, 5, 5, 5),
+                                            child: Column(
                                               children: [
-                                                Text(
-                                                  widget.ticketsToDisplay[index]
-                                                          .trainName +
-                                                      '   -   ' +
-                                                      widget
-                                                          .ticketsToDisplay[
-                                                              index]
-                                                          .trainNumber +
-                                                      '   号',
-                                                  style: TextStyle(
-                                                      fontSize:
-                                                          widget.widgetHeight *
-                                                              0.02,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontFamily: 'Ds-digi'),
-                                                ),
-                                                Divider(
-                                                  indent:
-                                                      widget.cardWidth * 0.05,
-                                                  endIndent:
-                                                      widget.cardWidth * 0.05,
-                                                  color: Colors.black,
-                                                ),
-                                                Text(
-                                                  widget.ticketsToDisplay[index]
-                                                          .carNumber +
-                                                      '   号車   ' +
-                                                      widget
-                                                          .ticketsToDisplay[
-                                                              index]
-                                                          .row +
-                                                      '   番   ' +
-                                                      widget
-                                                          .ticketsToDisplay[
-                                                              index]
-                                                          .seat +
-                                                      '   席',
-                                                  style: TextStyle(
-                                                      fontSize:
-                                                          widget.widgetHeight *
-                                                              0.02,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontFamily: 'Ds-digi'),
-                                                ),
+                                                Container(
+                                                    height:
+                                                        widget.widgetHeight *
+                                                            0.39,
+                                                    child:
+                                                        SingleChildScrollView(
+                                                            child: Padding(
+                                                      padding: const EdgeInsets
+                                                          .fromLTRB(
+                                                          20, 5, 15, 5),
+                                                      child: Text(
+                                                        widget
+                                                            .ticketsToDisplay[
+                                                                index]
+                                                            .memo,
+                                                        style: const TextStyle(
+                                                            fontSize: 16),
+                                                      ),
+                                                    ))),
+                                                Spacer(),
+
+                                                // date
+                                                Container(
+                                                  width: widget.cardWidth,
+                                                  child: Row(
+                                                    children: [
+                                                      Spacer(),
+                                                      Padding(
+                                                        padding:
+                                                            EdgeInsets.fromLTRB(
+                                                                0,
+                                                                0,
+                                                                widget.cardWidth *
+                                                                    0.05,
+                                                                0),
+                                                        child: Text(
+                                                          widget.tickets[index]
+                                                              .date,
+                                                          style: const TextStyle(
+                                                              fontFamily:
+                                                                  'Ds-Digi'),
+                                                        ),
+                                                      )
+                                                    ],
+                                                  ),
+                                                )
                                               ],
-                                            )),
+                                            ),
+                                          )),
+                                    ),
 
-                                            // Arrival
-                                            TimeContainer(
-                                                widgetHeight:
-                                                    widget.widgetHeight,
-                                                cardWidth: widget.cardWidth,
-                                                label: '着',
-                                                time: widget
-                                                    .ticketsToDisplay[index]
-                                                    .arrivalTime), // Arrival
-                                          ],
-                                        ),
+                                    // Departure Time --- Arrival Time
+                                    Container(
+                                      // color: Colors.red,
+                                      height: widget.widgetHeight * 0.13,
+                                      width: widget.cardWidth,
+                                      child: Row(
+                                        children: [
+                                          // Departure
+                                          TimeContainer(
+                                              widgetHeight: widget.widgetHeight,
+                                              cardWidth: widget.cardWidth,
+                                              label: '発',
+                                              time: widget.tickets[index]
+                                                  .departureTime),
+
+                                          Expanded(
+                                              // color: Colors.red,
+                                              // width: widget.cardWidth * 0.6,
+                                              child: Column(
+                                            children: [
+                                              Text(
+                                                '${widget.ticketsToDisplay[index].trainName}   -   ${widget.ticketsToDisplay[index].trainNumber}   号',
+                                                style: TextStyle(
+                                                    fontSize:
+                                                        widget.widgetHeight *
+                                                            0.02,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontFamily: 'Ds-digi'),
+                                              ),
+                                              Divider(
+                                                indent: widget.cardWidth * 0.05,
+                                                endIndent:
+                                                    widget.cardWidth * 0.05,
+                                                color: Colors.black,
+                                              ),
+                                              Text(
+                                                '${widget.ticketsToDisplay[index].carNumber}   号車   ${widget.ticketsToDisplay[index].row}   番   ${widget.ticketsToDisplay[index].seat}   席',
+                                                style: TextStyle(
+                                                    fontSize:
+                                                        widget.widgetHeight *
+                                                            0.02,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontFamily: 'Ds-digi'),
+                                              ),
+                                            ],
+                                          )),
+
+                                          // Arrival
+                                          TimeContainer(
+                                              widgetHeight: widget.widgetHeight,
+                                              cardWidth: widget.cardWidth,
+                                              label: '着',
+                                              time: widget
+                                                  .ticketsToDisplay[index]
+                                                  .arrivalTime), // Arrival
+                                        ],
                                       ),
+                                    ),
 
-                                      Container(
-                                        height: widget.widgetHeight * 0.015,
+                                    Container(
+                                      height: widget.widgetHeight * 0.015,
+                                    ),
+
+                                    // location --- location
+                                    Container(
+                                      width: widget.cardWidth,
+                                      // color: Colors.red,
+                                      height: widget.widgetHeight * 0.1,
+                                      child: Row(
+                                        // crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Spacer(),
+                                          Container(
+                                            // color: Colors.red,
+                                            height: widget.widgetHeight * 0.1,
+                                            child: Text(
+                                                '${widget.ticketsToDisplay[index].departureStation}---${widget.ticketsToDisplay[index].arrivalStation}',
+                                                style: TextStyle(
+                                                    height: 1,
+                                                    fontSize:
+                                                        widget.widgetHeight *
+                                                            0.06,
+                                                    fontWeight:
+                                                        FontWeight.bold)),
+                                          ),
+                                          Spacer()
+                                        ],
                                       ),
+                                    ),
 
-                                      // location --- location
-                                      Container(
-                                        width: widget.cardWidth,
-                                        // color: Colors.red,
-                                        height: widget.widgetHeight * 0.1,
+                                    // spacer
+                                    Container(
+                                      height: widget.widgetHeight * 0.02,
+                                    ),
+
+                                    DottedLine(
+                                      direction: Axis.horizontal,
+                                      lineLength: widget.cardWidth * 0.9,
+                                      lineThickness:
+                                          widget.widgetHeight * 0.012,
+                                      dashLength: widget.widgetHeight * 0.012,
+                                      dashColor: Colors.black,
+                                      // dashGradient: const [Colors.red, Colors.blue],
+                                      dashRadius: 100.0,
+                                      // dashGapLength: 0.003,
+                                      // dashGapColor: Colors.transparent,
+                                      // dashGapGradient: const [Colors.red, Colors.blue],
+                                      // dashGapRadius: 0.0,
+                                    ),
+
+                                    // spacer
+                                    Container(
+                                      height: widget.widgetHeight * 0.02,
+                                    ),
+
+                                    Container(
+                                      // color: config.bottom,
+                                      height: widget.widgetHeight * 0.14,
+                                      width: widget.cardWidth,
+                                      child: Container(
+                                        // color: Colors.green,
                                         child: Row(
-                                          // crossAxisAlignment: CrossAxisAlignment.start,
+                                          // mainAxisAlignment: ,
                                           children: [
-                                            Spacer(),
+                                            // Container(
+                                            //   color: Colors.red,
+                                            //   width: screenWidth * 0.2,
+                                            // ),
+
+                                            // 0.15
                                             Container(
                                               // color: Colors.red,
-                                              height: widget.widgetHeight * 0.1,
-                                              child: Text(
-                                                  widget.ticketsToDisplay[index]
-                                                          .departureStation +
-                                                      '---' +
+                                              width: widget.cardWidth * 0.15,
+                                              child: RotatedBox(
+                                                  quarterTurns: 3,
+                                                  child: Column(
+                                                    children: [
+                                                      // ## bottle location
+                                                      Text('JAPAN',
+                                                          style: TextStyle(
+                                                              fontSize: widget
+                                                                      .widgetHeight *
+                                                                  0.03,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold)),
+                                                    ],
+                                                  )),
+                                            ),
+
+                                            // 濟
+                                            Container(
+                                              child: NeumorphicButton(
+                                                  style: NeumorphicStyle(
+                                                    lightSource:
+                                                        LightSource.topLeft,
+                                                    shape: NeumorphicShape.flat,
+                                                    boxShape:
+                                                        const NeumorphicBoxShape
+                                                            .circle(),
+                                                    intensity: 0.6,
+                                                    color:
+                                                        config.ticketBackground,
+                                                    depth: widget
+                                                            .ticketsToDisplay[
+                                                                index]
+                                                            .isUsed
+                                                        ? -1.5
+                                                        : 1.5,
+                                                  ),
+                                                  onPressed: () async {
+                                                    final ticket =
+                                                        widget.ticketsToDisplay[
+                                                            index];
+                                                    ticket.isUsed =
+                                                        !ticket.isUsed;
+
+                                                    await DatabaseHelper()
+                                                        .updateTicket(ticket);
+
+                                                    setState(() {
                                                       widget
-                                                          .ticketsToDisplay[
-                                                              index]
-                                                          .arrivalStation,
-                                                  style: TextStyle(
-                                                      height: 1,
+                                                              .ticketsToDisplay[
+                                                                  index]
+                                                              .isUsed =
+                                                          ticket.isUsed;
+                                                    });
+                                                  },
+                                                  child: Center(
+                                                      child: Text(
+                                                    '濟',
+                                                    style: TextStyle(
+                                                      // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
                                                       fontSize:
                                                           widget.widgetHeight *
-                                                              0.06,
+                                                              0.02,
                                                       fontWeight:
-                                                          FontWeight.bold)),
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ))),
                                             ),
-                                            Spacer()
+                                            Spacer(),
+                                            // 修
+                                            Container(
+                                              child: NeumorphicButton(
+                                                  style: const NeumorphicStyle(
+                                                    lightSource:
+                                                        LightSource.topLeft,
+                                                    shape: NeumorphicShape.flat,
+                                                    boxShape: NeumorphicBoxShape
+                                                        .circle(),
+                                                    intensity: 0.6,
+                                                    color:
+                                                        config.ticketBackground,
+                                                    depth: 1,
+                                                  ),
+                                                  onPressed: () async {
+                                                    // final ticket =
+                                                    // widget.tickets[index];
+                                                    // ticket.isUsed = !ticket.isUsed;
+                                                    //
+                                                    // await DatabaseHelper()
+                                                    //     .updateTicket(ticket);
+                                                    //
+                                                    // setState(() {
+                                                    //   widget.tickets[index].isUsed =
+                                                    //       ticket.isUsed;
+                                                    // });
+                                                  },
+                                                  child: Center(
+                                                      child: Text(
+                                                    '修',
+                                                    style: TextStyle(
+                                                      // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
+                                                      fontSize:
+                                                          widget.widgetHeight *
+                                                              0.02,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ))),
+                                            ),
+                                            Spacer(),
+
+                                            Container(
+                                              // color: Colors.red,
+                                              width: widget.cardWidth * 0.4,
+                                              height:
+                                                  widget.widgetHeight * 0.14,
+                                              child: Row(children: barcode),
+                                            )
                                           ],
                                         ),
                                       ),
-
-                                      // spacer
-                                      Container(
-                                        height: widget.widgetHeight * 0.02,
-                                      ),
-
-                                      DottedLine(
-                                        direction: Axis.horizontal,
-                                        lineLength: widget.cardWidth * 0.9,
-                                        lineThickness:
-                                            widget.widgetHeight * 0.012,
-                                        dashLength: widget.widgetHeight * 0.012,
-                                        dashColor: Colors.black,
-                                        // dashGradient: const [Colors.red, Colors.blue],
-                                        dashRadius: 100.0,
-                                        // dashGapLength: 0.003,
-                                        // dashGapColor: Colors.transparent,
-                                        // dashGapGradient: const [Colors.red, Colors.blue],
-                                        // dashGapRadius: 0.0,
-                                      ),
-
-                                      // spacer
-                                      Container(
-                                        height: widget.widgetHeight * 0.02,
-                                      ),
-
-                                      Container(
-                                        // color: config.bottom,
-                                        height: widget.widgetHeight * 0.14,
-                                        width: widget.cardWidth,
-                                        child: Container(
-                                          // color: Colors.green,
-                                          child: Row(
-                                            // mainAxisAlignment: ,
-                                            children: [
-                                              // Container(
-                                              //   color: Colors.red,
-                                              //   width: screenWidth * 0.2,
-                                              // ),
-                                              Container(
-                                                // color: Colors.red,
-                                                width: widget.cardWidth * 0.15,
-                                                child: RotatedBox(
-                                                    quarterTurns: 3,
-                                                    child: Column(
-                                                      children: [
-                                                        // ## bottle location
-                                                        Text('JAPAN',
-                                                            style: TextStyle(
-                                                                fontSize: widget
-                                                                        .widgetHeight *
-                                                                    0.03,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold)),
-                                                        // ## bottle location
-                                                        Text('Tokyo',
-                                                            style: TextStyle(
-                                                                fontSize: widget
-                                                                        .widgetHeight *
-                                                                    0.025,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold)),
-                                                      ],
-                                                    )),
-                                              ),
-                                              // Spacer(),
-                                              Container(
-                                                child: NeumorphicButton(
-                                                    style: NeumorphicStyle(
-                                                      lightSource:
-                                                          LightSource.topLeft,
-                                                      shape:
-                                                          NeumorphicShape.flat,
-                                                      boxShape:
-                                                          NeumorphicBoxShape
-                                                              .circle(),
-                                                      intensity: 1,
-                                                      color: config
-                                                          .backGroundWhite,
-                                                      depth: widget
-                                                              .ticketsToDisplay[
-                                                                  index]
-                                                              .isUsed
-                                                          ? -1.5
-                                                          : 1.5,
-                                                    ),
-                                                    onPressed: () async {
-                                                      final ticket = widget
-                                                              .ticketsToDisplay[
-                                                          index];
-                                                      ticket.isUsed =
-                                                          !ticket.isUsed;
-
-                                                      await DatabaseHelper()
-                                                          .updateTicket(ticket);
-
-                                                      setState(() {
-                                                        widget
-                                                                .ticketsToDisplay[
-                                                                    index]
-                                                                .isUsed =
-                                                            ticket.isUsed;
-                                                      });
-                                                    },
-                                                    child: Center(
-                                                        child: Text(
-                                                      '濟',
-                                                      style: TextStyle(
-                                                        // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
-                                                        fontSize: widget
-                                                                .widgetHeight *
-                                                            0.05,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ))),
-                                              ),
-                                              Spacer(),
-                                              Container(
-                                                child: NeumorphicButton(
-                                                    style: NeumorphicStyle(
-                                                      lightSource:
-                                                          LightSource.topLeft,
-                                                      shape:
-                                                          NeumorphicShape.flat,
-                                                      boxShape:
-                                                          NeumorphicBoxShape
-                                                              .circle(),
-                                                      intensity: 0.8,
-                                                      color: config
-                                                          .backGroundWhite,
-                                                      depth: 1,
-                                                    ),
-                                                    onPressed: () async {
-                                                      // final ticket =
-                                                      // widget.tickets[index];
-                                                      // ticket.isUsed = !ticket.isUsed;
-                                                      //
-                                                      // await DatabaseHelper()
-                                                      //     .updateTicket(ticket);
-                                                      //
-                                                      // setState(() {
-                                                      //   widget.tickets[index].isUsed =
-                                                      //       ticket.isUsed;
-                                                      // });
-                                                    },
-                                                    child: Center(
-                                                        child: Text(
-                                                      '修',
-                                                      style: TextStyle(
-                                                        // color: widget.tickets[index].isUsed ? Colors.red: Colors.black,
-                                                        fontSize: widget
-                                                                .widgetHeight *
-                                                            0.05,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ))),
-                                              ),
-                                              Spacer(),
-
-                                              Container(
-                                                // color: Colors.red,
-                                                width: widget.cardWidth * 0.4,
-                                                height:
-                                                    widget.widgetHeight * 0.14,
-                                                child: Row(children: barcode),
-                                              )
-                                            ],
-                                          ),
-                                        ),
-                                      )
-                                    ],
-                                  ),
+                                    )
+                                  ],
                                 ),
-                              )),
-                        );
+                              ),
+                            ));
                       } else {
-                        print(
-                            '====== else length: $widget.ticketsToDisplay.length');
-                        return SizedBox();
+                        return const SizedBox();
                       }
                     },
                     scrollDirection: Axis.horizontal,
                   )
-                : Center(
+                : const Center(
                     child: Text('List is empty'),
                   ),
             Positioned(
-              top: 0,
+              top: widget.widgetHeight * 0.03,
               left: 0,
               right: 0,
               height: widget.widgetHeight * 0.3,
-              child: Container(
+              child: SizedBox(
                   height: widget.widgetHeight * 0.3,
                   child: Column(
                     children: [
@@ -1894,7 +1815,7 @@ class _TicketsViewState extends State<TicketsView> {
                               style: TextStyle(
                                   fontSize: widget.screenWidth * 0.02,
                                   fontWeight: FontWeight.bold)),
-                          Spacer(),
+                          const Spacer(),
                         ],
                       ),
                       SizedBox(
@@ -1910,7 +1831,7 @@ class _TicketsViewState extends State<TicketsView> {
                             width: widget.screenWidth * 0.15,
                             child: NeumorphicSwitch(
                               value: widget.isHideUsedTickets,
-                              style: NeumorphicSwitchStyle(
+                              style: const NeumorphicSwitchStyle(
                                 activeTrackColor: Color(0x0FD36300),
                                 thumbShape: NeumorphicShape.concave,
                               ),
@@ -1930,7 +1851,7 @@ class _TicketsViewState extends State<TicketsView> {
                               },
                             ),
                           ),
-                          Spacer(),
+                          const Spacer(),
                         ],
                       ),
                     ],
@@ -1964,7 +1885,7 @@ class _TicketsViewState extends State<TicketsView> {
   }
 }
 
-class FloatCardView extends StatelessWidget {
+class EditableTicketView extends StatelessWidget {
   final double widgetHeight;
   final double screenWidth;
   final double cardWidth;
@@ -1988,7 +1909,7 @@ class FloatCardView extends StatelessWidget {
   final TextEditingController rowNumberController;
   final TextEditingController seatNumberController;
 
-  FloatCardView({
+  EditableTicketView({
     Key? key,
     required this.widgetHeight,
     required this.screenWidth,
@@ -2038,7 +1959,7 @@ class FloatCardView extends StatelessWidget {
     return SingleChildScrollView(
       child: Card(
           elevation: 2.5,
-          color: config.bottleSheet,
+          color: config.ticketBackground,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
           ),
@@ -2049,15 +1970,12 @@ class FloatCardView extends StatelessWidget {
               child: Column(
                 children: [
                   Card(
-                    // color: config.bottleSheet,
-                    // color: Colors.red,
                     shape: BeveledRectangleBorder(
                       borderRadius: BorderRadius.circular(10.5),
                     ),
-
                     child: Container(
                         decoration: BoxDecoration(
-                            color: Color(0x0FD36300),
+                            color: config.memoWhite,
                             borderRadius: BorderRadius.circular(10.5)),
                         width: cardWidth,
                         height: widgetHeight * 0.5,
@@ -2073,7 +1991,7 @@ class FloatCardView extends StatelessWidget {
                                         const EdgeInsets.fromLTRB(20, 5, 15, 5),
                                     child: TextField(
                                       controller: memoController,
-                                      decoration: InputDecoration(
+                                      decoration: const InputDecoration(
                                         hintText: 'Leave your memo here',
                                         border: InputBorder.none,
                                       ),
@@ -2083,7 +2001,7 @@ class FloatCardView extends StatelessWidget {
                                       },
                                     ),
                                   ))),
-                              Spacer(),
+                              const Spacer(),
 
                               // date
                               Container(
@@ -2098,11 +2016,11 @@ class FloatCardView extends StatelessWidget {
                                           width: cardWidth * 0.35,
                                           child: TextField(
                                             controller: dateController,
-                                            decoration: InputDecoration(
+                                            decoration: const InputDecoration(
                                               hintText: '2024/01/12',
                                               border: InputBorder.none,
                                             ),
-                                            style: TextStyle(
+                                            style: const TextStyle(
                                                 fontFamily: 'Ds-Digi',
                                                 fontSize: 16),
                                             onChanged: (value) {
@@ -2506,11 +2424,6 @@ class FloatCardView extends StatelessWidget {
                                         style: TextStyle(
                                             fontSize: widgetHeight * 0.03,
                                             fontWeight: FontWeight.bold)),
-                                    // ## bottle location
-                                    Text('Tokyo',
-                                        style: TextStyle(
-                                            fontSize: widgetHeight * 0.025,
-                                            fontWeight: FontWeight.bold)),
                                   ],
                                 )),
                           ),
@@ -2597,7 +2510,7 @@ class FloatAttractionCardView extends StatelessWidget {
     return SingleChildScrollView(
       child: Card(
           elevation: 2.5,
-          color: config.bottleSheet,
+          color: config.ticketBackground,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
           ),
@@ -2607,16 +2520,14 @@ class FloatAttractionCardView extends StatelessWidget {
               padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
               child: Column(
                 children: [
+                  // memo
                   Card(
-                    // color: config.bottleSheet,
-                    // color: Colors.red,
                     shape: BeveledRectangleBorder(
                       borderRadius: BorderRadius.circular(10.5),
                     ),
-
                     child: Container(
                         decoration: BoxDecoration(
-                            color: Color(0x0FD36300),
+                            color: config.memoWhite,
                             borderRadius: BorderRadius.circular(10.5)),
                         width: cardWidth,
                         height: widgetHeight * 0.5,
@@ -2944,7 +2855,6 @@ class FloatAttractionCardView extends StatelessWidget {
                   ),
 
                   Container(
-                    // color: config.bottom,
                     height: widgetHeight * 0.14,
                     width: cardWidth,
                     child: Container(
@@ -2954,25 +2864,21 @@ class FloatAttractionCardView extends StatelessWidget {
                         children: [
                           Container(
                             // color: Colors.red,
-                            width: cardWidth * 0.15,
+                            width: cardWidth * 0.25,
                             child: RotatedBox(
                                 quarterTurns: 3,
                                 child: Column(
                                   children: [
-                                    // ## bottle location
-                                    Text('JAPAN',
-                                        style: TextStyle(
-                                            fontSize: widgetHeight * 0.03,
-                                            fontWeight: FontWeight.bold)),
-                                    // ## bottle location
-                                    Text('Tokyo',
-                                        style: TextStyle(
-                                            fontSize: widgetHeight * 0.025,
-                                            fontWeight: FontWeight.bold)),
+                                    Center(
+                                      child: Text('JAPAN',
+                                          style: TextStyle(
+                                              fontSize: widgetHeight * 0.03,
+                                              fontWeight: FontWeight.bold)),
+                                    )
                                   ],
                                 )),
                           ),
-                          Spacer(),
+                          const Spacer(),
                           Container(
                             // color: Colors.red,
                             width: cardWidth * 0.4,
