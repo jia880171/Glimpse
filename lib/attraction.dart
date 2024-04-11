@@ -18,6 +18,7 @@ class Attraction {
 
   bool isVisited;
   bool isNavigating;
+  bool isVisiting;
 
   Attraction({
     this.id,
@@ -33,6 +34,7 @@ class Attraction {
     required this.departureStation,
     required this.isVisited,
     required this.isNavigating,
+    required this.isVisiting,
   });
 
   factory Attraction.withAutoIncrement({
@@ -49,6 +51,7 @@ class Attraction {
     required String departureStation,
     required bool isVisited,
     required bool isNavigating,
+    required bool isVisiting,
   }) {
     return Attraction(
       id: id,
@@ -65,6 +68,7 @@ class Attraction {
       departureStation: departureStation,
       isVisited: isVisited,
       isNavigating: isNavigating,
+      isVisiting: isVisiting
     );
   }
 
@@ -84,6 +88,7 @@ class Attraction {
       'arrivalStation': arrivalStation,
       'isVisited': isVisited,
       'isNavigating': isNavigating,
+      'isVisiting': isVisiting,
     };
   }
 }

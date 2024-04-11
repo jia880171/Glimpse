@@ -33,7 +33,8 @@ class AttractionDatabaseHelper {
             departureStation TEXT,
             arrivalStation TEXT,
             isVisited INTEGER DEFAULT 0,
-            isNavigating INTEGER DEFAULT 0
+            isNavigating INTEGER DEFAULT 0,
+            isVisiting INTEGER DEFAULT 0
           )
         ''');
       },
@@ -63,7 +64,9 @@ class AttractionDatabaseHelper {
 
     final List<Map<String, dynamic>> sequenceQuery = await db
         .rawQuery('SELECT MAX(sequenceNumber) as maxSeq FROM $tableName');
+
     print('===== last?: ${sequenceQuery.first['maxSeq']}');
+
     int nextSequenceNumber = (sequenceQuery.first['maxSeq'] ?? 0) + 1;
 
     final attractionWithSequence = Attraction(
@@ -79,7 +82,7 @@ class AttractionDatabaseHelper {
       departureStation: attraction.departureStation,
       isVisited: attraction.isVisited,
       isNavigating: attraction.isNavigating,
-
+      isVisiting: attraction.isVisiting,
     );
 
     return await db.insert(tableName, attractionWithSequence.toMap());
@@ -103,6 +106,7 @@ class AttractionDatabaseHelper {
         arrivalStation: maps[i]['arrivalStation'],
         isVisited: maps[i]['isVisited'] == 1,
         isNavigating: maps[i]['isNavigating'] == 1,
+        isVisiting: maps[i]['isVisiting'] == 1,
       );
     });
   }
