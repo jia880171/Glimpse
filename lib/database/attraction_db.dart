@@ -1,6 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import './attraction.dart';
+import 'attraction.dart';
 
 class AttractionDatabaseHelper {
   static Database? _database;
