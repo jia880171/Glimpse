@@ -1,10 +1,10 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import './ticket.dart';
+import 'glimpse.dart';
 
-class DatabaseHelper {
+class GlimpseDatabaseHelper {
   static Database? _database;
-  static const String tableName = 'tickets';
+  static const String tableName = 'glimpse';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -14,7 +14,7 @@ class DatabaseHelper {
   }
 
   Future<Database> initDatabase() async {
-    final path = join(await getDatabasesPath(), 'ticket_database.db');
+    final path = join(await getDatabasesPath(), 'glimpse_database.db');
     return openDatabase(
       path,
       version: 1, // Increment the version number to trigger an update
@@ -22,18 +22,10 @@ class DatabaseHelper {
         await db.execute('''
           CREATE TABLE $tableName(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            memo TEXT,
             date TEXT,
-            departureTime TEXT,
-            arrivalTime TEXT,
-            trainName TEXT,
-            trainNumber TEXT,
-            carNumber TEXT,
-            row TEXT,
-            seat TEXT,
-            departureStation TEXT,
-            arrivalStation TEXT,
-            isUsed INTEGER DEFAULT 0
+            imgPaths TEXT,  -- Change imgPath to imgPaths and use TEXT to store JSON string
+            content TEXT,
+            GType INTEGER
           )
         ''');
       },
@@ -48,41 +40,28 @@ class DatabaseHelper {
     );
   }
 
-  Future<int> updateTicket(Ticket ticket) async {
+  Future<int> updateGlimpse(Glimpse glimpse) async {
     final db = await database;
     return await db.update(
       tableName,
-      ticket.toMap(),
+      glimpse.toMap(),
       where: 'id = ?',
-      whereArgs: [ticket.id],
+      whereArgs: [glimpse.id],
     );
   }
 
-  Future<int> insertTicket(Ticket ticket) async {
+  Future<int> insertGlimpse(Glimpse glimpse) async {
     final db = await database;
-    return await db.insert(tableName, ticket.toMap());
+    final id = await db.insert(tableName, glimpse.toMap());
+    print('Inserted Glimpse with id: $id');
+    return id;
   }
 
-  Future<List<Ticket>> getTickets() async {
+  Future<List<Glimpse>> getGlimpses() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(tableName);
     return List.generate(maps.length, (i) {
-      return Ticket(
-        id: maps[i]['id'],
-        memo: maps[i]['memo'],
-        date: maps[i]['date'],
-        departureTime: maps[i]['departureTime'],
-        arrivalTime: maps[i]['arrivalTime'],
-        trainName: maps[i]['trainName'],
-        trainNumber: maps[i]['trainNumber'],
-        carNumber: maps[i]['carNumber'],
-        row: maps[i]['row'],
-        seat: maps[i]['seat'],
-        departureStation: maps[i]['departureStation'],
-        arrivalStation: maps[i]['arrivalStation'],
-        isUsed: maps[i]['isUsed'] == 1,
-
-      );
+      return Glimpse.fromMap(maps[i]);
     });
   }
 }

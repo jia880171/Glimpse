@@ -10,14 +10,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 
-// import 'package:flutter_neumorphic/flutter_neumorphic.dart';
 import 'package:geolocator/geolocator.dart';
 import './config.dart' as config;
-import './ticket.dart';
-import './attraction.dart';
-import './ticket_db.dart';
-import './attraction_db.dart';
+import 'database/ticket.dart';
+import 'database/attraction.dart';
+import 'database/ticket_db.dart';
+import 'database/attraction_db.dart';
 import 'package:flutter_scalable_ocr/flutter_scalable_ocr.dart';
+import './AddAttractionView.dart';
+import './AddTicketView.dart';
+
+import 'Routes.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,21 +40,13 @@ class MyApp extends StatelessWidget {
         useMaterial3: false,
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      routes: Routes.getRoutes(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".fds
 
   final String title;
 
@@ -83,7 +78,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void updateHome(Attraction attraction) {
     setState(() {
-      print('====== updating home');
       home = attraction;
     });
   }
@@ -158,16 +152,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
     showDialog(
       context: context,
+      barrierColor: Colors.white.withOpacity(0.8),
+
       builder: (BuildContext context) {
         return Theme(
             data: ThemeData(
               useMaterial3: false,
             ),
             child: AlertDialog(
-              backgroundColor: Colors.white,
-              title: const Text('New Attraction'),
+              elevation: 0,
+              backgroundColor: Colors.white.withOpacity(0.0),
+              // title: const Text('New Attraction'),
               content: floatAttractionCardView,
               actions: <Widget>[
+                const Spacer(),
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
@@ -175,6 +173,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: const Text('Close',
                       style: TextStyle(color: Colors.black)),
                 ),
+                const Spacer(),
                 TextButton(
                   onPressed: () async {
                     double? latitude;
@@ -218,6 +217,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     style: TextStyle(color: Colors.black),
                   ),
                 ),
+                const Spacer(),
+                const Spacer(),
+
               ],
             ));
       },
@@ -233,18 +235,24 @@ class _MyHomePageState extends State<MyHomePage> {
 
     showDialog(
       context: context,
+      barrierColor: Colors.white.withOpacity(0.96),
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('New Ticket'),
+          elevation: 0.0,
+          backgroundColor: Colors.white.withOpacity(0.0),
+          // title: const Text('New Ticket'),
           content: floatCardView,
           actions: <Widget>[
+            const Spacer(),
             // close button
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Close'),
+              child: const Text('Close', style: TextStyle(color: Colors.black),),
             ),
+            const Spacer(),
+
             // create button
             TextButton(
               onPressed: () async {
@@ -270,8 +278,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
                 Navigator.of(context).pop();
               },
-              child: const Text('Create'),
+              child: const Text('Create', style: TextStyle(color: Colors.black),),
             ),
+            const Spacer(),
+            const Spacer(),
+
           ],
         );
       },
@@ -311,7 +322,43 @@ class _MyHomePageState extends State<MyHomePage> {
                 Stack(
                   children: [
                     Container(
+                      // color: Colors.lightBlue,
                       height: screenHeight,
+                    ),
+                    Positioned(
+                      top: screenHeight * 0.05,
+                      left: screenWidth * 0.05,
+                      child: NeumorphicButton(
+                          style: const NeumorphicStyle(
+                              shape: NeumorphicShape.flat,
+                              boxShape: NeumorphicBoxShape.circle(),
+                              intensity: 0.8,
+                              depth: 1,
+                              lightSource: LightSource.topLeft,
+                              color: config.backGroundWhite,
+                              border: NeumorphicBorder(
+                                color: config.border,
+                                width: 0.3,
+                              )),
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/createGlimpse');
+                          },
+                          child: SizedBox(
+                            // color: Colors.red,
+                            height: (screenHeight) * 0.03,
+                            width: (screenHeight) * 0.03,
+
+                            child: Center(
+                                child: SizedBox(
+                                    // color: Colors.red,
+                                    height: (screenHeight) * 0.03,
+                                    width: (screenHeight) * 0.03,
+                                    child: const Center(
+                                        child: Text(
+                                      'G',
+                                      style: TextStyle(fontSize: 20),
+                                    )))),
+                          )),
                     ),
                     Positioned(
                       top: screenHeight * 0.1,
@@ -350,6 +397,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           ],
                         ),
                       ),
+
+                    // Display Tickets
                     if (!isChasingMode)
                       Positioned(
                         // top: screenHeight * 0.25,
@@ -545,7 +594,6 @@ class _ChasingViewState extends State<ChasingView> {
 
   Future<void> _getUserLocation(Attraction targetAttraction) async {
     try {
-      print('=======_getUserLocation start');
       LocationPermission permission = await Geolocator.checkPermission();
 
       if (permission == LocationPermission.denied ||
@@ -571,7 +619,6 @@ class _ChasingViewState extends State<ChasingView> {
             targetAttraction.longitude);
         targetAttraction.distance = distanceInMeters / 1000;
       });
-      print('=======_getUserLocation end');
     } catch (e) {
       // Handle location fetch errors
       print('Error getting user location: $e');
@@ -1095,14 +1142,13 @@ class _TicketsViewState extends State<TicketsView> {
   List<Widget> barcode = [];
   final StreamController<String> controller = StreamController<String>();
 
-
   void setText(value) {
     controller.add(value);
   }
 
-  void show(BuildContext context){
-    print('====== showohwoehw');
-    showDialog(context: context,
+  void show(BuildContext context) {
+    showDialog(
+      context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('New Ticket'),
@@ -1128,8 +1174,10 @@ class _TicketsViewState extends State<TicketsView> {
                     }),
                 StreamBuilder<String>(
                   stream: controller.stream,
-                  builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
-                    return Result(text: snapshot.data != null ? snapshot.data! : "");
+                  builder:
+                      (BuildContext context, AsyncSnapshot<String> snapshot) {
+                    return Result(
+                        text: snapshot.data != null ? snapshot.data! : "");
                   },
                 )
               ],
@@ -1160,7 +1208,6 @@ class _TicketsViewState extends State<TicketsView> {
         height: widget.widgetHeight,
         child: Stack(
           children: [
-
             Padding(
               padding: EdgeInsets.all(widget.cardWidth * 0.1),
               child: SizedBox(
@@ -2040,9 +2087,7 @@ class _TicketsViewState extends State<TicketsView> {
             Positioned(
                 top: widget.screenWidth * 0.5,
                 child: BackButton(
-                  onPressed: () => {
-                    show(context)
-                  },
+                  onPressed: () => {show(context)},
                 )),
           ],
         ));
@@ -2071,6 +2116,7 @@ class _TicketsViewState extends State<TicketsView> {
     }
   }
 }
+
 class Result extends StatelessWidget {
   const Result({
     Key? key,
@@ -2082,1017 +2128,6 @@ class Result extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text("Readed text: $text");
-  }
-}
-class AddTicketView extends StatelessWidget {
-  final double widgetHeight;
-  final double screenWidth;
-  final double cardWidth;
-  final List<Widget> barcode;
-
-  // memo
-  final TextEditingController memoController;
-
-  // date
-  final TextEditingController dateController;
-  final TextEditingController departureTimeController;
-  final TextEditingController arrivalTimeController;
-
-  final TextEditingController departureStationController;
-  final TextEditingController arrivalStationController;
-
-  final TextEditingController trainNameController;
-  final TextEditingController trainNumberController;
-
-  final TextEditingController carNumberController;
-  final TextEditingController rowNumberController;
-  final TextEditingController seatNumberController;
-
-  AddTicketView({
-    Key? key,
-    required this.widgetHeight,
-    required this.screenWidth,
-    required this.cardWidth,
-  })  : memoController = TextEditingController(),
-        dateController = TextEditingController(
-          text:
-              '${DateTime.now().year}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().day.toString().padLeft(2, '0')}',
-        ),
-        departureTimeController = TextEditingController(),
-        arrivalTimeController = TextEditingController(),
-        departureStationController = TextEditingController(),
-        arrivalStationController = TextEditingController(),
-        trainNameController = TextEditingController(),
-        trainNumberController = TextEditingController(),
-        carNumberController = TextEditingController(),
-        rowNumberController = TextEditingController(),
-        seatNumberController = TextEditingController(),
-        barcode = _generateBarcode(cardWidth),
-        super(key: key);
-
-  static List<Widget> _generateBarcode(double cardWidth) {
-    List<Widget> barcode = [];
-    double barcodeWidth = 0;
-
-    while (barcodeWidth < 0.9) {
-      double widthPercentage = math.Random().nextInt(10) * 0.006;
-      barcodeWidth += widthPercentage;
-      barcode.add(
-        VerticalDivider(
-          thickness: cardWidth *
-              0.4 *
-              widthPercentage *
-              math.Random().nextInt(10) *
-              0.1,
-          width: cardWidth * 0.4 * widthPercentage,
-          color: Colors.black,
-        ),
-      );
-    }
-
-    return barcode;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Card(
-          elevation: 2.5,
-          color: config.ticketBackground,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          child: Container(
-            height: widgetHeight,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
-              child: Column(
-                children: [
-                  Card(
-                    shape: BeveledRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.5),
-                    ),
-                    child: Container(
-                        decoration: BoxDecoration(
-                            color: config.memoWhite,
-                            borderRadius: BorderRadius.circular(10.5)),
-                        width: cardWidth,
-                        height: widgetHeight * 0.5,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
-                          child: Column(
-                            children: [
-                              Container(
-                                  height: widgetHeight * 0.3,
-                                  child: SingleChildScrollView(
-                                      child: Padding(
-                                    padding:
-                                        const EdgeInsets.fromLTRB(20, 5, 15, 5),
-                                    child: TextField(
-                                      controller: memoController,
-                                      decoration: const InputDecoration(
-                                        hintText: 'Leave your memo here',
-                                        border: InputBorder.none,
-                                      ),
-                                      style: const TextStyle(fontSize: 16),
-                                      onChanged: (value) {
-                                        // Handle the input text change here if needed
-                                      },
-                                    ),
-                                  ))),
-                              const Spacer(),
-
-                              // date
-                              Container(
-                                width: cardWidth,
-                                child: Row(
-                                  children: [
-                                    const Spacer(),
-                                    Padding(
-                                        padding: EdgeInsets.fromLTRB(
-                                            0, 0, cardWidth * 0.05, 0),
-                                        child: SizedBox(
-                                          width: cardWidth * 0.35,
-                                          child: TextField(
-                                            controller: dateController,
-                                            decoration: const InputDecoration(
-                                              hintText: '2024/01/12',
-                                              border: InputBorder.none,
-                                            ),
-                                            style: const TextStyle(
-                                                fontFamily: 'Ds-Digi',
-                                                fontSize: 16),
-                                            onChanged: (value) {
-                                              // Handle the input text change here if needed
-                                            },
-                                          ),
-                                        ))
-                                  ],
-                                ),
-                              )
-                            ],
-                          ),
-                        )),
-                  ),
-
-                  // Departure Time --- Arrival Time
-                  Container(
-                    // color: Colors.green,
-                    height: widgetHeight * 0.13,
-                    width: cardWidth,
-                    child: Row(
-                      children: [
-                        // Departure
-                        Container(
-                          // color: Colors.green,
-                          width: cardWidth * 0.2,
-                          height: widgetHeight * 0.13,
-                          child: Column(
-                            children: [
-                              Container(
-                                height: widgetHeight * 0.08,
-                                child: Row(
-                                  children: [
-                                    const Spacer(),
-                                    Text(
-                                      '発',
-                                      style: TextStyle(
-                                        fontSize: widgetHeight * 0.05,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                width: cardWidth * 0.2,
-                                height: widgetHeight * 0.03,
-                                // color: Colors.red,
-                                child: Center(
-                                  child: TextField(
-                                    controller: departureTimeController,
-                                    textAlign: TextAlign.center,
-                                    decoration: const InputDecoration(
-                                      hintText: '07:36',
-                                      border: InputBorder.none,
-                                    ),
-                                    style: TextStyle(
-                                      fontFamily: 'Ds-Digi',
-                                      fontSize: widgetHeight * 0.02,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    onChanged: (value) {
-                                      // Handle the input text change here if needed
-                                    },
-                                  ),
-                                ),
-                              ),
-                              Spacer(),
-                            ],
-                          ),
-                        ),
-
-                        Expanded(
-                            // color: Colors.red,
-                            // width: cardWidth * 0.5,
-                            child: Column(
-                          children: [
-                            Container(
-                              height: widgetHeight * 0.06,
-                              // color: Colors.green,
-                              child: Center(
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                        child: Container(
-                                      // color: Colors.red,
-                                      height: widgetHeight * 0.06,
-                                      child: TextField(
-                                        controller: trainNameController,
-                                        textAlign: TextAlign.center,
-                                        decoration: const InputDecoration(
-                                          hintText: 'のぞみ',
-                                          border: InputBorder.none,
-                                        ),
-                                        style: TextStyle(
-                                          fontFamily: 'Ds-Digi',
-                                          fontSize: widgetHeight * 0.02,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        onChanged: (value) {
-                                          // Handle the input text change here if needed
-                                        },
-                                      ),
-                                    )),
-                                    Container(
-                                      height: widgetHeight * 0.06,
-                                      child: const Text('-'),
-                                    ),
-                                    Expanded(
-                                        child: SizedBox(
-                                      height: widgetHeight * 0.06,
-                                      child: TextField(
-                                        controller: trainNumberController,
-                                        textAlign: TextAlign.center,
-                                        decoration: const InputDecoration(
-                                          hintText: '12',
-                                          border: InputBorder.none,
-                                        ),
-                                        style: TextStyle(
-                                          fontFamily: 'Ds-Digi',
-                                          fontSize: widgetHeight * 0.02,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        onChanged: (value) {
-                                          // Handle the input text change here if needed
-                                        },
-                                      ),
-                                    )),
-                                    Container(
-                                      height: widgetHeight * 0.06,
-                                      child: const Text('号'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Container(
-                              height: widgetHeight * 0.01,
-                              child: Center(
-                                child: Divider(
-                                  indent: cardWidth * 0.05,
-                                  endIndent: cardWidth * 0.05,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              height: widgetHeight * 0.06,
-                              // color: Colors.green,
-                              child: Center(
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                        child: Container(
-                                      // color: Colors.red,
-                                      height: widgetHeight * 0.06,
-                                      child: TextField(
-                                        controller: carNumberController,
-                                        textAlign: TextAlign.center,
-                                        decoration: const InputDecoration(
-                                          hintText: '8',
-                                          border: InputBorder.none,
-                                        ),
-                                        style: TextStyle(
-                                          fontFamily: 'Ds-Digi',
-                                          fontSize: widgetHeight * 0.02,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        onChanged: (value) {
-                                          // Handle the input text change here if needed
-                                        },
-                                      ),
-                                    )),
-                                    Container(
-                                      height: widgetHeight * 0.06,
-                                      child: const Text('号車'),
-                                    ),
-                                    Expanded(
-                                        child: Container(
-                                      height: widgetHeight * 0.06,
-                                      child: TextField(
-                                        controller: rowNumberController,
-                                        textAlign: TextAlign.center,
-                                        decoration: const InputDecoration(
-                                          hintText: '8',
-                                          border: InputBorder.none,
-                                        ),
-                                        style: TextStyle(
-                                          fontFamily: 'Ds-Digi',
-                                          fontSize: widgetHeight * 0.02,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        onChanged: (value) {
-                                          // Handle the input text change here if needed
-                                        },
-                                      ),
-                                    )),
-                                    Container(
-                                      height: widgetHeight * 0.06,
-                                      child: const Text('番'),
-                                    ),
-                                    Expanded(
-                                        child: Container(
-                                      height: widgetHeight * 0.06,
-                                      child: TextField(
-                                        controller: seatNumberController,
-                                        textAlign: TextAlign.center,
-                                        decoration: const InputDecoration(
-                                          hintText: 'A',
-                                          border: InputBorder.none,
-                                        ),
-                                        style: TextStyle(
-                                          fontFamily: 'Ds-Digi',
-                                          fontSize: widgetHeight * 0.02,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        onChanged: (value) {
-                                          // Handle the input text change here if needed
-                                        },
-                                      ),
-                                    )),
-                                    Container(
-                                      height: widgetHeight * 0.06,
-                                      child: const Text('席'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        )),
-
-                        // Arrival
-                        Container(
-                          // color: Colors.green,
-                          width: cardWidth * 0.2,
-                          height: widgetHeight * 0.13,
-                          child: Column(
-                            children: [
-                              Container(
-                                height: widgetHeight * 0.08,
-                                child: Row(
-                                  children: [
-                                    const Spacer(),
-                                    Text(
-                                      '着',
-                                      style: TextStyle(
-                                        fontSize: widgetHeight * 0.05,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                width: cardWidth * 0.2,
-                                height: widgetHeight * 0.03,
-                                // color: Colors.red,
-                                child: Center(
-                                  child: TextField(
-                                    controller: arrivalTimeController,
-                                    textAlign: TextAlign.center,
-                                    decoration: const InputDecoration(
-                                      hintText: '07:36',
-                                      border: InputBorder.none,
-                                    ),
-                                    style: TextStyle(
-                                      fontFamily: 'Ds-Digi',
-                                      fontSize: widgetHeight * 0.02,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    onChanged: (value) {
-                                      // Handle the input text change here if needed
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                            ],
-                          ),
-                        ), // Arrival
-                      ],
-                    ),
-                  ),
-
-                  Container(
-                    height: widgetHeight * 0.015,
-                  ),
-
-                  // location --- location
-                  Container(
-                    width: cardWidth,
-                    // color: Colors.red,
-                    height: widgetHeight * 0.1,
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        // Center horizontally
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        // Center vertically
-                        children: [
-                          Expanded(
-                              child: Center(
-                            child: Container(
-                              height: widgetHeight * 0.1,
-                              // color: Colors.green,
-                              child: TextField(
-                                controller: departureStationController,
-                                textAlign: TextAlign.center,
-                                decoration: const InputDecoration(
-                                  hintText: '東京',
-                                  border: InputBorder.none,
-                                ),
-                                style: TextStyle(
-                                    height: 1,
-                                    fontSize: widgetHeight * 0.05,
-                                    fontWeight: FontWeight.bold),
-                                onChanged: (value) {
-                                  // Handle the input text change here if needed
-                                },
-                              ),
-                            ),
-                          )),
-                          Text(
-                            '---',
-                            style: TextStyle(
-                                height: 1,
-                                fontSize: widgetHeight * 0.06,
-                                fontWeight: FontWeight.bold),
-                          ),
-                          Expanded(
-                              child: Center(
-                            child: Container(
-                              height: widgetHeight * 0.1,
-                              child: TextField(
-                                controller: arrivalStationController,
-                                textAlign: TextAlign.center,
-                                decoration: const InputDecoration(
-                                  hintText: '秋田',
-                                  border: InputBorder.none,
-                                ),
-                                style: TextStyle(
-                                    height: 1,
-                                    fontSize: widgetHeight * 0.05,
-                                    fontWeight: FontWeight.bold),
-                                onChanged: (value) {
-                                  // Handle the input text change here if needed
-                                },
-                              ),
-                            ),
-                          )),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // spacer
-                  Container(
-                    height: widgetHeight * 0.02,
-                  ),
-
-                  DottedLine(
-                    direction: Axis.horizontal,
-                    lineLength: cardWidth * 0.9,
-                    lineThickness: cardWidth * 0.012,
-                    dashLength: cardWidth * 0.012,
-                    dashColor: Colors.black,
-                    // dashGradient: const [Colors.red, Colors.blue],
-                    dashRadius: 100.0,
-                    // dashGapLength: 0.003,
-                    // dashGapColor: Colors.transparent,
-                    // dashGapGradient: const [Colors.red, Colors.blue],
-                    // dashGapRadius: 0.0,
-                  ),
-
-                  // spacer
-                  Container(
-                    height: widgetHeight * 0.02,
-                  ),
-
-                  Container(
-                    // color: config.bottom,
-                    height: widgetHeight * 0.14,
-                    width: cardWidth,
-                    child: Container(
-                      // color: Colors.green,
-                      child: Row(
-                        // mainAxisAlignment: ,
-                        children: [
-                          Container(
-                            // color: Colors.red,
-                            width: cardWidth * 0.15,
-                            child: RotatedBox(
-                                quarterTurns: 3,
-                                child: Column(
-                                  children: [
-                                    // ## bottle location
-                                    Text('JAPAN',
-                                        style: TextStyle(
-                                            fontSize: widgetHeight * 0.03,
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                )),
-                          ),
-                          const Spacer(),
-                          Container(
-                            // color: Colors.red,
-                            width: cardWidth * 0.4,
-                            height: widgetHeight * 0.14,
-                            child: Row(children: barcode),
-                          )
-                        ],
-                      ),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          )),
-    );
-  }
-}
-
-class AddAttractionView extends StatelessWidget {
-  final double widgetHeight;
-  final double screenWidth;
-  final double cardWidth;
-  final List<Widget> barcode;
-
-  final TextEditingController nameController;
-  final TextEditingController memoController;
-
-  final TextEditingController locationController;
-  final TextEditingController dateController;
-  final TextEditingController departureTimeController;
-  final TextEditingController arrivalTimeController;
-
-  final TextEditingController departureStationController;
-  final TextEditingController arrivalStationController;
-
-  AddAttractionView({
-    Key? key,
-    required this.widgetHeight,
-    required this.screenWidth,
-    required this.cardWidth,
-  })  : nameController = TextEditingController(),
-        memoController = TextEditingController(),
-        locationController = TextEditingController(),
-        dateController = TextEditingController(
-          text:
-              '${DateTime.now().year}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().day.toString().padLeft(2, '0')}',
-        ),
-        departureTimeController = TextEditingController(),
-        arrivalTimeController = TextEditingController(),
-        departureStationController = TextEditingController(),
-        arrivalStationController = TextEditingController(),
-        barcode = _generateBarcode(cardWidth),
-        super(key: key);
-
-  static List<Widget> _generateBarcode(double cardWidth) {
-    List<Widget> barcode = [];
-    double barcodeWidth = 0;
-
-    while (barcodeWidth < 0.9) {
-      double widthPercentage = math.Random().nextInt(10) * 0.006;
-      barcodeWidth += widthPercentage;
-      barcode.add(
-        VerticalDivider(
-          thickness: cardWidth *
-              0.4 *
-              widthPercentage *
-              math.Random().nextInt(10) *
-              0.1,
-          width: cardWidth * 0.4 * widthPercentage,
-          color: Colors.black,
-        ),
-      );
-    }
-
-    return barcode;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Card(
-          elevation: 2.5,
-          color: config.ticketBackground,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          child: Container(
-            height: widgetHeight,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
-              child: Column(
-                children: [
-                  // memo
-                  Card(
-                    shape: BeveledRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.5),
-                    ),
-                    child: Container(
-                        decoration: BoxDecoration(
-                            color: config.memoWhite,
-                            borderRadius: BorderRadius.circular(10.5)),
-                        width: cardWidth,
-                        height: widgetHeight * 0.5,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
-                          child: Column(
-                            children: [
-                              Container(
-                                  height: widgetHeight * 0.25,
-                                  child: SingleChildScrollView(
-                                      child: Padding(
-                                    padding:
-                                        const EdgeInsets.fromLTRB(20, 5, 15, 5),
-                                    child: TextField(
-                                      controller: memoController,
-                                      decoration: const InputDecoration(
-                                        hintText: 'Leave your memo here',
-                                        border: InputBorder.none,
-                                      ),
-                                      style: const TextStyle(fontSize: 16),
-                                      onChanged: (value) {
-                                        // Handle the input text change here if needed
-                                      },
-                                    ),
-                                  ))),
-                              Spacer(),
-
-                              // date
-                              Container(
-                                height: widgetHeight * 0.05,
-                                width: cardWidth,
-                                // color: Colors.green,
-                                child: Row(
-                                  children: [
-                                    const Spacer(),
-                                    Container(
-                                      width: cardWidth * 0.8,
-                                      // color: Colors.red,
-                                      alignment: Alignment.bottomCenter,
-                                      child: TextField(
-                                        controller: dateController,
-                                        textAlign: TextAlign.right,
-                                        decoration: const InputDecoration(
-                                          hintText: '2024/01/12',
-                                          border: InputBorder.none,
-                                        ),
-                                        style: const TextStyle(
-                                            fontFamily: 'Ds-Digi',
-                                            fontSize: 16),
-                                        onChanged: (value) {
-                                          // Handle the input text change here if needed
-                                        },
-                                      ),
-                                    ),
-                                    Spacer(),
-                                  ],
-                                ),
-                              ),
-
-                              // location
-                              Container(
-                                height: widgetHeight * 0.05,
-                                width: cardWidth,
-                                child: Row(
-                                  children: [
-                                    const Spacer(),
-                                    Container(
-                                      width: cardWidth * 0.8,
-                                      // color: Colors.green,
-                                      child: TextField(
-                                        controller: locationController,
-                                        textAlign: TextAlign.right,
-                                        decoration: const InputDecoration(
-                                          hintText: '35.6226077, 139.7210550',
-                                          border: InputBorder.none,
-                                        ),
-                                        style: const TextStyle(
-                                            fontFamily: 'Ds-Digi',
-                                            fontSize: 16),
-                                        onChanged: (value) {
-                                          // Handle the input text change here if needed
-                                        },
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
-                  ),
-
-                  // Departure Time --- Arrival Time
-                  Container(
-                    // color: Colors.green,
-                    height: widgetHeight * 0.13,
-                    width: cardWidth,
-                    child: Row(
-                      children: [
-                        // Departure
-                        Container(
-                          // color: Colors.green,
-                          width: cardWidth * 0.2,
-                          height: widgetHeight * 0.13,
-                          child: Column(
-                            children: [
-                              Container(
-                                height: widgetHeight * 0.08,
-                                child: Row(
-                                  children: [
-                                    Spacer(),
-                                    Text(
-                                      '到',
-                                      style: TextStyle(
-                                        fontSize: widgetHeight * 0.05,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                width: cardWidth * 0.2,
-                                height: widgetHeight * 0.03,
-                                // color: Colors.red,
-                                child: Center(
-                                  child: TextField(
-                                    controller: departureTimeController,
-                                    textAlign: TextAlign.center,
-                                    decoration: const InputDecoration(
-                                      hintText: '07:36',
-                                      border: InputBorder.none,
-                                    ),
-                                    style: TextStyle(
-                                      fontFamily: 'Ds-Digi',
-                                      fontSize: widgetHeight * 0.02,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    onChanged: (value) {
-                                      // Handle the input text change here if needed
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                            ],
-                          ),
-                        ),
-
-                        Expanded(
-                            child: Column(
-                          children: [
-                            SizedBox(height: widgetHeight * 0.03),
-                            Container(
-                              height: widgetHeight * 0.06,
-                              // color: Colors.green,
-                              child: Center(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  // Center horizontally
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  // Center vertically
-                                  children: [
-                                    Container(
-                                      width: cardWidth * 0.4,
-                                      // height: widgetHeight * 0.05,
-                                      // color: Colors.red,
-                                      child: TextField(
-                                        controller: departureStationController,
-                                        textAlign: TextAlign.center,
-                                        decoration: const InputDecoration(
-                                          hintText: '最近車站',
-                                          border: InputBorder.none,
-                                        ),
-                                        style: TextStyle(
-                                            height: 1,
-                                            fontSize: widgetHeight * 0.03,
-                                            fontWeight: FontWeight.bold),
-                                        onChanged: (value) {
-                                          // Handle the input text change here if needed
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Container(
-                              height: widgetHeight * 0.005,
-                              child: Center(
-                                child: Divider(
-                                  indent: cardWidth * 0.05,
-                                  endIndent: cardWidth * 0.05,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                            Container(
-                                // height: widgetHeight * 0.03,
-                                // // color: Colors.green,
-                                // child: Center(),
-                                ),
-                          ],
-                        )),
-
-                        // Arrival
-                        Container(
-                          // color: Colors.green,
-                          width: cardWidth * 0.2,
-                          height: widgetHeight * 0.13,
-                          child: Column(
-                            children: [
-                              Container(
-                                height: widgetHeight * 0.08,
-                                child: Row(
-                                  children: [
-                                    const Spacer(),
-                                    Text(
-                                      '離',
-                                      style: TextStyle(
-                                        fontSize: widgetHeight * 0.05,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                width: cardWidth * 0.2,
-                                height: widgetHeight * 0.03,
-                                // color: Colors.red,
-                                child: Center(
-                                  child: TextField(
-                                    controller: arrivalTimeController,
-                                    textAlign: TextAlign.center,
-                                    decoration: const InputDecoration(
-                                      hintText: '07:36',
-                                      border: InputBorder.none,
-                                    ),
-                                    style: TextStyle(
-                                      fontFamily: 'Ds-Digi',
-                                      fontSize: widgetHeight * 0.02,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    onChanged: (value) {
-                                      // Handle the input text change here if needed
-                                    },
-                                  ),
-                                ),
-                              ),
-                              Spacer(),
-                            ],
-                          ),
-                        ), // Arrival
-                      ],
-                    ),
-                  ),
-
-                  Container(
-                    height: widgetHeight * 0.015,
-                  ),
-
-                  // location --- location
-                  Container(
-                    width: cardWidth,
-                    // color: Colors.red,
-                    height: widgetHeight * 0.1,
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        // Center horizontally
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        // Center vertically
-                        children: [
-                          Container(
-                            width: cardWidth * 0.5,
-                            height: widgetHeight * 0.1,
-                            // color: Colors.green,
-                            child: TextField(
-                              controller: nameController,
-                              textAlign: TextAlign.center,
-                              decoration: InputDecoration(
-                                hintText: '景點名',
-                                border: InputBorder.none,
-                              ),
-                              style: TextStyle(
-                                  height: 1,
-                                  fontSize: widgetHeight * 0.05,
-                                  fontWeight: FontWeight.bold),
-                              onChanged: (value) {
-                                // Handle the input text change here if needed
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // spacer
-                  Container(
-                    height: widgetHeight * 0.02,
-                  ),
-
-                  DottedLine(
-                    direction: Axis.horizontal,
-                    lineLength: cardWidth * 0.9,
-                    lineThickness: cardWidth * 0.012,
-                    dashLength: cardWidth * 0.012,
-                    dashColor: Colors.black,
-                    // dashGradient: const [Colors.red, Colors.blue],
-                    dashRadius: 100.0,
-                    // dashGapLength: 0.003,
-                    // dashGapColor: Colors.transparent,
-                    // dashGapGradient: const [Colors.red, Colors.blue],
-                    // dashGapRadius: 0.0,
-                  ),
-
-                  // spacer
-                  Container(
-                    height: widgetHeight * 0.02,
-                  ),
-
-                  Container(
-                    height: widgetHeight * 0.14,
-                    width: cardWidth,
-                    child: Container(
-                      // color: Colors.green,
-                      child: Row(
-                        // mainAxisAlignment: ,
-                        children: [
-                          Container(
-                            // color: Colors.red,
-                            width: cardWidth * 0.25,
-                            child: RotatedBox(
-                                quarterTurns: 3,
-                                child: Column(
-                                  children: [
-                                    Center(
-                                      child: Text('JAPAN',
-                                          style: TextStyle(
-                                              fontSize: widgetHeight * 0.03,
-                                              fontWeight: FontWeight.bold)),
-                                    )
-                                  ],
-                                )),
-                          ),
-                          const Spacer(),
-                          Container(
-                            // color: Colors.red,
-                            width: cardWidth * 0.4,
-                            height: widgetHeight * 0.14,
-                            child: Row(children: barcode),
-                          )
-                        ],
-                      ),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          )),
-    );
   }
 }
 
