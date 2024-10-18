@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/material.dart';
+
 const double pulseAmplitude = 3;
 const Color themeColor = Color.fromRGBO(255, 253, 244, 1.0);
 const Color redJP = Color(0xFFFEBFCD);
@@ -19,14 +21,10 @@ const Color themeColorBackGround = Color.fromRGBO(255, 253, 249, 1);
 
 const Color themeColorShadow = Color.fromRGBO(243, 243, 228, 1.0);
 
-
-// darg green
-// const Color memoWhite = Color.fromARGB(200, 163, 186, 156);
-// const Color ticketBackground = Color.fromARGB(255, 163, 186, 156);
-
 const Color memoWhite = Color.fromARGB(100, 163, 186, 156);
-// const Color ticketBackground =  Color.fromARGB(255, 163, 186, 156);
-const Color ticketBackground = Color(0xF064948c);
+const Color ticketBackground1 = Color(0xF064948c);
+const Color ticketBackground = Colors.white;
+
 
 const Color bottom = Color.fromRGBO(255, 253, 249, 0.9254901960784314);
 

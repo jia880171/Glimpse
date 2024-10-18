@@ -34,7 +34,7 @@ class Attraction {
     required this.departureStation,
     required this.isVisited,
     required this.isNavigating,
-    required this.isVisiting,
+    required this.isVisiting, double? distance,
   });
 
   factory Attraction.withAutoIncrement({
@@ -76,19 +76,54 @@ class Attraction {
     return {
       'id': id,
       'sequenceNumber': sequenceNumber,
-      // Default value, will be set dynamically during insertion
       'name': name,
       'memo': memo,
       'latitude': latitude,
       'longitude': longitude,
       'date': date,
-      'departureTime': departureTime,
       'arrivalTime': arrivalTime,
-      'departureStation': departureStation,
+      'departureTime': departureTime,
       'arrivalStation': arrivalStation,
-      'isVisited': isVisited,
-      'isNavigating': isNavigating,
-      'isVisiting': isVisiting,
+      'departureStation': departureStation,
+      'isVisited': isVisited ? 1 : 0, // Convert bool to int
+      'isNavigating': isNavigating ? 1 : 0, // Convert bool to int
+      'isVisiting': isVisiting ? 1 : 0, // Convert bool to int
     };
+  }
+
+  Attraction copyWith({
+    int? id,
+    int? sequenceNumber,
+    String? name,
+    String? memo,
+    String? date,
+    double? latitude,
+    double? longitude,
+    String? arrivalTime,
+    String? departureTime,
+    String? arrivalStation,
+    String? departureStation,
+    double? distance,
+    bool? isVisited,
+    bool? isNavigating,
+    bool? isVisiting,
+  }) {
+    return Attraction(
+      id: id ?? this.id,
+      sequenceNumber: sequenceNumber ?? this.sequenceNumber,
+      name: name ?? this.name,
+      memo: memo ?? this.memo,
+      date: date ?? this.date,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      arrivalTime: arrivalTime ?? this.arrivalTime,
+      departureTime: departureTime ?? this.departureTime,
+      arrivalStation: arrivalStation ?? this.arrivalStation,
+      departureStation: departureStation ?? this.departureStation,
+      distance: distance ?? this.distance,
+      isVisited: isVisited ?? this.isVisited,
+      isNavigating: isNavigating ?? this.isNavigating,
+      isVisiting: isVisiting ?? this.isVisiting,
+    );
   }
 }

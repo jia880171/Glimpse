@@ -453,19 +453,33 @@ class AddAttractionView extends StatelessWidget {
                     height: widgetHeight * 0.02,
                   ),
 
-                  DottedLine(
-                    direction: Axis.horizontal,
-                    lineLength: cardWidth * 0.9,
-                    lineThickness: cardWidth * 0.012,
-                    dashLength: cardWidth * 0.012,
-                    dashColor: Colors.black,
-                    // dashGradient: const [Colors.red, Colors.blue],
-                    dashRadius: 100.0,
-                    // dashGapLength: 0.003,
-                    // dashGapColor: Colors.transparent,
-                    // dashGapGradient: const [Colors.red, Colors.blue],
-                    // dashGapRadius: 0.0,
+                  SizedBox(
+                    width: cardWidth,
+                    height: widgetHeight * 0.012,
+                    child: Divider(
+                      thickness:
+                      widgetHeight * 0.002,
+                      indent: cardWidth * 0.02,
+                      endIndent:
+                      cardWidth * 0.02,
+                      // color: Colors.white,
+                      color: Colors.black,
+                    ),
                   ),
+
+                  // DottedLine(
+                  //   direction: Axis.horizontal,
+                  //   lineLength: cardWidth * 0.9,
+                  //   lineThickness: cardWidth * 0.012,
+                  //   dashLength: cardWidth * 0.012,
+                  //   dashColor: Colors.black,
+                  //   // dashGradient: const [Colors.red, Colors.blue],
+                  //   dashRadius: 100.0,
+                  //   // dashGapLength: 0.003,
+                  //   // dashGapColor: Colors.transparent,
+                  //   // dashGapGradient: const [Colors.red, Colors.blue],
+                  //   // dashGapRadius: 0.0,
+                  // ),
 
                   // spacer
                   Container(

@@ -51,11 +51,24 @@ class AttractionDatabaseHelper {
 
   Future<int> updateAttraction(Attraction attraction) async {
     final db = await database;
+    print('====== attraction_db.dart');
+    print('======attraction, arr: ${attraction.arrivalTime}');
+    print('======attraction, dep: ${attraction.departureTime}');
+
     return await db.update(
       tableName,
       attraction.toMap(),
       where: 'id = ?',
       whereArgs: [attraction.id],
+    );
+  }
+
+  Future<int> deleteAttraction(int id) async {
+    final db = await database;
+    return await db.delete(
+      tableName,
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 

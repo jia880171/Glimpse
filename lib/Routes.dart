@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'CreateGlimpse.dart';
+import 'create_glimpse.dart';
 
 class Routes {
   static final Map<String, WidgetBuilder> routes = {
