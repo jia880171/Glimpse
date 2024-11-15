@@ -11,6 +11,9 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 
 import 'package:geolocator/geolocator.dart';
+import 'package:glimpse/perpetual_view.dart';
+import 'package:photo_manager/photo_manager.dart';
+import ' waterfall_view.dart';
 import './config.dart' as config;
 import 'attractions_view.dart';
 import 'bottom_tourist_list_view.dart';
@@ -69,6 +72,13 @@ class _MyHomePageState extends State<MyHomePage> {
   bool isDisplayAttractionsView = false;
   bool hideUsedTickets = false;
 
+  int year = 2024;
+  int month = 1;
+  int day = 1;
+  int glimpseCount = 0;
+
+  late DateTime selectedDate;
+
   // var mode = Modes.chasingAttraction;
 
   // Taiwan
@@ -99,7 +109,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void updateVisitingAttraction(Attraction attraction) {
     setState(() {
-      print('====== updating visiting target');
       visitingAttraction = attraction;
     });
   }
@@ -117,6 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
     print('====== main init');
     fetchTickets();
     fetchAttractions();
+    selectedDate = DateTime(year, month, day);
   }
 
   Future<void> fetchTickets() async {
@@ -144,12 +154,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
       for (Attraction attraction in attractions) {
         print('====== [fetchAttractions]attraction: ${attraction.name}');
-        print('====== [fetchAttractions]attraction is visited: ${attraction.isVisited}');
+        print(
+            '====== [fetchAttractions]attraction is visited: ${attraction.isVisited}');
 
-
-        print('====== [fetchAttractions]attraction arr: ${attraction.arrivalTime}');
-        print('====== [fetchAttractions]attraction dep: ${attraction.departureTime}');
-
+        print(
+            '====== [fetchAttractions]attraction arr: ${attraction.arrivalTime}');
+        print(
+            '====== [fetchAttractions]attraction dep: ${attraction.departureTime}');
 
         if (attraction.isVisited == true) {
           print('====== [fetchAttractions] find new visited attraction');
@@ -367,6 +378,22 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void setDate(int year, int month, int day) {
+    setState(() {
+      this.year = year;
+      this.month = month;
+      this.day = day;
+      selectedDate = DateTime(year, month, day);
+    });
+  }
+
+  void setGlimpseCount(int count) {
+    setState(() {
+      glimpseCount = count;
+
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
@@ -444,15 +471,30 @@ class _MyHomePageState extends State<MyHomePage> {
                         right: 0,
                         child: Stack(
                           children: [
-                            ChasingView(
-                                toggleChasingMode,
-                                screenHeight,
-                                screenWidth,
+                            // PerpetualView(
+                            //     screenHeight * 0.38, screenWidth, home, setDate)
+
+                            // rotate it
+                            Transform.rotate(
+                              angle: 90 * 3.1415926535897932 / 180,
+                              child: PerpetualView(
                                 screenHeight * 0.38,
-                                20.0,
-                                10.0,
+                                screenWidth,
                                 home,
-                                visitingAttraction),
+                                setDate,
+                              ),
+                            )
+
+                            // 指北針
+                            // ChasingView(
+                            //     toggleChasingMode,
+                            //     screenHeight,
+                            //     screenWidth,
+                            //     screenHeight * 0.38,
+                            //     20.0,
+                            //     10.0,
+                            //     home,
+                            //     visitingAttraction),
                           ],
                         ),
                       ),
@@ -466,24 +508,47 @@ class _MyHomePageState extends State<MyHomePage> {
                             height: screenHeight,
                             child: Column(
                               children: [
-                                // Title
-                                VisitingText(
-                                    visitingAttraction, clickAddButton),
+                                // 景點列表
+                                // VisitingText(
+                                //     visitingAttraction, clickAddButton),
+                                //
+                                // BottomTouristList(
+                                //     screenHeight,
+                                //     screenWidth,
+                                //     attractions,
+                                //     attractionDatabaseHelper,
+                                //     home,
+                                //     updateVisitingAttraction,
+                                //     toggleDisplayAttractionsView)
 
-                                BottomTouristList(
-                                    screenHeight,
-                                    screenWidth,
-                                    attractions,
-                                    attractionDatabaseHelper,
-                                    home,
-                                    updateVisitingAttraction,
-                                    toggleDisplayAttractionsView)
+                                Transform.rotate(
+                                  angle: 0 * 3.1415926535897932 / 180,
+                                  child: Container(
+                                      color: Colors.black,
+                                      width: screenHeight - screenWidth,
+                                      height: screenWidth,
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            color: Colors.black,
+                                            height: screenWidth,
+                                            width: screenHeight - screenWidth,
+                                            child: WaterfallView(
+                                              selectedDate: selectedDate,
+                                            ),
+                                          )
+                                        ],
+                                      )),
+                                ),
                               ],
                             ),
                           )
                         ] else if (isDisplayAttractionsView) ...[
-                          AttractionsView(clickedAttraction,
-                              toggleDisplayAttractionsView, attractions, fetchAttractions)
+                          AttractionsView(
+                              clickedAttraction,
+                              toggleDisplayAttractionsView,
+                              attractions,
+                              fetchAttractions)
                         ]
                       ]
                       // Display Tickets

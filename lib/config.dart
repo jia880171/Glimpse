@@ -12,6 +12,20 @@ const Color border = Color(0x00000000);
 const Color backGroundWhite = Color(0xfff1f1f0);
 const Color ticketWhite = Color.fromARGB(255, 255, 255, 255);
 
+// red
+// const Color dragButton = Color.fromARGB(255, 195, 14, 14);
+
+const Color dragButton = Color.fromARGB(255, 242, 160, 90);
+
+
+// orange
+const Color dragButtonOrange = Color.fromARGB(255, 238, 149, 101);
+
+// black
+// const Color dragButton = Color.fromARGB(255, 34, 32, 32);
+
+
+
 const Color floatBlue = Color(0xFF9FC99D);
 const Color flagRed = Color(0xFFb97f82);
 
