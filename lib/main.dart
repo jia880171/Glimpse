@@ -71,6 +71,11 @@ class _MyHomePageState extends State<MyHomePage> {
   bool isChasingMode = true;
   bool isDisplayAttractionsView = false;
   bool hideUsedTickets = false;
+  bool isShowFilms = true;
+
+  double panelScale = 1;
+  bool isPanelBig = true;
+  Timer? _timer;
 
   int year = 2024;
   int month = 1;
@@ -80,6 +85,22 @@ class _MyHomePageState extends State<MyHomePage> {
   late DateTime selectedDate;
 
   // var mode = Modes.chasingAttraction;
+
+  void startCountdown() {
+    print('====== start timer');
+
+    // 如果已有倒计时，先取消
+    _timer?.cancel();
+
+    // 启动一个新的倒计时
+    _timer = Timer(const Duration(milliseconds: 3500), () {
+      print('======== times up');
+      setState(() {
+        isPanelBig = false;
+        panelScale = 0.3; // 可根据需要调整
+      });
+    });
+  }
 
   // Taiwan
   Attraction home = Attraction(
@@ -99,7 +120,28 @@ class _MyHomePageState extends State<MyHomePage> {
 
   late Attraction clickedAttraction;
 
-  late Attraction visitingAttraction = home;
+  late Attraction visitingAttraction;
+
+  void makePanelSmall() {
+    setState(() {
+      if (isPanelBig) {
+        isPanelBig = false;
+        panelScale = 0.3;
+      }
+    });
+  }
+
+  void _togglePanel() {
+    print('====== _togglePanel is triggered');
+    startCountdown();
+
+    setState(() {
+      if (!isPanelBig) {
+        isPanelBig = true;
+        panelScale = 1;
+      }
+    });
+  }
 
   void updateHome(Attraction attraction) {
     setState(() {
@@ -127,6 +169,8 @@ class _MyHomePageState extends State<MyHomePage> {
     fetchTickets();
     fetchAttractions();
     selectedDate = DateTime(year, month, day);
+    visitingAttraction = home;
+    startCountdown();
   }
 
   Future<void> fetchTickets() async {
@@ -147,30 +191,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
     setState(() {
       attractions = fetchedAttractions;
-      print('====== [fetchAttractions]fetched attractions: $attractions');
 
       // Find the last visited attraction and use it to refresh visiting attraction.
       var lastVisitedAttraction = home;
 
       for (Attraction attraction in attractions) {
-        print('====== [fetchAttractions]attraction: ${attraction.name}');
-        print(
-            '====== [fetchAttractions]attraction is visited: ${attraction.isVisited}');
-
-        print(
-            '====== [fetchAttractions]attraction arr: ${attraction.arrivalTime}');
-        print(
-            '====== [fetchAttractions]attraction dep: ${attraction.departureTime}');
-
         if (attraction.isVisited == true) {
-          print('====== [fetchAttractions] find new visited attraction');
           lastVisitedAttraction = attraction;
         }
       }
 
       updateVisitingAttraction(lastVisitedAttraction);
-
-      print('====== [fetchAttractions]visiting refreshed');
     });
   }
 
@@ -184,7 +215,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void toggleChasingMode() {
-    print('======Chasing mode toggled');
     setState(() {
       isChasingMode = !isChasingMode;
     });
@@ -390,7 +420,6 @@ class _MyHomePageState extends State<MyHomePage> {
   void setGlimpseCount(int count) {
     setState(() {
       glimpseCount = count;
-
     });
   }
 
@@ -417,210 +446,62 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Scaffold(
           body: SingleChildScrollView(
             child: Container(
+              width: screenWidth,
               height: screenHeight,
-              color: config.backGroundWhite,
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      Container(
-                        // color: Colors.lightBlue,
-                        height: screenHeight,
+              // color: config.backGroundWhite,
+              child: Stack(
+
+                  children: [
+                // Container(
+                //   color: Colors.red,
+                //   height: screenHeight,
+                //   width: screenWidth,
+                // ),
+
+                Opacity(
+                  opacity: (isShowFilms == true) ? 1.0 : 0.0,
+                  // opacity: 1.0,
+                  child: Transform.rotate(
+                    angle: 0 * 3.1415926535897932 / 180,
+                    child: Container(
+                      width: screenWidth,
+                      height: screenHeight,
+                      child: WaterfallView(
+                        selectedDate: selectedDate,
+                        setGlimpseCount: setGlimpseCount,
                       ),
-
-                      // This is the G button for navigating to the Glimpse page.
-                      Positioned(
-                        top: screenHeight * 0.05,
-                        left: screenWidth * 0.05,
-                        child: NeumorphicButton(
-                            style: const NeumorphicStyle(
-                                shape: NeumorphicShape.flat,
-                                boxShape: NeumorphicBoxShape.circle(),
-                                intensity: 0.8,
-                                depth: 1,
-                                lightSource: LightSource.topLeft,
-                                color: config.backGroundWhite,
-                                border: NeumorphicBorder(
-                                  color: config.border,
-                                  width: 0.3,
-                                )),
-                            onPressed: () {
-                              Navigator.pushNamed(context, '/createGlimpse');
-                            },
-                            child: SizedBox(
-                              // color: Colors.red,
-                              height: (screenHeight) * 0.03,
-                              width: (screenHeight) * 0.03,
-
-                              child: Center(
-                                  child: SizedBox(
-                                      // color: Colors.red,
-                                      height: (screenHeight) * 0.03,
-                                      width: (screenHeight) * 0.03,
-                                      child: const Center(
-                                          child: Text(
-                                        'G',
-                                        style: TextStyle(fontSize: 20),
-                                      )))),
-                            )),
-                      ),
-
-                      Positioned(
-                        top: screenHeight * 0.1,
-                        left: 0,
-                        right: 0,
-                        child: Stack(
-                          children: [
-                            // PerpetualView(
-                            //     screenHeight * 0.38, screenWidth, home, setDate)
-
-                            // rotate it
-                            Transform.rotate(
-                              angle: 90 * 3.1415926535897932 / 180,
-                              child: PerpetualView(
-                                screenHeight * 0.38,
-                                screenWidth,
-                                home,
-                                setDate,
-                              ),
-                            )
-
-                            // 指北針
-                            // ChasingView(
-                            //     toggleChasingMode,
-                            //     screenHeight,
-                            //     screenWidth,
-                            //     screenHeight * 0.38,
-                            //     20.0,
-                            //     10.0,
-                            //     home,
-                            //     visitingAttraction),
-                          ],
-                        ),
-                      ),
-
-                      if (isChasingMode) ...[
-                        if (!isDisplayAttractionsView) ...[
-                          Positioned(
-                            top: screenHeight * 0.5,
-                            left: 0,
-                            right: 0,
-                            height: screenHeight,
-                            child: Column(
-                              children: [
-                                // 景點列表
-                                // VisitingText(
-                                //     visitingAttraction, clickAddButton),
-                                //
-                                // BottomTouristList(
-                                //     screenHeight,
-                                //     screenWidth,
-                                //     attractions,
-                                //     attractionDatabaseHelper,
-                                //     home,
-                                //     updateVisitingAttraction,
-                                //     toggleDisplayAttractionsView)
-
-                                Transform.rotate(
-                                  angle: 0 * 3.1415926535897932 / 180,
-                                  child: Container(
-                                      color: Colors.black,
-                                      width: screenHeight - screenWidth,
-                                      height: screenWidth,
-                                      child: Column(
-                                        children: [
-                                          Container(
-                                            color: Colors.black,
-                                            height: screenWidth,
-                                            width: screenHeight - screenWidth,
-                                            child: WaterfallView(
-                                              selectedDate: selectedDate,
-                                            ),
-                                          )
-                                        ],
-                                      )),
-                                ),
-                              ],
-                            ),
-                          )
-                        ] else if (isDisplayAttractionsView) ...[
-                          AttractionsView(
-                              clickedAttraction,
-                              toggleDisplayAttractionsView,
-                              attractions,
-                              fetchAttractions)
-                        ]
-                      ]
-                      // Display Tickets
-                      else if (!isChasingMode) ...[
-                        Positioned(
-                          // top: screenHeight * 0.25,
-                          left: 0,
-                          right: 0,
-                          child: Container(
-                              height: screenHeight,
-                              color: const Color.fromARGB(239, 255, 255, 255),
-                              child: Stack(
-                                children: [
-                                  Positioned(
-                                      top: screenHeight * 0.05,
-                                      child: BackButton(
-                                        onPressed: () => {toggleChasingMode()},
-                                      )),
-                                  Column(
-                                    children: [
-                                      // SizedBox(height: screenHeight * 0.1),
-                                      const Spacer(),
-                                      ticketsView,
-                                      const Spacer(),
-
-                                      // SizedBox(height: screenHeight * 0.05)
-                                    ],
-                                  ),
-                                ],
-                              )),
-                        )
-                      ]
-                    ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+
+                // panel
+                Positioned(
+                  bottom: screenHeight * 0.02,
+                  left: 0,
+                  child: GestureDetector(
+                    onTap: _togglePanel,
+                    child: AnimatedScale(
+                      scale: panelScale,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      child: Transform.rotate(
+                        angle: 0 * 3.1415926535897932 / 180,
+                        child: PerpetualView(
+                            screenHeight * 0.38,
+                            screenWidth,
+                            home,
+                            setDate,
+                            glimpseCount,
+                            isPanelBig,
+                            makePanelSmall,
+                            startCountdown),
+                      ),
+                    ),
+                  ),
+                )
+              ]),
             ),
           ),
-          floatingActionButton: !isDisplayAttractionsView
-              ? Padding(
-                  padding: const EdgeInsets.only(top: 20.0),
-                  child: NeumorphicButton(
-                      style: const NeumorphicStyle(
-                          shape: NeumorphicShape.flat,
-                          boxShape: NeumorphicBoxShape.circle(),
-                          intensity: 0.8,
-                          depth: 1,
-                          lightSource: LightSource.topLeft,
-                          color: config.backGroundWhite,
-                          border: NeumorphicBorder(
-                            color: config.border,
-                            width: 0.3,
-                          )),
-                      onPressed: () {
-                        clickAddButton(context, screenHeight, screenWidth);
-                        // widget.toggleChasingMode();
-                      },
-                      child: SizedBox(
-                        // color: Colors.red,
-                        height: (screenHeight) * 0.05,
-                        width: (screenHeight) * 0.05,
-
-                        child: Center(
-                            child: SizedBox(
-                                // color: Colors.red,
-                                height: (screenHeight) * 0.03,
-                                width: (screenHeight) * 0.03,
-                                child: const Center(child: Icon(Icons.add)))),
-                      )),
-                )
-              : null,
-          floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
         ),
       ),
     );
@@ -734,11 +615,6 @@ class _ChasingViewState extends State<ChasingView> {
 
     _getUserLocation(widget.home);
     _initCompass();
-
-    // if(widget.visitingAttraction != null){
-    //   print('====== visitingAttraction name: ${widget.visitingAttraction.name}');
-    //   print('====== visitingAttraction isVisiting: ${widget.visitingAttraction.isVisiting}');
-    // }
 
     // Set up a periodic timer to call _getUserLocation every 5 seconds
     _timer = Timer.periodic(Duration(seconds: fetchLocationIntervalSeconds),

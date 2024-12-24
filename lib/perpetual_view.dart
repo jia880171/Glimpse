@@ -13,9 +13,13 @@ class PerpetualView extends StatefulWidget {
   final double screenWidth;
   final Attraction home;
   final Function setDate;
+  final int glimpseCount;
+  final bool isTapped;
+  final Function makePanelSmall;
+  final Function startCountdown;
 
-  const PerpetualView(
-      this.perpetualViewHeight, this.screenWidth, this.home, this.setDate,
+  const PerpetualView(this.perpetualViewHeight, this.screenWidth, this.home,
+      this.setDate, this.glimpseCount, this.isTapped, this.makePanelSmall, this.startCountdown,
       {Key? key})
       : super(key: key);
 
@@ -30,18 +34,17 @@ class _PerpetualViewState extends State<PerpetualView> {
 
   AngleCalculator angleCalculator = AngleCalculator();
 
-  late double dx;
-  late double dy;
   double test = 0;
   late LightSource neumorphicLightSource;
-  late double dragObjectRadius;
-  late double smallSensorRadius;
+  late double radiusOfCenterMoniterCircle;
+  late double radiusOfDragObject;
   late double dentRadius;
   late double backgroundRadius;
-  late final double monthRadius;
+  late final double distanceFromMonthCenterToScreenCenter;
+  late final double distanceFromDayCenterToScreenCenter;
   late List<DisplayBottle> bottles;
 
-  late final double centerOfTargetToCenterPlusTargetRadius;
+  // late final double centerOfTargetToCenterPlusTargetRadius;
   late final double centerOfTargetToCenter;
 
   late final double centerX;
@@ -52,26 +55,69 @@ class _PerpetualViewState extends State<PerpetualView> {
   late Offset dragObjectPositionOfMonth;
   double degreeOfRotated12OClockPositionOfMonth = 0.0;
 
+  int daysInMonth = 31;
   int dragDay = 1;
   int dragMonth = 1;
   int dragYear = 2024;
 
   double _totalRotation = 0.0;
 
-  void calculateDragDay(degrees) {
-    // 計算 dragDay
-    double adjustedDegrees = degrees + 90; // 以 -90 為基準點
-    if (adjustedDegrees < 0) {
-      adjustedDegrees += 360; // 確保在 0 到 360 度之間
+  bool isAnimating = false;
+
+  int getDaysInMonth(int year, int month) {
+    int nextMonth = month == 12 ? 1 : month + 1;
+    int yearOfNextMonth = month == 12 ? year + 1 : year;
+
+    DateTime firstDayOfNextMonth = DateTime(yearOfNextMonth, nextMonth, 1);
+    DateTime lastDayOfCurrentMonth =
+        firstDayOfNextMonth.subtract(const Duration(days: 1));
+
+    return lastDayOfCurrentMonth.day;
+  }
+
+  void simulateShutterEffect() async {
+    setState(() {
+      isAnimating = true; // 啟動動畫
+    });
+
+    await Future.delayed(const Duration(milliseconds: 50)); // 模擬移動效果
+    setState(() {
+      isAnimating = false; // 停止動畫
+    });
+  }
+
+  double alignDegreeTo12OClock(double angleInDegrees) {
+    // Adjust the angle to align 12 o'clock as the 0-degree reference point.
+    // By default, angles are measured from the 3 o'clock position (0 degrees).
+    // Adding 90 degrees shifts the reference to 12 o'clock (previously -90 degrees).
+    double alignedDegrees = angleInDegrees + 90;
+
+    // Ensure the resulting angle stays within the range of 0 to 360 degrees.
+    if (alignedDegrees < 0) {
+      alignedDegrees += 360;
     }
+    return alignedDegrees;
+  }
+
+  double alignRadianTo3OClock(double radian) {
+    double adjustedRadians = radian - (math.pi / 2);
+    if (adjustedRadians < 0) {
+      adjustedRadians += 2 * math.pi;
+    }
+    return adjustedRadians;
+  }
+
+  void calculateDragDayByDegree(double degrees) {
+    // 計算 dragDay
+    double adjustedDegrees = alignDegreeTo12OClock(degrees);
 
     // 每一天的角度範圍
-    double degreesPerDay = 360 / 31;
+    double degreesPerDay = 360 / daysInMonth;
     dragDay = (adjustedDegrees / degreesPerDay).floor() + 1;
 
     // 確保 dragDay 在 1 到 31 之間
-    if (dragDay > 31) {
-      dragDay = 31;
+    if (dragDay > daysInMonth) {
+      dragDay = daysInMonth;
     } else if (dragDay < 1) {
       dragDay = 1;
     }
@@ -80,7 +126,7 @@ class _PerpetualViewState extends State<PerpetualView> {
     });
   }
 
-  void calculateDragMonth(degrees) {
+  void calculateDragMonthByDegree(double degrees) {
     final oldMonth = dragMonth;
 
     double adjustedDegrees = degrees + 90; // 以 -90 為基準點
@@ -129,7 +175,7 @@ class _PerpetualViewState extends State<PerpetualView> {
   double calculateDegreeBetween(Offset oldPosition, Offset newPosition) {
 // 使用一個固定旋轉中心，通常是畫布中心點
     final Offset center =
-        Offset(centerX - smallSensorRadius, centerY - smallSensorRadius);
+        Offset(centerX - radiusOfDragObject, centerY - radiusOfDragObject);
 
     // 計算兩個向量分別相對於中心的角度
     final double angleOfNewPosition = (newPosition - center).direction;
@@ -152,7 +198,6 @@ class _PerpetualViewState extends State<PerpetualView> {
 
     double unitDegree = 1;
 
-    // 計算範圍內的最小和最大 15 的倍數
     double lowerMultiple = (start / unitDegree).ceil() * unitDegree;
     double upperMultiple = (end / unitDegree).floor() * unitDegree;
 
@@ -165,7 +210,7 @@ class _PerpetualViewState extends State<PerpetualView> {
 
   void rotateMonthPanel(Offset newFingerPosition) {
     final Offset center =
-        Offset(centerX - smallSensorRadius, centerY - smallSensorRadius);
+        Offset(centerX - radiusOfDragObject, centerY - radiusOfDragObject);
     final double newFingerAngelToCenterInDegree =
         angleInDegrees((newFingerPosition - center).direction);
     final double oldFingerAngelToCenterInDegree =
@@ -198,24 +243,26 @@ class _PerpetualViewState extends State<PerpetualView> {
   }
 
   void calculateMonthByTheDegreeOfRotated12OClockPosition(double degrees) {
-    // 校正用
-    // double adjustedDegrees = degrees + 90; // 以 -90 為基準點
-    // if (adjustedDegrees < 0) {
-    //   adjustedDegrees += 360; // 確保在 0 到 360 度之間
-    // }
+    int oldDragMonth = dragMonth;
 
     double adjustedDegrees =
         ((degrees % 360) < 0) ? (degrees + 360) % 360 : (degrees % 360);
 
     double degreesPerMonth = 360 / 12;
-    dragMonth = (adjustedDegrees / degreesPerMonth).floor();
+
+    int complementOfMonth = (adjustedDegrees / degreesPerMonth).floor();
 
     // The dial rotates in reverse direction
-    dragMonth = takeTheComplementOf12(dragMonth);
+    dragMonth = takeTheComplementOf12(complementOfMonth);
 
-    setState(() {
-      widget.setDate(dragYear, dragMonth, dragDay);
-    });
+    if (oldDragMonth != dragMonth) {
+      daysInMonth = getDaysInMonth(dragYear, dragMonth);
+      setDragDayToOneIfOverflow();
+
+      setState(() {
+        widget.setDate(dragYear, dragMonth, dragDay);
+      });
+    }
   }
 
   double calculateAngleByOffset(Offset location, Offset center) {
@@ -226,53 +273,88 @@ class _PerpetualViewState extends State<PerpetualView> {
   }
 
   void moveDragMonthObjectToCertainDegree(double angle) {
-    final dragPositionCenter = Offset(
-      centerX + (monthRadius * cos(angle)),
-      centerY + (monthRadius * sin(angle)),
+    Offset dragPositionCenter = Offset(
+      centerX + (distanceFromMonthCenterToScreenCenter * cos(angle)),
+      centerY + (distanceFromMonthCenterToScreenCenter * sin(angle)),
     );
     setState(() {
       dragObjectPositionOfMonth = angleCalculator.calibrateCoordination(
-          dragPositionCenter, smallSensorRadius);
+          dragPositionCenter, radiusOfDragObject);
     });
+  }
+
+  // This function adjusts the position of the dragged day when the month changes
+  // and ensures the position of the day is calibrated if it overflows.
+  void moveDragDayPositionByTheValueOfDragDay() {
+    // Calculate the angle based on the day in the month (dragDay) relative to the total days (daysInMonth).
+    // This represents the angle between the 12 o'clock reference and the target day.
+    double angle = 2 * pi * (dragDay / daysInMonth);
+
+    // Adjust the angle to align with Flutter's coordinate system, where angles are measured starting from 3 o'clock (0 degrees).
+    // The `alignRadianTo3OClock` function ensures the angle is shifted properly to match the desired 12 o'clock start.
+    angle = alignRadianTo3OClock(angle);
+
+    Offset centerOfDragDay = Offset(
+        centerX + (distanceFromDayCenterToScreenCenter * cos(angle)),
+        centerY + (distanceFromDayCenterToScreenCenter * sin(angle)));
+
+    setState(() {
+      dragDayPosition = angleCalculator.calibrateCoordination(
+          centerOfDragDay, radiusOfDragObject);
+    });
+  }
+
+  void setDragDayToOneIfOverflow() {
+    if (dragDay > daysInMonth) {
+      setState(() {
+        dragDay = 1;
+        moveDragDayPositionByTheValueOfDragDay();
+      });
+    }
   }
 
   @override
   void initState() {
     super.initState();
     neumorphicLightSource = LightSource.top;
-    dragObjectRadius = widget.perpetualViewHeight * 0.23;
-    smallSensorRadius = widget.perpetualViewHeight * 0.06;
+    radiusOfCenterMoniterCircle = widget.perpetualViewHeight * 0.23;
 
-    dentRadius = (dragObjectRadius * 1.05) + smallSensorRadius * 2;
+    // month and day
+    radiusOfDragObject = widget.perpetualViewHeight * 0.06;
 
-    backgroundRadius = (dragObjectRadius * 1.05) + smallSensorRadius * 2.2;
+    dentRadius = (radiusOfCenterMoniterCircle * 1.05) + radiusOfDragObject * 2;
+
+    backgroundRadius =
+        (radiusOfCenterMoniterCircle * 1.05) + radiusOfDragObject * 2.2;
     bottles = [
       DisplayBottle('E', 0, 150, 24.397630, 121.264331),
       DisplayBottle('N', 90, 100, 35.622522, 139.720624),
       DisplayBottle('W', 180, 150, 24.397630, 121.264331),
     ];
 
-    // (center of target) to the center + (radius of target)
-    // 小圓圓心與中心距離 ＋ 小圓半徑
-    centerOfTargetToCenterPlusTargetRadius =
-        dragObjectRadius + smallSensorRadius * 2;
+    // centerOfTargetToCenterPlusTargetRadius =
+    //     radiusOfCenterMoniterCircle + radiusOfDragObject * 2;
 
     centerX = (widget.screenWidth / 2);
     centerY = (widget.perpetualViewHeight / 2);
 
+    distanceFromDayCenterToScreenCenter =
+        radiusOfCenterMoniterCircle + radiusOfDragObject;
     // center
     final dragPositionCenter =
-        Offset(centerX, centerY - (dragObjectRadius + smallSensorRadius));
-    // the position of that dragable object
+        Offset(centerX, centerY - distanceFromDayCenterToScreenCenter);
+    // the position of the drag object of day
     dragDayPosition = angleCalculator.calibrateCoordination(
-        dragPositionCenter, smallSensorRadius);
+        dragPositionCenter, radiusOfDragObject);
 
     // Initialise the position
-    monthRadius = dragObjectRadius + smallSensorRadius * 3.5;
-    final dragMonthPositionCenter = Offset(centerX, centerY - monthRadius);
+    distanceFromMonthCenterToScreenCenter =
+        radiusOfCenterMoniterCircle + radiusOfDragObject * 3.5;
+    final dragMonthPositionCenter =
+        Offset(centerX, centerY - distanceFromMonthCenterToScreenCenter);
 
     dragObjectPositionOfMonth = angleCalculator.calibrateCoordination(
-        dragMonthPositionCenter, smallSensorRadius);
+        dragMonthPositionCenter, radiusOfDragObject);
   }
 
   @override
@@ -288,13 +370,10 @@ class _PerpetualViewState extends State<PerpetualView> {
             onTapDown: (TapDownDetails details) {
               Offset localPosition = details.localPosition;
 
-              print(
-                  "========Tapped at X: $localPosition.dx, Y: $localPosition.dy");
-
               final angle = calculateAngleByOffset(
                   localPosition,
-                  Offset(centerX - smallSensorRadius,
-                      centerY - smallSensorRadius));
+                  Offset(centerX - radiusOfDragObject,
+                      centerY - radiusOfDragObject));
 
               moveDragMonthObjectToCertainDegree(angle);
             },
@@ -333,11 +412,11 @@ class _PerpetualViewState extends State<PerpetualView> {
                                     painter: DashedCirclePainter(
                                         dx: centerX,
                                         dy: centerY,
-                                        radius: dentRadius + smallSensorRadius,
+                                        radius: dentRadius + radiusOfDragObject,
                                         margin: 0.0,
                                         dashCount: 31,
-                                        dashWidth: smallSensorRadius * 0.8,
-                                        strokeWidth: smallSensorRadius * 0.03,
+                                        dashWidth: radiusOfDragObject * 0.8,
+                                        strokeWidth: radiusOfDragObject * 0.03,
                                         strockColor: Colors.grey,
                                         isMonth: true),
                                   ),
@@ -391,8 +470,8 @@ class _PerpetualViewState extends State<PerpetualView> {
             alignment: Alignment.center,
             child: Container(
               // color: Colors.green,
-              height: (dragObjectRadius) * 1.9,
-              width: (dragObjectRadius) * 1.9,
+              height: (radiusOfCenterMoniterCircle) * 1.9,
+              width: (radiusOfCenterMoniterCircle) * 1.9,
               child: NeumorphicButton(
                   style: NeumorphicStyle(
                     shape: NeumorphicShape.flat,
@@ -407,8 +486,8 @@ class _PerpetualViewState extends State<PerpetualView> {
                     // widget.toggleChasingMode();
                   },
                   child: SizedBox(
-                    height: (dragObjectRadius) * 3,
-                    width: (dragObjectRadius) * 3,
+                    height: (radiusOfCenterMoniterCircle) * 3,
+                    width: (radiusOfCenterMoniterCircle) * 3,
                   )),
             ),
           ),
@@ -435,8 +514,8 @@ class _PerpetualViewState extends State<PerpetualView> {
                   // Text
                   Center(
                       child: SizedBox(
-                          width: dragObjectRadius * 1.9,
-                          height: dragObjectRadius * 1.9,
+                          width: radiusOfCenterMoniterCircle * 1.9,
+                          height: radiusOfCenterMoniterCircle * 1.9,
                           child: Column(
                             children: [
                               const Spacer(),
@@ -444,108 +523,82 @@ class _PerpetualViewState extends State<PerpetualView> {
                               // const Spacer(),
 
                               // date
-                              // Row(
-                              //   crossAxisAlignment: CrossAxisAlignment.end,
-                              //   children: [
-                              //     const Spacer(),
-                              //
-                              //     // year
-                              //     SizedBox(
-                              //       width: fontSizeForText * 4,
-                              //       child: Text(
-                              //         dragYear.toString(),
-                              //         overflow: TextOverflow.clip,
-                              //         maxLines: 1,
-                              //         textAlign: TextAlign.center,
-                              //         style: TextStyle(
-                              //           fontSize: fontSizeForText,
-                              //           fontWeight: FontWeight.w500,
-                              //           fontFamily:
-                              //               'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                              //         ),
-                              //       ),
-                              //     ),
-                              //
-                              //     // /
-                              //     SizedBox(
-                              //       child: Text(
-                              //         '/',
-                              //         overflow: TextOverflow.clip,
-                              //         maxLines: 1,
-                              //         textAlign: TextAlign.center,
-                              //         style: TextStyle(
-                              //           fontSize: fontSizeForText,
-                              //           fontWeight: FontWeight.w500,
-                              //           fontFamily:
-                              //               'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                              //         ),
-                              //       ),
-                              //     ),
-                              //
-                              //     // month
-                              //     SizedBox(
-                              //       width: fontSizeForText * 2,
-                              //       child: Text(
-                              //         dragMonth < 10
-                              //             ? '0$dragMonth'
-                              //             : dragMonth.toString(),
-                              //         overflow: TextOverflow.clip,
-                              //         maxLines: 1,
-                              //         textAlign: TextAlign.center,
-                              //         style: TextStyle(
-                              //           fontSize: fontSizeForText,
-                              //           fontWeight: FontWeight.w500,
-                              //           fontFamily:
-                              //               'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                              //         ),
-                              //       ),
-                              //     ),
-                              //
-                              //     // /
-                              //     SizedBox(
-                              //       child: Text(
-                              //         '/',
-                              //         overflow: TextOverflow.clip,
-                              //         maxLines: 1,
-                              //         textAlign: TextAlign.center,
-                              //         style: TextStyle(
-                              //           fontSize: fontSizeForText,
-                              //           fontWeight: FontWeight.w500,
-                              //           fontFamily:
-                              //               'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                              //         ),
-                              //       ),
-                              //     ),
-                              //
-                              //     // date
-                              //     SizedBox(
-                              //         width: fontSizeForText * 2,
-                              //         child: Text(
-                              //       dragDay < 10
-                              //           ? '0$dragDay'
-                              //           : dragDay.toString(),
-                              //       overflow: TextOverflow.clip,
-                              //       maxLines: 1,
-                              //       textAlign: TextAlign.center,
-                              //       style: TextStyle(
-                              //         fontSize: fontSizeForText,
-                              //         fontWeight: FontWeight.w500,
-                              //         fontFamily:
-                              //             'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                              //       ),
-                              //     )),
-                              //     const Spacer(),
-                              //   ],
-                              // ),
-
-                              // cups
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   const Spacer(),
-                                  Container(
-                                      // color: Colors.blue,
-                                      width: dragObjectRadius * 1.9 * 0.4,
+
+                                  // year
+                                  SizedBox(
+                                    width: fontSizeForText * 4,
+                                    child: Text(
+                                      dragYear.toString(),
+                                      overflow: TextOverflow.clip,
+                                      maxLines: 1,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: fontSizeForText,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily:
+                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                      ),
+                                    ),
+                                  ),
+
+                                  // /
+                                  SizedBox(
+                                    child: Text(
+                                      '/',
+                                      overflow: TextOverflow.clip,
+                                      maxLines: 1,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: fontSizeForText,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily:
+                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                      ),
+                                    ),
+                                  ),
+
+                                  // month
+                                  SizedBox(
+                                    width: fontSizeForText * 2,
+                                    child: Text(
+                                      dragMonth < 10
+                                          ? '0$dragMonth'
+                                          : dragMonth.toString(),
+                                      overflow: TextOverflow.clip,
+                                      maxLines: 1,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: fontSizeForText,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily:
+                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                      ),
+                                    ),
+                                  ),
+
+                                  // /
+                                  SizedBox(
+                                    child: Text(
+                                      '/',
+                                      overflow: TextOverflow.clip,
+                                      maxLines: 1,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: fontSizeForText,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily:
+                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                      ),
+                                    ),
+                                  ),
+
+                                  // date
+                                  SizedBox(
+                                      width: fontSizeForText * 2,
                                       child: Text(
                                         dragDay < 10
                                             ? '0$dragDay'
@@ -554,10 +607,42 @@ class _PerpetualViewState extends State<PerpetualView> {
                                         maxLines: 1,
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
-                                          fontSize: dragObjectRadius *
-                                              1.9 *
-                                              0.5 *
-                                              0.5,
+                                          fontSize: fontSizeForText,
+                                          fontWeight: FontWeight.w500,
+                                          fontFamily:
+                                              'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                        ),
+                                      )),
+                                  const Spacer(),
+                                ],
+                              ),
+
+                              // cups
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  const Spacer(),
+                                  Container(
+                                      // color: Colors.blue,
+                                      width: radiusOfCenterMoniterCircle *
+                                          1.9 *
+                                          0.4,
+                                      child: Text(
+                                        widget.glimpseCount == 0
+                                            ? '00'
+                                            : widget.glimpseCount < 10
+                                                ? '0${widget.glimpseCount}'
+                                                : widget.glimpseCount
+                                                    .toString(),
+                                        overflow: TextOverflow.clip,
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize:
+                                              radiusOfCenterMoniterCircle *
+                                                  1.9 *
+                                                  0.5 *
+                                                  0.5,
                                           fontWeight: FontWeight.w500,
                                           fontFamily:
                                               'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
@@ -574,7 +659,9 @@ class _PerpetualViewState extends State<PerpetualView> {
                                   const Spacer(),
                                   SizedBox(
                                       // color: Colors.blue,
-                                      width: dragObjectRadius * 1.9 * 0.4,
+                                      width: radiusOfCenterMoniterCircle *
+                                          1.9 *
+                                          0.4,
                                       child: const Text(
                                         '',
                                       )),
@@ -611,8 +698,8 @@ class _PerpetualViewState extends State<PerpetualView> {
                     radius: dentRadius,
                     margin: dentRadius * 0.1,
                     dashCount: 31,
-                    dashWidth: smallSensorRadius * 0.8,
-                    strokeWidth: smallSensorRadius * 0.03,
+                    dashWidth: radiusOfDragObject * 0.8,
+                    strokeWidth: radiusOfDragObject * 0.03,
                     strockColor: Colors.grey,
                     isMonth: false),
               ),
@@ -626,8 +713,8 @@ class _PerpetualViewState extends State<PerpetualView> {
               top: dragDayPosition.dy,
               child: Container(
                 // color: config.redJP,
-                width: (smallSensorRadius * (2)),
-                height: (smallSensorRadius * (2)),
+                width: (radiusOfDragObject * (2)),
+                height: (radiusOfDragObject * (2)),
                 child: Stack(
                   children: [
                     Align(
@@ -641,19 +728,20 @@ class _PerpetualViewState extends State<PerpetualView> {
                           ),
                           child: Container(
                             color: config.dragButton,
-                            width: (smallSensorRadius * 2),
-                            height: (smallSensorRadius * 2),
+                            width: (radiusOfDragObject * 2),
+                            height: (radiusOfDragObject * 2),
                           )),
                     ),
                     Align(
                       alignment: Alignment.center,
                       child: GestureDetector(
                         onPanUpdate: (details) {
+                          widget.startCountdown();
                           // Calculate the angle of the dragged position relative to the calibrated center point
                           Offset newPosition = dragDayPosition + details.delta;
                           Offset centerOfCalibratedDragPosition = Offset(
-                              centerX - smallSensorRadius,
-                              centerY - smallSensorRadius);
+                              centerX - radiusOfDragObject,
+                              centerY - radiusOfDragObject);
 
                           // Calculate the angle between the new position and the center
                           final angle =
@@ -664,14 +752,15 @@ class _PerpetualViewState extends State<PerpetualView> {
                           if (degrees.ceil() % 15 == 0) {
                             Vibration.vibrate(duration: 25, amplitude: 255);
                           }
-                          calculateDragDay(degrees);
 
                           final dragPositionCenter = Offset(
                             centerX +
-                                ((dragObjectRadius + smallSensorRadius) *
+                                ((radiusOfCenterMoniterCircle +
+                                        radiusOfDragObject) *
                                     cos(angle)),
                             centerY +
-                                (dragObjectRadius + smallSensorRadius) *
+                                (radiusOfCenterMoniterCircle +
+                                        radiusOfDragObject) *
                                     sin(angle),
                           );
 
@@ -679,7 +768,9 @@ class _PerpetualViewState extends State<PerpetualView> {
                             // dragPosition = Offset(tdx, tdy);
                             dragDayPosition =
                                 angleCalculator.calibrateCoordination(
-                                    dragPositionCenter, smallSensorRadius);
+                                    dragPositionCenter, radiusOfDragObject);
+
+                            calculateDragDayByDegree(degrees);
                           });
                         },
                         onPanEnd: (details) {
@@ -696,8 +787,8 @@ class _PerpetualViewState extends State<PerpetualView> {
                             ),
                             child: Container(
                                 color: config.dragButton,
-                                width: smallSensorRadius * (0.9) * 2,
-                                height: smallSensorRadius * (0.9) * 2,
+                                width: radiusOfDragObject * (0.9) * 2,
+                                height: radiusOfDragObject * (0.9) * 2,
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
@@ -705,14 +796,17 @@ class _PerpetualViewState extends State<PerpetualView> {
 
                                     Center(
                                         child: SizedBox(
-                                            width: dragObjectRadius * 2,
-                                            height: dragObjectRadius * 2,
-                                            child:  Center(
+                                            width:
+                                                radiusOfCenterMoniterCircle * 2,
+                                            height:
+                                                radiusOfCenterMoniterCircle * 2,
+                                            child: Center(
                                               child:
                                                   // Icon(fingerprint),
                                                   // Icon(null),
-                                              Text(
-                                                dragDay.toString(),
+                                                  Text(
+                                                // dragDay.toString(),
+                                                '',
                                                 overflow: TextOverflow.clip,
                                                 maxLines: 1,
                                                 textAlign: TextAlign.center,
@@ -729,21 +823,21 @@ class _PerpetualViewState extends State<PerpetualView> {
                                 ))),
                       ),
                     ),
-                    // Align(
-                    //   alignment: Alignment.center,
-                    //   child: Neumorphic(
-                    //       style: const NeumorphicStyle(
-                    //         shape: NeumorphicShape.flat,
-                    //         boxShape: NeumorphicBoxShape.circle(),
-                    //         intensity: 0.5,
-                    //         depth: 0.6,
-                    //       ),
-                    //       child: Container(
-                    //         color: config.dragButtonOrange,
-                    //         width: (smallSensorRadius * 0.3),
-                    //         height: (smallSensorRadius * 0.3),
-                    //       )),
-                    // ),
+                    Align(
+                      alignment: Alignment.center,
+                      child: Neumorphic(
+                          style: const NeumorphicStyle(
+                            shape: NeumorphicShape.flat,
+                            boxShape: NeumorphicBoxShape.circle(),
+                            intensity: 0.5,
+                            depth: 0.6,
+                          ),
+                          child: Container(
+                            color: config.dragButtonOrange,
+                            width: (radiusOfDragObject * 0.3),
+                            height: (radiusOfDragObject * 0.3),
+                          )),
+                    ),
                   ],
                 ),
               ),
@@ -757,8 +851,8 @@ class _PerpetualViewState extends State<PerpetualView> {
               top: dragObjectPositionOfMonth.dy,
               child: Container(
                 // color: config.redJP,
-                width: (smallSensorRadius * (2)),
-                height: (smallSensorRadius * (2)),
+                width: (radiusOfDragObject * (2)),
+                height: (radiusOfDragObject * (2)),
                 child: Stack(
                   children: [
                     Align(
@@ -772,20 +866,22 @@ class _PerpetualViewState extends State<PerpetualView> {
                           ),
                           child: Container(
                             color: config.backGroundWhite,
-                            width: (smallSensorRadius * 2),
-                            height: (smallSensorRadius * 2),
+                            width: (radiusOfDragObject * 2),
+                            height: (radiusOfDragObject * 2),
                           )),
                     ),
                     Align(
                       alignment: Alignment.center,
                       child: GestureDetector(
                         onPanUpdate: (details) {
+                          widget.startCountdown();
+
                           // Calculate the angle of the dragged position relative to the calibrated center point
                           Offset newFingerPosition =
                               dragObjectPositionOfMonth + details.delta;
                           Offset centerOfRime = Offset(
-                              centerX - smallSensorRadius,
-                              centerY - smallSensorRadius);
+                              centerX - radiusOfDragObject,
+                              centerY - radiusOfDragObject);
 
                           // Calculate the angle Of the new position to the center
                           final angleInRadian =
@@ -801,15 +897,21 @@ class _PerpetualViewState extends State<PerpetualView> {
                           calculateMonthByTheDegreeOfRotated12OClockPosition(
                               degreeOfRotated12OClockPositionOfMonth);
 
+                          // center
                           final dragPositionCenter = Offset(
-                            centerX + (monthRadius * cos(angleInRadian)),
-                            centerY + monthRadius * sin(angleInRadian),
+                            centerX +
+                                (distanceFromMonthCenterToScreenCenter *
+                                    cos(angleInRadian)),
+                            centerY +
+                                distanceFromMonthCenterToScreenCenter *
+                                    sin(angleInRadian),
                           );
 
                           setState(() {
+                            // left top
                             dragObjectPositionOfMonth =
                                 angleCalculator.calibrateCoordination(
-                                    dragPositionCenter, smallSensorRadius);
+                                    dragPositionCenter, radiusOfDragObject);
                           });
                         },
                         onPanEnd: (details) {
@@ -826,8 +928,8 @@ class _PerpetualViewState extends State<PerpetualView> {
                             ),
                             child: Container(
                                 color: config.backGroundWhite,
-                                width: smallSensorRadius * (0.9) * 2,
-                                height: smallSensorRadius * (0.9) * 2,
+                                width: radiusOfDragObject * (0.9) * 2,
+                                height: radiusOfDragObject * (0.9) * 2,
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
@@ -847,8 +949,10 @@ class _PerpetualViewState extends State<PerpetualView> {
                                     // ),
                                     Center(
                                         child: SizedBox(
-                                            width: dragObjectRadius * 2,
-                                            height: dragObjectRadius * 2,
+                                            width:
+                                                radiusOfCenterMoniterCircle * 2,
+                                            height:
+                                                radiusOfCenterMoniterCircle * 2,
                                             child: const Center(
                                               child: Icon(fingerprint),
                                               // Text(
@@ -882,6 +986,20 @@ class _PerpetualViewState extends State<PerpetualView> {
               ),
             )
           ]),
+
+          Positioned(
+              bottom: widget.perpetualViewHeight * 0.01,
+              right: widget.perpetualViewHeight * 0.03,
+              child: GestureDetector(
+                onTap: (){
+                  setState(() {
+                    widget.makePanelSmall();
+                  });
+                },
+                child: widget.isTapped
+                    ? const Icon(Icons.arrow_circle_left, color: Colors.white)
+                    : const Icon(Icons.arrow_right, color: Colors.white),
+              ))
         ],
       ),
     );
@@ -1008,5 +1126,216 @@ class DashedCirclePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return false;
+  }
+}
+
+// class CirclesPainter extends CustomPainter {
+//   final double dx;
+//   final double dy;
+//   final double radius;
+//   final double margin;
+//   final double dashWidth;
+//   final double dashCount;
+//   final double strokeWidth;
+//   final Color strockColor;
+//   final bool isMonth;
+//
+//
+//   CirclesPainter(
+//       {required this.dx,
+//       required this.dy,
+//       required this.radius,
+//       required this.margin,
+//       required this.dashCount,
+//       required this.dashWidth,
+//       required this.strokeWidth,
+//       required this.strockColor,
+//       required this.isMonth});
+//
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final Paint paint = Paint()
+//       ..color = strockColor
+//       ..style = PaintingStyle.stroke
+//       ..strokeWidth = strokeWidth;
+//
+//     double newRadius = radius - margin;
+//
+//     for (int i = 0; i < dashCount; i++) {
+//       // Start angle at -pi / 2 to align the first dash to the 12 o'clock position
+//       double angle = (2 * pi * i) / dashCount - (pi / 2);
+//       double startX = dx + newRadius * cos(angle);
+//       double startY = dy + newRadius * sin(angle);
+//       double endX = dx + (newRadius - dashWidth) * cos(angle);
+//       double endY = dy + (newRadius - dashWidth) * sin(angle);
+//
+//       // Create a new Paint instance for the filled circle
+//       final filledPaint = Paint()
+//         ..color = strockColor
+//         ..style = PaintingStyle.fill; // Set style to fill
+//
+//       // canvas.drawCircle(Offset(startX, startY), dashWidth * 3, paint);
+//       canvas.drawCircle(Offset(startX, startY), dashWidth * 3, filledPaint);
+//     }
+//   }
+//
+//   @override
+//   bool shouldRepaint(covariant CustomPainter oldDelegate) {
+//     return false;
+//   }
+// }
+
+// class CirclesPainter extends CustomPainter {
+//   final double dx;
+//   final double dy;
+//   final double radius;
+//   final double margin;
+//   final double dashWidth;
+//   final double dashCount;
+//   final double strokeWidth;
+//   final Color strockColor;
+//   final bool isMonth;
+//   double animationProgress =
+//       1.0; // Animation progress: 0.0 -> fully moved, 1.0 -> back to original
+//
+//   CirclesPainter({
+//     required this.dx,
+//     required this.dy,
+//     required this.radius,
+//     required this.margin,
+//     required this.dashCount,
+//     required this.dashWidth,
+//     required this.strokeWidth,
+//     required this.strockColor,
+//     required this.isMonth,
+//   });
+//
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final Paint paint = Paint()
+//       ..color = strockColor
+//       ..style = PaintingStyle.stroke
+//       ..strokeWidth = strokeWidth;
+//
+//     double newRadius = radius - margin;
+//
+//     for (int i = 0; i < dashCount; i++) {
+//       // Calculate angle
+//       double angle = (2 * pi * i) / dashCount - (pi / 2);
+//
+//       // Base positions
+//       double startX = dx + newRadius * cos(angle);
+//       double startY = dy + newRadius * sin(angle);
+//
+//       // Calculate offset for shutter effect
+//       double offsetDistance = animationProgress < 0.5
+//           ? dashWidth * 3 * (1 - animationProgress * 2) // Moving outward
+//           : dashWidth * 2 * ((animationProgress - 0.5) * 2); // Returning inward
+//
+//       // Calculate shifted position
+//       double shiftedX = startX + offsetDistance * cos(angle);
+//       double shiftedY = startY + offsetDistance * sin(angle);
+//
+//       // Paint filled circle
+//       final filledPaint = Paint()
+//         ..color = strockColor
+//         ..style = PaintingStyle.fill;
+//
+//       canvas.drawCircle(Offset(shiftedX, shiftedY), dashWidth * 3, filledPaint);
+//     }
+//   }
+//
+//   @override
+//   bool shouldRepaint(covariant CustomPainter oldDelegate) {
+//     return true; // Enable redrawing for animation
+//   }
+//
+//   /// Simulate shutter effect by updating animation progress
+//   void simulateShutterEffect(AnimationController controller) {
+//     controller.addListener(() {
+//       animationProgress = controller.value;
+//     });
+//   }
+// }
+
+class CirclesPainter extends CustomPainter {
+  final bool isAnimating; // 添加動畫標誌
+  final double dx;
+  final double dy;
+  final double radius;
+  final double margin;
+  final double dashWidth;
+  final double dashCount;
+  final double strokeWidth;
+  final Color strockColor;
+  final bool isMonth;
+
+  CirclesPainter({
+    required this.isAnimating,
+    required this.dx,
+    required this.dy,
+    required this.radius,
+    required this.margin,
+    required this.dashCount,
+    required this.dashWidth,
+    required this.strokeWidth,
+    required this.strockColor,
+    required this.isMonth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 用於邊框的黑色 Paint
+    final Paint borderPaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    // 用於填充的 Paint（實心圓）
+    final Paint fillPaint = Paint()
+      ..color = strockColor
+      ..style = PaintingStyle.fill;
+
+    // 用於遮色片的半透明 Paint
+    final Paint maskPaint = Paint()
+      ..color = Colors.black.withOpacity(0.6) // 半透明的黑色遮色片
+      ..style = PaintingStyle.fill;
+
+    // 計算圓的半徑，減去邊距
+    double newRadius = radius - margin;
+    for (int i = 0; i < dashCount; i++) {
+      double angle = (2 * pi * i) / dashCount - (pi / 2);
+      double startX = dx + newRadius * cos(angle);
+      double startY = dy + newRadius * sin(angle);
+
+      // 如果動畫正在進行，調整圓的繪製位置
+      double adjustment = isAnimating ? dashWidth * 5 : dashWidth * 3.5;
+      startX += adjustment * cos(angle);
+      startY += adjustment * sin(angle);
+
+      // 先畫邊框圓
+      canvas.drawCircle(Offset(startX, startY), dashWidth * 2.5, borderPaint);
+
+      // 再畫實心圓
+      canvas.drawCircle(Offset(startX, startY), dashWidth * 2.5, fillPaint);
+    }
+
+    // 填充遮罩區域
+    canvas.drawCircle(Offset(dx, dy), radius * 6, maskPaint);
+
+    // 創建遮罩範圍，限制畫布繪製範圍
+    Path maskPath = Path()
+      ..addOval(Rect.fromCircle(center: Offset(dx, dy), radius: radius * 6));
+    // 使用遮罩範圍裁剪畫布，這樣超出範圍的部分會被隱藏
+    canvas.save(); // 保存當前畫布狀態
+    canvas.clipPath(maskPath); // 進行裁剪
+
+    // 記得恢復畫布狀態，避免後續繪製被遮罩影響
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true; // 強制重繪
   }
 }
