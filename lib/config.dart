@@ -18,6 +18,10 @@ const Color ticketWhite = Color.fromARGB(255, 255, 255, 255);
 const Color dragButton = Color.fromARGB(255, 242, 160, 90);
 
 
+const Color backLightW = Colors.white;
+const Color backLightB = Colors.black;
+
+
 // orange
 const Color dragButtonOrange = Color.fromARGB(255, 238, 149, 101);
 

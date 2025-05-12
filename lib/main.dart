@@ -42,11 +42,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
-        // primarySwatch: Colors.blue,
         useMaterial3: false,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-      routes: Routes.getRoutes(),
+      initialRoute: '/',
+      routes: Routes.routes,
     );
   }
 }
@@ -68,335 +67,221 @@ enum Modes {
 
 class _MyHomePageState extends State<MyHomePage> {
   bool _canPop = false;
-  bool isChasingMode = true;
-  bool isDisplayAttractionsView = false;
-  bool hideUsedTickets = false;
-  bool isShowFilms = true;
-
-  double panelScale = 1;
-  bool isPanelBig = true;
-  Timer? _timer;
-
-  int year = 2024;
-  int month = 1;
-  int day = 1;
-  int glimpseCount = 0;
-
-  late DateTime selectedDate;
-
-  // var mode = Modes.chasingAttraction;
-
-  void startCountdown() {
-    print('====== start timer');
-
-    // 如果已有倒计时，先取消
-    _timer?.cancel();
-
-    // 启动一个新的倒计时
-    _timer = Timer(const Duration(milliseconds: 3500), () {
-      print('======== times up');
-      setState(() {
-        isPanelBig = false;
-        panelScale = 0.3; // 可根据需要调整
-      });
-    });
-  }
-
-  // Taiwan
-  Attraction home = Attraction(
-      sequenceNumber: 0,
-      name: 'Taiwan',
-      memo: 'Default',
-      date: '19930312',
-      longitude: 121.597366,
-      latitude: 25.105497,
-      arrivalTime: '199303121',
-      departureTime: '19931312',
-      arrivalStation: 'tokyo',
-      departureStation: 'tokyo',
-      isVisited: false,
-      isNavigating: false,
-      isVisiting: false);
-
-  late Attraction clickedAttraction;
-
-  late Attraction visitingAttraction;
-
-  void makePanelSmall() {
-    setState(() {
-      if (isPanelBig) {
-        isPanelBig = false;
-        panelScale = 0.3;
-      }
-    });
-  }
-
-  void _togglePanel() {
-    print('====== _togglePanel is triggered');
-    startCountdown();
-
-    setState(() {
-      if (!isPanelBig) {
-        isPanelBig = true;
-        panelScale = 1;
-      }
-    });
-  }
-
-  void updateHome(Attraction attraction) {
-    setState(() {
-      home = attraction;
-    });
-  }
-
-  void updateVisitingAttraction(Attraction attraction) {
-    setState(() {
-      visitingAttraction = attraction;
-    });
-  }
-
-  final DatabaseHelper databaseHelper = DatabaseHelper();
-  List<Ticket> tickets = []; // Store fetched tickets
-
-  final AttractionDatabaseHelper attractionDatabaseHelper =
-      AttractionDatabaseHelper();
-  List<Attraction> attractions = [];
 
   @override
   void initState() {
     super.initState();
-    print('====== main init');
-    fetchTickets();
-    fetchAttractions();
-    selectedDate = DateTime(year, month, day);
-    visitingAttraction = home;
-    startCountdown();
   }
 
-  Future<void> fetchTickets() async {
-    print('====== fetching Tickets... ');
 
-    List<Ticket> fetchedTickets = await databaseHelper.getTickets();
-    setState(() {
-      tickets = fetchedTickets;
-      print('====== fetched tickets: $tickets');
-    });
-  }
+  @override
+  Widget build(BuildContext context) {
+    double screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
+    double screenHeight = MediaQuery
+        .of(context)
+        .size
+        .height;
+    double paddingTopForMenuText = screenHeight * 0.035;
+    double paddingLeftForMenuText = screenWidth * 0.08;
 
-  Future<void> fetchAttractions() async {
-    print('====== fetching Attractions... ');
-
-    List<Attraction> fetchedAttractions =
-        await attractionDatabaseHelper.getAttractions();
-
-    setState(() {
-      attractions = fetchedAttractions;
-
-      // Find the last visited attraction and use it to refresh visiting attraction.
-      var lastVisitedAttraction = home;
-
-      for (Attraction attraction in attractions) {
-        if (attraction.isVisited == true) {
-          lastVisitedAttraction = attraction;
-        }
-      }
-
-      updateVisitingAttraction(lastVisitedAttraction);
-    });
-  }
-
-  void toggleDisplayAttractionsView(Attraction? attraction) {
-    setState(() {
-      if (attraction != null) {
-        clickedAttraction = attraction;
-      }
-      isDisplayAttractionsView = !isDisplayAttractionsView;
-    });
-  }
-
-  void toggleChasingMode() {
-    setState(() {
-      isChasingMode = !isChasingMode;
-    });
-  }
-
-  void showAddAttractionDialog(double screenHeight, double screenWidth) {
-    AddAttractionView floatAttractionCardView = AddAttractionView(
-      widgetHeight: screenHeight * 0.5,
-      screenWidth: screenWidth,
-      cardWidth: screenWidth * 0.7,
-    );
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.white.withOpacity(0.8),
-      builder: (BuildContext context) {
-        return Theme(
-            data: ThemeData(
-              useMaterial3: false,
-            ),
-            child: AlertDialog(
-              elevation: 0,
-              backgroundColor: Colors.white.withOpacity(0.0),
-              // title: const Text('New Attraction'),
-              content: floatAttractionCardView,
-              actions: <Widget>[
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Close',
-                      style: TextStyle(color: Colors.black)),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () async {
-                    double? latitude;
-                    double? longitude;
-                    final locationText =
-                        floatAttractionCardView.locationController.text;
-                    final locationValues = locationText.split(',');
-                    if (locationValues.length == 2) {
-                      latitude = double.tryParse(locationValues[0].trim());
-                      longitude = double.tryParse(locationValues[1].trim());
-                    }
-
-                    final newAttraction = Attraction.withAutoIncrement(
-                      name: floatAttractionCardView.nameController.text,
-                      memo: floatAttractionCardView.memoController.text,
-                      date: floatAttractionCardView.dateController.text,
-                      latitude: latitude ?? 0.0,
-                      longitude: longitude ?? 0.0,
-                      departureTime:
-                          floatAttractionCardView.departureTimeController.text,
-                      arrivalTime:
-                          floatAttractionCardView.arrivalTimeController.text,
-                      departureStation: floatAttractionCardView
-                          .departureStationController.text,
-                      arrivalStation:
-                          floatAttractionCardView.arrivalStationController.text,
-                      isVisited: false,
-                      isNavigating: false,
-                      isVisiting: false,
-                    );
-
-                    await attractionDatabaseHelper
-                        .insertAttraction(newAttraction);
-
-                    fetchAttractions();
-
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text(
-                    'Create',
-                    style: TextStyle(color: Colors.black),
+    return PopScope(
+        canPop: _canPop,
+        onPopInvoked: (canPop) {
+          if (!_canPop) {
+            _showPopWarningDialog();
+          }
+        },
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness:
+            Brightness.dark, // Dark status bar icons (like time, battery)
+          ),
+          child: Scaffold(
+            body: SingleChildScrollView(
+              child: SizedBox(
+                width: screenWidth,
+                height: screenHeight,
+                child: Stack(
+                  children: [
+                  // background
+                  Container(
+                  height: screenHeight,
+                  width: screenWidth,
+                  color: Colors.white,
+                  child: Image.asset(
+                    'assets/images/bac.jpg',
+                    height: screenHeight,
+                    fit: BoxFit.fitHeight,
+                    alignment: Alignment.center,
+                    cacheHeight: screenHeight.toInt(),
                   ),
                 ),
-                const Spacer(),
-                const Spacer(),
-              ],
-            ));
-      },
-    );
-  }
 
-  void showAddTicketDialog(double screenHeight, double screenWidth) {
-    AddTicketView floatCardView = AddTicketView(
-      widgetHeight: screenHeight * 0.5,
-      screenWidth: screenWidth,
-      cardWidth: screenWidth * 0.7,
-    );
+                // Menu
+                Container(
+                  // color: Colors.white.withOpacity(0.5),
+                  alignment: Alignment.topLeft,
+                  height: screenHeight,
+                  width: screenWidth,
+                  margin: EdgeInsets.only(
+                    top: screenHeight * 0.25,
+                    left: screenWidth * 0.1,),
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          onTap: (){
+                            Navigator.pushNamed(
+                              context,
+                              '/filmRoll',
+                            );
+                          },
+                          child: Container(
+                              color: Colors.white.withOpacity(0.5),
+                              width: screenWidth * 0.5,
+                              padding: EdgeInsets.only(
+                                  left: paddingLeftForMenuText,
+                                  right: paddingLeftForMenuText,
+                                  top: paddingTopForMenuText),
+                              child: const Text(
+                                'Film Roll',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                ),
+                              )),
+                        ),
 
-    showDialog(
-      context: context,
-      barrierColor: Colors.white.withOpacity(0.96),
-      builder: (BuildContext context) {
-        return AlertDialog(
-          elevation: 0.0,
-          backgroundColor: Colors.white.withOpacity(0.0),
-          // title: const Text('New Ticket'),
-          content: floatCardView,
-          actions: <Widget>[
-            const Spacer(),
-            // close button
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                'Close',
-                style: TextStyle(color: Colors.black),
+                        GestureDetector(
+                          onTap: (){
+                            Navigator.pushNamed(
+                              context,
+                              '/trash',
+                            );
+                          },
+                          child: Container(
+                              color: Colors.white.withOpacity(0.5),
+                              width: screenWidth * 0.5,
+                              padding: EdgeInsets.only(
+                                  left: paddingLeftForMenuText,
+                                  right: paddingLeftForMenuText,
+                                  top: paddingTopForMenuText),
+                              child: const Text(
+                                'Trash',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                ),
+                              )),
+                        ),
+
+                        GestureDetector(
+                          onTap: (){
+                            Navigator.pushNamed(
+                              context,
+                              '/receipt',
+                            );
+                          },
+                          child: Container(
+                              color: Colors.white.withOpacity(0.5),
+                              width: screenWidth * 0.5,
+                              padding: EdgeInsets.only(
+                                  left: paddingLeftForMenuText,
+                                  right: paddingLeftForMenuText,
+                                  top: paddingTopForMenuText),
+                              child: const Text(
+                                'Receipt',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                ),
+                              )),
+                        ),
+
+                        Container(
+                            color: Colors.white.withOpacity(0.5),
+                            width: screenWidth * 0.5,
+                            padding: EdgeInsets.only(
+                                left: paddingLeftForMenuText,
+                                right: paddingLeftForMenuText,
+                                top: paddingTopForMenuText),
+                            child: const Text(
+                              'Contact Sheet',
+                              style: TextStyle(
+                                color: Colors.black,
+                              ),
+                            )),
+                        Container(
+                            color: Colors.white.withOpacity(0.5),
+                            width: screenWidth * 0.5,
+                            padding: EdgeInsets.only(
+                                left: paddingLeftForMenuText,
+                                right: paddingLeftForMenuText,
+                                top: paddingTopForMenuText),
+                            child: const Text(
+                              'Albums',
+                              style: TextStyle(
+                                color: Colors.black,
+                              ),
+                            )),
+                        Container(
+                            color: Colors.white.withOpacity(0.5),
+                            width: screenWidth * 0.5,
+                            padding: EdgeInsets.only(
+                                left: paddingLeftForMenuText,
+                                right: paddingLeftForMenuText,
+                                top: paddingTopForMenuText),
+                            child: const Text(
+                              'Printer',
+                              style: TextStyle(
+                                color: Colors.black,
+                              ),
+                            )),
+                        Container(
+                            color: Colors.white.withOpacity(0.5),
+                            width: screenWidth * 0.5,
+                            padding: EdgeInsets.only(
+                                left: paddingLeftForMenuText,
+                                right: paddingLeftForMenuText,
+                                top: paddingTopForMenuText,
+                                bottom: paddingTopForMenuText
+                            ),
+                            child: const Text(
+                              'Setting',
+                              style: TextStyle(
+                                color: Colors.black,
+                              ),
+                            )),
+                      ],
+                    ),
+                  ),
+                  ],
+                ),
               ),
             ),
-            const Spacer(),
-
-            // create button
-            TextButton(
-              onPressed: () async {
-                final newTicket = Ticket(
-                  memo: floatCardView.memoController.text,
-                  date: floatCardView.dateController.text,
-                  departureTime: floatCardView.departureTimeController.text,
-                  arrivalTime: floatCardView.arrivalTimeController.text,
-                  trainName: floatCardView.trainNameController.text,
-                  trainNumber: floatCardView.trainNumberController.text,
-                  carNumber: floatCardView.carNumberController.text,
-                  row: floatCardView.rowNumberController.text,
-                  seat: floatCardView.seatNumberController.text,
-                  departureStation:
-                      floatCardView.departureStationController.text,
-                  arrivalStation: floatCardView.arrivalStationController.text,
-                  isUsed: false,
-                );
-
-                await databaseHelper.insertTicket(newTicket);
-
-                fetchTickets();
-
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                'Create',
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-            const Spacer(),
-            const Spacer(),
-          ],
-        );
-      },
-    );
+          ),
+        ));
   }
 
-  // add new ticket or tourist
-  void clickAddButton(
-      BuildContext context, double screenHeight, double screenWidth) async {
-    if (isChasingMode) {
-      showAddAttractionDialog(screenHeight, screenWidth);
-    } else {
-      showAddTicketDialog(screenHeight, screenWidth);
-    }
-  }
-
-  void _showWarningDialog() async {
+  void _showPopWarningDialog() async {
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('正在離開...'),
-        content: const Text(''),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            // Close the app
-            child: const Text('關閉app'),
+      builder: (context) =>
+          AlertDialog(
+            title: const Text('正在離開...'),
+            content: const Text(''),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                // Close the app
+                child: const Text('關閉app'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false), // Cancel
+                child: const Text('取消'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false), // Cancel
-            child: const Text('取消'),
-          ),
-        ],
-      ),
     );
 
     if (shouldPop == true) {
@@ -407,111 +292,12 @@ class _MyHomePageState extends State<MyHomePage> {
           .maybePop(); // Close the app after setting canPop to true
     }
   }
-
-  void setDate(int year, int month, int day) {
-    setState(() {
-      this.year = year;
-      this.month = month;
-      this.day = day;
-      selectedDate = DateTime(year, month, day);
-    });
-  }
-
-  void setGlimpseCount(int count) {
-    setState(() {
-      glimpseCount = count;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
-    TicketsView ticketsView = TicketsView(hideUsedTickets, screenHeight * 0.6,
-        screenWidth, screenWidth * 0.8, tickets);
-
-    return PopScope(
-      canPop: _canPop,
-      onPopInvoked: (canPop) {
-        if (!_canPop) {
-          _showWarningDialog();
-        }
-      },
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness:
-              Brightness.dark, // Dark status bar icons (like time, battery)
-        ),
-        child: Scaffold(
-          body: SingleChildScrollView(
-            child: Container(
-              width: screenWidth,
-              height: screenHeight,
-              // color: config.backGroundWhite,
-              child: Stack(
-
-                  children: [
-                // Container(
-                //   color: Colors.red,
-                //   height: screenHeight,
-                //   width: screenWidth,
-                // ),
-
-                Opacity(
-                  opacity: (isShowFilms == true) ? 1.0 : 0.0,
-                  // opacity: 1.0,
-                  child: Transform.rotate(
-                    angle: 0 * 3.1415926535897932 / 180,
-                    child: Container(
-                      width: screenWidth,
-                      height: screenHeight,
-                      child: WaterfallView(
-                        selectedDate: selectedDate,
-                        setGlimpseCount: setGlimpseCount,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // panel
-                Positioned(
-                  bottom: screenHeight * 0.02,
-                  left: 0,
-                  child: GestureDetector(
-                    onTap: _togglePanel,
-                    child: AnimatedScale(
-                      scale: panelScale,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                      child: Transform.rotate(
-                        angle: 0 * 3.1415926535897932 / 180,
-                        child: PerpetualView(
-                            screenHeight * 0.38,
-                            screenWidth,
-                            home,
-                            setDate,
-                            glimpseCount,
-                            isPanelBig,
-                            makePanelSmall,
-                            startCountdown),
-                      ),
-                    ),
-                  ),
-                )
-              ]),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class VisitingText extends StatefulWidget {
   final Attraction visitingAttraction;
   final Function(BuildContext context, double screenHeight, double screenWidth)
-      clickAddNewTicketButton;
+  clickAddNewTicketButton;
 
   const VisitingText(this.visitingAttraction, this.clickAddNewTicketButton,
       {Key? key})
@@ -531,8 +317,14 @@ class _VisitingTextState extends State<VisitingText> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
+    double screenHeight = MediaQuery
+        .of(context)
+        .size
+        .height;
     return Container(
       width: screenWidth,
       height: screenHeight * 0.1,
@@ -573,8 +365,7 @@ class ChasingView extends StatefulWidget {
   final Attraction visitingAttraction;
   final VoidCallback toggleChasingMode;
 
-  const ChasingView(
-      this.toggleChasingMode,
+  const ChasingView(this.toggleChasingMode,
       this.screenHeight,
       this.screenWidth,
       this.chasingViewHeight,
@@ -618,9 +409,9 @@ class _ChasingViewState extends State<ChasingView> {
 
     // Set up a periodic timer to call _getUserLocation every 5 seconds
     _timer = Timer.periodic(Duration(seconds: fetchLocationIntervalSeconds),
-        (timer) {
-      _getUserLocation(widget.home);
-    });
+            (timer) {
+          _getUserLocation(widget.home);
+        });
 
     print('====== endof init');
   }
@@ -661,10 +452,10 @@ class _ChasingViewState extends State<ChasingView> {
   void _initCompass() {
     Stream<CompassEvent> emptyStream = Stream<CompassEvent>.empty();
     _compassStreamSubscription = FlutterCompass.events?.listen((event) {
-          setState(() {
-            _currentHeading = event.heading ?? 0.0;
-          });
-        }) ??
+      setState(() {
+        _currentHeading = event.heading ?? 0.0;
+      });
+    }) ??
         emptyStream.listen((event) {});
   }
 
@@ -695,12 +486,12 @@ class _ChasingViewState extends State<ChasingView> {
       double leftX = centerX +
           AngleCalculator()
               .radiusProjector(bottles[i].bearingAngle + _currentHeading,
-                  targetRadiusToCenter)
+              targetRadiusToCenter)
               .dx;
       double topY = centerY -
           AngleCalculator()
               .radiusProjector(bottles[i].bearingAngle + _currentHeading,
-                  targetRadiusToCenter)
+              targetRadiusToCenter)
               .dy;
       targets.add(Positioned(
         left: leftX,
@@ -740,13 +531,7 @@ class _ChasingViewState extends State<ChasingView> {
                   shape: NeumorphicShape.convex,
                   boxShape: NeumorphicBoxShape.circle(),
                   intensity: 1,
-                  // lightSource: neumorphiclightSource,
-                  // color: config.themeColor,
                   depth: 1.5,
-                  // border: NeumorphicBorder(
-                  //   color: config.backGroundWhite10,
-                  //   width: 2,
-                  // )
                 ),
                 child: Container(
                   color: config.backGroundWhite,
@@ -799,181 +584,139 @@ class _ChasingViewState extends State<ChasingView> {
 
                   child: Center(
                       child: SizedBox(
-                    height: (sensorRadius) * 2,
-                    width: (sensorRadius) * 2,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // monitor background
-                        Center(
-                          child: Container(
-                            width: sensorRadius * 2,
-                            height: sensorRadius * 2,
-                            decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                image: DecorationImage(
-                                  image:
-                                      AssetImage('assets/images/monitor.png'),
-                                  fit: BoxFit.cover,
-                                )),
-                          ),
-                        ),
-                        Center(
-                            child: SizedBox(
+                        height: (sensorRadius) * 2,
+                        width: (sensorRadius) * 2,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // monitor background
+                            Center(
+                              child: Container(
                                 width: sensorRadius * 2,
                                 height: sensorRadius * 2,
-                                child: Column(
-                                  children: [
-                                    const Spacer(),
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
+                                decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    image: DecorationImage(
+                                      image:
+                                      AssetImage('assets/images/monitor.png'),
+                                      fit: BoxFit.cover,
+                                    )),
+                              ),
+                            ),
+                            Center(
+                                child: SizedBox(
+                                    width: sensorRadius * 2,
+                                    height: sensorRadius * 2,
+                                    child: Column(
                                       children: [
                                         const Spacer(),
-                                        SizedBox(
-                                          child: Text(
-                                            'Next 新幹線 leaves in : ',
-                                            overflow: TextOverflow.clip,
-                                            maxLines: 1,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize:
+                                        Row(
+                                          crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                          children: [
+                                            const Spacer(),
+                                            SizedBox(
+                                              child: Text(
+                                                'Next 新幹線 leaves in : ',
+                                                overflow: TextOverflow.clip,
+                                                maxLines: 1,
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize:
                                                   widget.screenWidth * 0.03,
-                                              fontWeight: FontWeight.w500,
-                                              fontFamily:
+                                                  fontWeight: FontWeight.w500,
+                                                  fontFamily:
                                                   'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                            const Spacer(),
+                                          ],
                                         ),
-                                        const Spacer(),
-                                      ],
-                                    ),
-                                    Row(
-                                      crossAxisAlignment:
+                                        Row(
+                                          crossAxisAlignment:
                                           CrossAxisAlignment.end,
-                                      children: [
-                                        const Spacer(),
-                                        SizedBox(
-                                          child: Text(
-                                            '1 H : 30 M',
-                                            overflow: TextOverflow.clip,
-                                            maxLines: 1,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize:
+                                          children: [
+                                            const Spacer(),
+                                            SizedBox(
+                                              child: Text(
+                                                '1 H : 30 M',
+                                                overflow: TextOverflow.clip,
+                                                maxLines: 1,
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize:
                                                   widget.screenWidth * 0.06,
-                                              fontWeight: FontWeight.w500,
-                                              fontFamily:
+                                                  fontWeight: FontWeight.w500,
+                                                  fontFamily:
                                                   'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                            const Spacer(),
+                                          ],
                                         ),
-                                        const Spacer(),
-                                      ],
-                                    ),
-                                    Row(
-                                      crossAxisAlignment:
+                                        Row(
+                                          crossAxisAlignment:
                                           CrossAxisAlignment.end,
-                                      children: [
-                                        const Spacer(),
-                                        SizedBox(
-                                          child: Text(
-                                            'Home: ',
-                                            overflow: TextOverflow.clip,
-                                            maxLines: 1,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize:
+                                          children: [
+                                            const Spacer(),
+                                            SizedBox(
+                                              child: Text(
+                                                'Home: ',
+                                                overflow: TextOverflow.clip,
+                                                maxLines: 1,
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize:
                                                   widget.screenWidth * 0.035,
-                                              fontWeight: FontWeight.w500,
-                                              fontFamily:
+                                                  fontWeight: FontWeight.w500,
+                                                  fontFamily:
                                                   'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                        SizedBox(
-                                            child: Text(
-                                          (widget.home.distance != null)
-                                              ? widget.home.distance!
-                                                  .toStringAsFixed(3)
-                                              : 'calc...',
-                                          overflow: TextOverflow.clip,
-                                          maxLines: 1,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize:
-                                                widget.screenWidth * 0.035,
-                                            fontWeight: FontWeight.w500,
-                                            fontFamily:
-                                                'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                          ),
-                                        )),
-                                        SizedBox(
-                                            width: widget.screenWidth * 0.01),
-                                        Text(
-                                          'KM',
-                                          style: TextStyle(
-                                            fontSize: widget.screenWidth * 0.02,
-                                            fontWeight: FontWeight.w500,
-                                            fontFamily:
+                                            SizedBox(
+                                                child: Text(
+                                                  (widget.home.distance != null)
+                                                      ? widget.home.distance!
+                                                      .toStringAsFixed(3)
+                                                      : 'calc...',
+                                                  overflow: TextOverflow.clip,
+                                                  maxLines: 1,
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                    widget.screenWidth * 0.035,
+                                                    fontWeight: FontWeight.w500,
+                                                    fontFamily:
+                                                    'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                                  ),
+                                                )),
+                                            SizedBox(
+                                                width: widget.screenWidth *
+                                                    0.01),
+                                            Text(
+                                              'KM',
+                                              style: TextStyle(
+                                                fontSize: widget.screenWidth *
+                                                    0.02,
+                                                fontWeight: FontWeight.w500,
+                                                fontFamily:
                                                 'Open-Sans', // Replace 'SecondFontFamily' with your desired font family
-                                          ),
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                          ],
                                         ),
                                         const Spacer(),
                                       ],
-                                    ),
-                                    const Spacer(),
-                                  ],
-                                ))),
-                      ],
-                    ),
-                  )),
+                                    ))),
+                          ],
+                        ),
+                      )),
                 )),
           ),
-
-          // rotated N
-          // IgnorePointer(
-          //   ignoring: true,
-          //   child: Align(
-          //       alignment: Alignment.center,
-          //       child: Transform.rotate(
-          //         angle: _currentHeading * (3.14159 / 180) * -1,
-          //         child: Container(
-          //           height: rotatedNRadius * 2,
-          //           width: rotatedNRadius * 2,
-          //           decoration: const BoxDecoration(
-          //             shape: BoxShape.circle,
-          //           ),
-          //           child: Stack(
-          //             children: [
-          //               Align(
-          //                 alignment: Alignment.topCenter,
-          //                 child: Text('N',
-          //                     style: TextStyle(
-          //                         color: Colors.black,
-          //                         fontSize: widget.screenHeight * 0.025)),
-          //               ),
-          //               Align(
-          //                 alignment: Alignment.center,
-          //                 child: Row(
-          //                   children: [
-          //                     Text('－',
-          //                         style: TextStyle(
-          //                             color: Colors.black,
-          //                             fontSize: widget.screenHeight * 0.02)),
-          //                     const Spacer(),
-          //                     Text('－',
-          //                         style: TextStyle(
-          //                             color: Colors.black,
-          //                             fontSize: widget.screenHeight * 0.02)),
-          //                   ],
-          //                 ),
-          //               ),
-          //             ],
-          //           ),
-          //         ),
-          //       )),
-          // ),
 
           Stack(children: targets),
         ],

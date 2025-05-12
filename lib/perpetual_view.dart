@@ -11,15 +11,22 @@ import 'package:vibration/vibration.dart';
 class PerpetualView extends StatefulWidget {
   final double perpetualViewHeight;
   final double screenWidth;
-  final Attraction home;
   final Function setDate;
   final int glimpseCount;
   final bool isTapped;
   final Function makePanelSmall;
   final Function startCountdown;
+  final Function _togglePanel;
 
-  const PerpetualView(this.perpetualViewHeight, this.screenWidth, this.home,
-      this.setDate, this.glimpseCount, this.isTapped, this.makePanelSmall, this.startCountdown,
+  const PerpetualView(
+      this._togglePanel,
+      this.perpetualViewHeight,
+      this.screenWidth,
+      this.setDate,
+      this.glimpseCount,
+      this.isTapped,
+      this.makePanelSmall,
+      this.startCountdown,
       {Key? key})
       : super(key: key);
 
@@ -58,7 +65,7 @@ class _PerpetualViewState extends State<PerpetualView> {
   int daysInMonth = 31;
   int dragDay = 1;
   int dragMonth = 1;
-  int dragYear = 2024;
+  int dragYear = 2025;
 
   double _totalRotation = 0.0;
 
@@ -73,17 +80,6 @@ class _PerpetualViewState extends State<PerpetualView> {
         firstDayOfNextMonth.subtract(const Duration(days: 1));
 
     return lastDayOfCurrentMonth.day;
-  }
-
-  void simulateShutterEffect() async {
-    setState(() {
-      isAnimating = true; // 啟動動畫
-    });
-
-    await Future.delayed(const Duration(milliseconds: 50)); // 模擬移動效果
-    setState(() {
-      isAnimating = false; // 停止動畫
-    });
   }
 
   double alignDegreeTo12OClock(double angleInDegrees) {
@@ -133,8 +129,6 @@ class _PerpetualViewState extends State<PerpetualView> {
     if (adjustedDegrees < 0) {
       adjustedDegrees += 360; // 確保在 0 到 360 度之間
     }
-
-    print('======= adjustedDegrees ${adjustedDegrees}');
 
     // 每一天的角度範圍
     double degreesPerMonth = 360 / 12;
@@ -332,9 +326,6 @@ class _PerpetualViewState extends State<PerpetualView> {
       DisplayBottle('W', 180, 150, 24.397630, 121.264331),
     ];
 
-    // centerOfTargetToCenterPlusTargetRadius =
-    //     radiusOfCenterMoniterCircle + radiusOfDragObject * 2;
-
     centerX = (widget.screenWidth / 2);
     centerY = (widget.perpetualViewHeight / 2);
 
@@ -359,7 +350,7 @@ class _PerpetualViewState extends State<PerpetualView> {
 
   @override
   Widget build(BuildContext context) {
-    double fontSizeForText = widget.screenWidth * 0.036;
+    double fontSizeForText = widget.screenWidth * 0.025;
     return SizedBox(
       height: widget.perpetualViewHeight,
       width: widget.screenWidth,
@@ -465,7 +456,6 @@ class _PerpetualViewState extends State<PerpetualView> {
                 )),
           ),
 
-          // hint R: sensorRadius
           Align(
             alignment: Alignment.center,
             child: Container(
@@ -483,7 +473,7 @@ class _PerpetualViewState extends State<PerpetualView> {
                     color: config.backGroundWhite,
                   ),
                   onPressed: () {
-                    // widget.toggleChasingMode();
+                    widget._togglePanel();
                   },
                   child: SizedBox(
                     height: (radiusOfCenterMoniterCircle) * 3,
@@ -493,116 +483,43 @@ class _PerpetualViewState extends State<PerpetualView> {
           ),
 
           // png
-          Align(
-              alignment: Alignment.center,
-              child: Stack(
-                children: [
-                  // png
-                  // Center(
-                  //   child: Container(
-                  //     width: dragObjectRadius * 1.8,
-                  //     height: dragObjectRadius * 1.8,
-                  //     decoration: const BoxDecoration(
-                  //         shape: BoxShape.circle,
-                  //         image: DecorationImage(
-                  //           image: AssetImage('assets/images/monitor.png'),
-                  //           fit: BoxFit.cover,
-                  //         )),
-                  //   ),
-                  // ),
+          IgnorePointer(
+            child: Align(
+                alignment: Alignment.center,
+                child: Stack(
+                  children: [
+                    // png
+                    // Center(
+                    //   child: Container(
+                    //     width: radiusOfCenterMoniterCircle * 1.8,
+                    //     height: radiusOfCenterMoniterCircle * 1.8,
+                    //     decoration: const BoxDecoration(
+                    //         shape: BoxShape.circle,
+                    //         image: DecorationImage(
+                    //           image: AssetImage('assets/images/monitor.png'),
+                    //           fit: BoxFit.cover,
+                    //         )),
+                    //   ),
+                    // ),
 
-                  // Text
-                  Center(
-                      child: SizedBox(
-                          width: radiusOfCenterMoniterCircle * 1.9,
-                          height: radiusOfCenterMoniterCircle * 1.9,
-                          child: Column(
-                            children: [
-                              const Spacer(),
+                    // Text
+                    Center(
+                        child: SizedBox(
+                            width: radiusOfCenterMoniterCircle * 1.9,
+                            height: radiusOfCenterMoniterCircle * 1.9,
+                            child: Column(
+                              children: [
+                                const Spacer(),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Spacer(),
 
-                              // const Spacer(),
-
-                              // date
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  const Spacer(),
-
-                                  // year
-                                  SizedBox(
-                                    width: fontSizeForText * 4,
-                                    child: Text(
-                                      dragYear.toString(),
-                                      overflow: TextOverflow.clip,
-                                      maxLines: 1,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: fontSizeForText,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily:
-                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                      ),
-                                    ),
-                                  ),
-
-                                  // /
-                                  SizedBox(
-                                    child: Text(
-                                      '/',
-                                      overflow: TextOverflow.clip,
-                                      maxLines: 1,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: fontSizeForText,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily:
-                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                      ),
-                                    ),
-                                  ),
-
-                                  // month
-                                  SizedBox(
-                                    width: fontSizeForText * 2,
-                                    child: Text(
-                                      dragMonth < 10
-                                          ? '0$dragMonth'
-                                          : dragMonth.toString(),
-                                      overflow: TextOverflow.clip,
-                                      maxLines: 1,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: fontSizeForText,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily:
-                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                      ),
-                                    ),
-                                  ),
-
-                                  // /
-                                  SizedBox(
-                                    child: Text(
-                                      '/',
-                                      overflow: TextOverflow.clip,
-                                      maxLines: 1,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: fontSizeForText,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily:
-                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                      ),
-                                    ),
-                                  ),
-
-                                  // date
-                                  SizedBox(
-                                      width: fontSizeForText * 2,
+                                    // year
+                                    SizedBox(
+                                      width: fontSizeForText * 4,
                                       child: Text(
-                                        dragDay < 10
-                                            ? '0$dragDay'
-                                            : dragDay.toString(),
+                                        dragYear.toString(),
                                         overflow: TextOverflow.clip,
                                         maxLines: 1,
                                         textAlign: TextAlign.center,
@@ -612,96 +529,167 @@ class _PerpetualViewState extends State<PerpetualView> {
                                           fontFamily:
                                               'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
                                         ),
-                                      )),
-                                  const Spacer(),
-                                ],
-                              ),
+                                      ),
+                                    ),
 
-                              // cups
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  const Spacer(),
-                                  Container(
-                                      // color: Colors.blue,
-                                      width: radiusOfCenterMoniterCircle *
-                                          1.9 *
-                                          0.4,
+                                    // /
+                                    SizedBox(
                                       child: Text(
-                                        widget.glimpseCount == 0
-                                            ? '00'
-                                            : widget.glimpseCount < 10
-                                                ? '0${widget.glimpseCount}'
-                                                : widget.glimpseCount
-                                                    .toString(),
+                                        '/',
                                         overflow: TextOverflow.clip,
                                         maxLines: 1,
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
-                                          fontSize:
-                                              radiusOfCenterMoniterCircle *
-                                                  1.9 *
-                                                  0.5 *
-                                                  0.5,
+                                          fontSize: fontSizeForText,
                                           fontWeight: FontWeight.w500,
                                           fontFamily:
                                               'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
                                         ),
-                                      )),
-                                  const Spacer(),
-                                ],
-                              ),
-                              // glimpse
-
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Spacer(),
-                                  SizedBox(
-                                      // color: Colors.blue,
-                                      width: radiusOfCenterMoniterCircle *
-                                          1.9 *
-                                          0.4,
-                                      child: const Text(
-                                        '',
-                                      )),
-                                  Text(
-                                    'Glimpses',
-                                    style: TextStyle(
-                                      fontSize: widget.screenWidth * 0.02,
-                                      fontWeight: FontWeight.w500,
-                                      fontFamily:
-                                          'Ds-Digi', // Replace 'SecondFontFamily' with your desired font family
+                                      ),
                                     ),
-                                  ),
-                                  const Spacer(),
-                                ],
-                              ),
 
-                              const Spacer(),
-                            ],
-                          ))),
-                ],
-              )),
+                                    // month
+                                    SizedBox(
+                                      width: fontSizeForText * 2,
+                                      child: Text(
+                                        dragMonth < 10
+                                            ? '0$dragMonth'
+                                            : dragMonth.toString(),
+                                        overflow: TextOverflow.clip,
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: fontSizeForText,
+                                          fontWeight: FontWeight.w500,
+                                          fontFamily:
+                                              'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                        ),
+                                      ),
+                                    ),
+
+                                    // /
+                                    SizedBox(
+                                      child: Text(
+                                        '/',
+                                        overflow: TextOverflow.clip,
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: fontSizeForText,
+                                          fontWeight: FontWeight.w500,
+                                          fontFamily:
+                                              'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                        ),
+                                      ),
+                                    ),
+
+                                    // date
+                                    SizedBox(
+                                        width: fontSizeForText * 2,
+                                        child: Text(
+                                          dragDay < 10
+                                              ? '0$dragDay'
+                                              : dragDay.toString(),
+                                          overflow: TextOverflow.clip,
+                                          maxLines: 1,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: fontSizeForText,
+                                            fontWeight: FontWeight.w500,
+                                            fontFamily:
+                                                'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                          ),
+                                        )),
+                                    const Spacer(),
+                                  ],
+                                ),
+
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Spacer(),
+                                    Container(
+                                        // color: Colors.blue,
+                                        width: radiusOfCenterMoniterCircle *
+                                            1.9 *
+                                            0.4,
+                                        child: Text(
+                                          widget.glimpseCount == 0
+                                              ? '00'
+                                              : widget.glimpseCount < 10
+                                                  ? '0${widget.glimpseCount}'
+                                                  : widget.glimpseCount
+                                                      .toString(),
+                                          overflow: TextOverflow.clip,
+                                          maxLines: 1,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize:
+                                                radiusOfCenterMoniterCircle *
+                                                    1.9 *
+                                                    0.5 *
+                                                    0.5,
+                                            fontWeight: FontWeight.w500,
+                                            fontFamily:
+                                                'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                          ),
+                                        )),
+                                    const Spacer(),
+                                  ],
+                                ),
+
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Spacer(),
+                                    SizedBox(
+                                        // color: Colors.blue,
+                                        width: radiusOfCenterMoniterCircle *
+                                            1.9 *
+                                            0.4,
+                                        child: const Text(
+                                          '',
+                                        )),
+                                    Text(
+                                      'Glimpses',
+                                      style: TextStyle(
+                                        fontSize: widget.screenWidth * 0.02,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily:
+                                            'Ds-Digi', // Replace 'SecondFontFamily' with your desired font family
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                  ],
+                                ),
+
+                                const Spacer(),
+                              ],
+                            ))),
+                  ],
+                )),
+          ),
 
           // Draw date dash
-          Align(
-            alignment: Alignment.center,
-            child: Container(
-              // color: Colors.black,
-              child: CustomPaint(
-                size: Size(dentRadius * 2, dentRadius * 2),
-                // Adjust the size as needed
-                painter: DashedCirclePainter(
-                    dx: dentRadius,
-                    dy: dentRadius,
-                    radius: dentRadius,
-                    margin: dentRadius * 0.1,
-                    dashCount: 31,
-                    dashWidth: radiusOfDragObject * 0.8,
-                    strokeWidth: radiusOfDragObject * 0.03,
-                    strockColor: Colors.grey,
-                    isMonth: false),
+          IgnorePointer(
+            child: Align(
+              alignment: Alignment.center,
+              child: Container(
+                // color: Colors.black,
+                child: CustomPaint(
+                  size: Size(dentRadius * 2, dentRadius * 2),
+                  // Adjust the size as needed
+                  painter: DashedCirclePainter(
+                      dx: dentRadius,
+                      dy: dentRadius,
+                      radius: dentRadius,
+                      margin: dentRadius * 0.1,
+                      dashCount: 31,
+                      dashWidth: radiusOfDragObject * 0.8,
+                      strokeWidth: radiusOfDragObject * 0.03,
+                      strockColor: Colors.grey,
+                      isMonth: false),
+                ),
               ),
             ),
           ),
@@ -991,14 +979,14 @@ class _PerpetualViewState extends State<PerpetualView> {
               bottom: widget.perpetualViewHeight * 0.01,
               right: widget.perpetualViewHeight * 0.03,
               child: GestureDetector(
-                onTap: (){
+                onTap: () {
                   setState(() {
                     widget.makePanelSmall();
                   });
                 },
                 child: widget.isTapped
-                    ? const Icon(Icons.arrow_circle_left, color: Colors.white)
-                    : const Icon(Icons.arrow_right, color: Colors.white),
+                    ? const Icon(Icons.arrow_circle_left, color: Colors.grey)
+                    : const Icon(Icons.arrow_right, color: Colors.grey),
               ))
         ],
       ),
@@ -1128,135 +1116,6 @@ class DashedCirclePainter extends CustomPainter {
     return false;
   }
 }
-
-// class CirclesPainter extends CustomPainter {
-//   final double dx;
-//   final double dy;
-//   final double radius;
-//   final double margin;
-//   final double dashWidth;
-//   final double dashCount;
-//   final double strokeWidth;
-//   final Color strockColor;
-//   final bool isMonth;
-//
-//
-//   CirclesPainter(
-//       {required this.dx,
-//       required this.dy,
-//       required this.radius,
-//       required this.margin,
-//       required this.dashCount,
-//       required this.dashWidth,
-//       required this.strokeWidth,
-//       required this.strockColor,
-//       required this.isMonth});
-//
-//   @override
-//   void paint(Canvas canvas, Size size) {
-//     final Paint paint = Paint()
-//       ..color = strockColor
-//       ..style = PaintingStyle.stroke
-//       ..strokeWidth = strokeWidth;
-//
-//     double newRadius = radius - margin;
-//
-//     for (int i = 0; i < dashCount; i++) {
-//       // Start angle at -pi / 2 to align the first dash to the 12 o'clock position
-//       double angle = (2 * pi * i) / dashCount - (pi / 2);
-//       double startX = dx + newRadius * cos(angle);
-//       double startY = dy + newRadius * sin(angle);
-//       double endX = dx + (newRadius - dashWidth) * cos(angle);
-//       double endY = dy + (newRadius - dashWidth) * sin(angle);
-//
-//       // Create a new Paint instance for the filled circle
-//       final filledPaint = Paint()
-//         ..color = strockColor
-//         ..style = PaintingStyle.fill; // Set style to fill
-//
-//       // canvas.drawCircle(Offset(startX, startY), dashWidth * 3, paint);
-//       canvas.drawCircle(Offset(startX, startY), dashWidth * 3, filledPaint);
-//     }
-//   }
-//
-//   @override
-//   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-//     return false;
-//   }
-// }
-
-// class CirclesPainter extends CustomPainter {
-//   final double dx;
-//   final double dy;
-//   final double radius;
-//   final double margin;
-//   final double dashWidth;
-//   final double dashCount;
-//   final double strokeWidth;
-//   final Color strockColor;
-//   final bool isMonth;
-//   double animationProgress =
-//       1.0; // Animation progress: 0.0 -> fully moved, 1.0 -> back to original
-//
-//   CirclesPainter({
-//     required this.dx,
-//     required this.dy,
-//     required this.radius,
-//     required this.margin,
-//     required this.dashCount,
-//     required this.dashWidth,
-//     required this.strokeWidth,
-//     required this.strockColor,
-//     required this.isMonth,
-//   });
-//
-//   @override
-//   void paint(Canvas canvas, Size size) {
-//     final Paint paint = Paint()
-//       ..color = strockColor
-//       ..style = PaintingStyle.stroke
-//       ..strokeWidth = strokeWidth;
-//
-//     double newRadius = radius - margin;
-//
-//     for (int i = 0; i < dashCount; i++) {
-//       // Calculate angle
-//       double angle = (2 * pi * i) / dashCount - (pi / 2);
-//
-//       // Base positions
-//       double startX = dx + newRadius * cos(angle);
-//       double startY = dy + newRadius * sin(angle);
-//
-//       // Calculate offset for shutter effect
-//       double offsetDistance = animationProgress < 0.5
-//           ? dashWidth * 3 * (1 - animationProgress * 2) // Moving outward
-//           : dashWidth * 2 * ((animationProgress - 0.5) * 2); // Returning inward
-//
-//       // Calculate shifted position
-//       double shiftedX = startX + offsetDistance * cos(angle);
-//       double shiftedY = startY + offsetDistance * sin(angle);
-//
-//       // Paint filled circle
-//       final filledPaint = Paint()
-//         ..color = strockColor
-//         ..style = PaintingStyle.fill;
-//
-//       canvas.drawCircle(Offset(shiftedX, shiftedY), dashWidth * 3, filledPaint);
-//     }
-//   }
-//
-//   @override
-//   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-//     return true; // Enable redrawing for animation
-//   }
-//
-//   /// Simulate shutter effect by updating animation progress
-//   void simulateShutterEffect(AnimationController controller) {
-//     controller.addListener(() {
-//       animationProgress = controller.value;
-//     });
-//   }
-// }
 
 class CirclesPainter extends CustomPainter {
   final bool isAnimating; // 添加動畫標誌
