@@ -3,12 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class DatePickerView extends StatefulWidget {
-  const DatePickerView({super.key});
-
   @override
-  State<StatefulWidget> createState() {
-    return _DatePickerViewState();
-  }
+  State<StatefulWidget> createState() => _DatePickerViewState();
 }
 
 class _DatePickerViewState extends State<DatePickerView> {
@@ -24,7 +20,7 @@ class _DatePickerViewState extends State<DatePickerView> {
         height: screenHeight,
         color: Colors.black,
         child: Column(
-          children: [],
+          children: [Text('text')],
         ),
       ),
     );

@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:glimpse/attraction_display_view.dart';
-import 'database/attraction.dart';
-import 'database/attraction_db.dart';
+import 'database_sqlite/attraction.dart';
+import 'database_sqlite/attraction_db.dart';
 
 class AttractionsView extends StatefulWidget {
   final Attraction currentAttraction;

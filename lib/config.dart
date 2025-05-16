@@ -12,6 +12,15 @@ const Color border = Color(0x00000000);
 const Color backGroundWhite = Color(0xfff1f1f0);
 const Color ticketWhite = Color.fromARGB(255, 255, 255, 255);
 
+const Color hardCard = Color(0xffe1e1e1);
+const Color hardCardYellowLight = Color(0xffddd1ae);
+const Color hardCardYellow = Color(0xffdecd9e);
+const Color hardCardYellowDark = Color(0xffdcc995);
+
+const Color hardCardRed = Color(0xff671010);
+const Color hardCardBlue = Color(0xff424f6e);
+
+
 // red
 // const Color dragButton = Color.fromARGB(255, 195, 14, 14);
 

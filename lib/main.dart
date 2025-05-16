@@ -11,24 +11,39 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 
 import 'package:geolocator/geolocator.dart';
+import 'package:glimpse/models/food.dart';
+import 'package:glimpse/models/place.dart';
 import 'package:glimpse/perpetual_view.dart';
+import 'package:isar/isar.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 import ' waterfall_view.dart';
 import './config.dart' as config;
 import 'attractions_view.dart';
 import 'bottom_tourist_list_view.dart';
+import 'models/glimpse.dart';
 import 'tickets_view.dart';
-import 'database/ticket.dart';
-import 'database/attraction.dart';
-import 'database/ticket_db.dart';
-import 'database/attraction_db.dart';
+import 'database_sqlite/ticket.dart';
+import 'database_sqlite/attraction.dart';
+import 'database_sqlite/ticket_db.dart';
+import 'database_sqlite/attraction_db.dart';
 import 'package:flutter_scalable_ocr/flutter_scalable_ocr.dart';
 import './add_attraction_view.dart';
 import './add_ticket_view.dart';
 
 import 'Routes.dart';
 
-void main() {
+late final Isar isar;
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final dir = await getApplicationDocumentsDirectory();
+  isar = await Isar.open(
+    [GlimpseSchema, FoodSchema, PlaceSchema],
+    directory: dir.path,
+  );
+
   runApp(const MyApp());
 }
 

@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
-import 'package:glimpse/database/glimpse_db.dart';
+import 'package:glimpse/database_sqlite/glimpse_db.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import './config.dart' as config;
-import 'database/glimpse.dart';
+import 'database_sqlite/glimpse.dart';
 
 const Map<String, int> glimpseTypes = {
   'vertical_img_with_text_on_the_right': 0,

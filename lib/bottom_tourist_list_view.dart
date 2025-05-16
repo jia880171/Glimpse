@@ -1,8 +1,8 @@
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import './config.dart' as config;
 
-import 'database/attraction.dart';
-import 'database/attraction_db.dart';
+import 'database_sqlite/attraction.dart';
+import 'database_sqlite/attraction_db.dart';
 
 class BottomTouristList extends StatefulWidget {
   final List<Attraction> attractions;

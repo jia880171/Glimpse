@@ -5,8 +5,8 @@ import 'dart:math' as math;
 import './config.dart' as config;
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:flutter_scalable_ocr/flutter_scalable_ocr.dart';
-import 'database/ticket.dart';
-import 'database/ticket_db.dart';
+import 'database_sqlite/ticket.dart';
+import 'database_sqlite/ticket_db.dart';
 
 class TicketsView extends StatefulWidget {
   bool isHideUsedTickets;

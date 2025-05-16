@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import './config.dart' as config;
 import 'dart:math' as math;
 
-import 'database/attraction.dart';
+import 'database_sqlite/attraction.dart';
 
 class AttractionEditView extends StatefulWidget {
   final Attraction attraction;

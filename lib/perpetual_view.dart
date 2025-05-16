@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import './config.dart' as config;
-import 'database/attraction.dart';
+import 'database_sqlite/attraction.dart';
 import 'main.dart';
 import 'dart:math' as math;
 import 'package:vibration/vibration.dart';

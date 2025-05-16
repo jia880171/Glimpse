@@ -4,8 +4,8 @@ import 'package:glimpse/attraction_edit_view.dart';
 import './config.dart' as config;
 import 'dart:math' as math;
 
-import 'database/attraction.dart';
-import 'database/attraction_db.dart';
+import 'database_sqlite/attraction.dart';
+import 'database_sqlite/attraction_db.dart';
 
 class AttractionDisplayView extends StatefulWidget {
   final Attraction attraction;

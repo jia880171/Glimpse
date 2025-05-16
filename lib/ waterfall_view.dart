@@ -1,6 +1,9 @@
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:collection/collection.dart';
+import 'package:flutter/src/services/message_codec.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
+import 'package:glimpse/rotatable_Glimpse_card_view.dart';
 
 import './config.dart' as config;
 
@@ -8,7 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:image/image.dart' as img; // Import the image package
+import 'package:image/image.dart' as img;
+import 'package:exif/exif.dart';
 
 class WaterfallView extends StatefulWidget {
   final DateTime selectedDate;
@@ -19,101 +23,159 @@ class WaterfallView extends StatefulWidget {
       : super(key: key);
 
   @override
-  _WaterfallViewState createState() => _WaterfallViewState();
+  WaterfallViewState createState() => WaterfallViewState();
 }
 
 double filmWidthRatio = 0.4;
 
-class _WaterfallViewState extends State<WaterfallView> {
+class WaterfallViewState extends State<WaterfallView>
+    with WidgetsBindingObserver {
   bool lightOn = false;
-
   int thumbnailSize = 135;
-  String targetAlbumName = "Pictures";
-  List<String> albumNames = [];
-  List<AssetEntity> images = [];
+
   int counts = 0;
   String? selectedImageId;
 
   Color backLight = config.backLightW;
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchImages();
-  }
-
   // 定義一個縮略圖快取Map
   final Map<String, Uint8List?> _thumbnailCache = {};
 
-  Future<void> _fetchImages() async {
-    final PermissionState permission =
-        await PhotoManager.requestPermissionExtend();
+  String targetAlbumName = "Pictures";
 
-    // Check if permission is authorized
-    if (permission.isAuth || permission == PermissionState.limited) {
-      // // Fetch albums from the device
-      final List<AssetPathEntity> albums =
-          await PhotoManager.getAssetPathList();
+  List<String> albumNames = [];
+  List<AssetEntity> images = [];
+  List<AssetPathEntity> _cachedAlbums = [];
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initAlbumsAndListen();
+  }
 
-      if (albums.isNotEmpty) {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    PhotoManager.removeChangeCallback(_onPhotoChange);
+    super.dispose();
+  }
 
-        setState(() {
-          albumNames = albums
-              .whereType<AssetPathEntity>() // 過濾掉 null
-              .map((album) => album.name) // 提取 name
-              .toList();
-        });
-
-        List<AssetEntity> selectedImages =
-            await getAssetEntitiesFormTargetAlbum(albums);
-
-        if (selectedImages.isNotEmpty) {
-          // insert dummy photos
-          selectedImages.insert(0, selectedImages[0]);
-          selectedImages.insert(selectedImages.length, selectedImages[0]);
-        }
-
-        setState(() {
-          images = selectedImages;
-          counts = images.isEmpty ? 0 : images.length - 2;
-          widget.setGlimpseCount(counts);
-        });
-
-        // 加載縮略圖並快取
-        await loadAndCacheThumbnail(selectedImages);
-      } else {
-        print('====== albums is empty');
-      }
-    } else {
-      print('====== permission is not authed');
-      PhotoManager.openSetting();
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // App refreshes when returning to the foreground from the background
+    if (state == AppLifecycleState.resumed) {
+      _initAlbumsAndListen();
     }
   }
 
-  Future<List<AssetEntity>> getAssetEntitiesFormTargetAlbum(
-      List<AssetPathEntity> albums) async {
+  void _onPhotoChange(MethodCall call) {
+    // 系統照片有改變，自動刷新
+    _initAlbumsAndListen();
+  }
 
-    // 找到目標相簿
-    final AssetPathEntity? targetAlbum =
-        albums.cast<AssetPathEntity?>().firstWhere(
-              (album) => album?.name == targetAlbumName,
-              orElse: () => null,
-            );
+  Future<void> _initAlbumsAndListen() async {
+    if (!await hasPhotoAccess()) {
+      PhotoManager.openSetting();
+      return; //設定回來之後 會回來這裡?????
+    }
+
+    // 註冊系統照片庫改變監聽（第一次呼叫時註冊，之後移除重註冊也沒問題）
+    PhotoManager.removeChangeCallback(_onPhotoChange);
+    PhotoManager.addChangeCallback(_onPhotoChange);
+
+    // 取得相簿列表並緩存
+    _cachedAlbums = await PhotoManager.getAssetPathList();
+
+    setState(() {
+      albumNames = _cachedAlbums.map((e) => e.name).toList();
+    });
+  }
+
+  Future<bool> hasPhotoAccess() async {
+    final permission = await PhotoManager.requestPermissionExtend();
+    return permission.isAuth || permission == PermissionStatus.limited;
+  }
+
+  Future<List<String>> _fetchAlbumNames() async {
+    if (await hasPhotoAccess()) {
+      final albums = await PhotoManager.getAssetPathList();
+      return albums.map((album) => album.name).toList();
+    } else {
+      PhotoManager.openSetting();
+      return [];
+    }
+  }
+
+
+  Future<List<AssetEntity>> getAssetEntitiesFromCachedAlbums(String targetAlbumName) async {
+    final targetAlbum = _cachedAlbums.firstWhereOrNull(
+          (album) => album.name == targetAlbumName,
+    );
 
     if (targetAlbum == null) {
       print("目標相簿不存在");
       return [];
     }
 
-    // 從目標相簿中獲取所有圖片
-    final List<AssetEntity> allImages =
-        await targetAlbum.getAssetListPaged(page: 0, size: 100);
-
-    // Filter images by selected date
+    final List<AssetEntity> allImages = await targetAlbum.getAssetListPaged(page: 0, size: 100);
     final selectedImages = filterImagesByDate(allImages);
     return selectedImages;
   }
+
+  Future<void> _fetchImages() async {
+    // Check if permission is authorized
+    if (!await hasPhotoAccess()) {
+      print('====== permission is not authed');
+      PhotoManager.openSetting();
+      return;
+    }
+
+    if (_cachedAlbums.isEmpty) {
+      await _initAlbumsAndListen();
+    }
+
+    List<AssetEntity> selectedImages =
+        await getAssetEntitiesFromCachedAlbums(targetAlbumName);
+
+    if (selectedImages.isNotEmpty) {
+      selectedImages.insert(0, selectedImages[0]);
+      selectedImages.insert(selectedImages.length, selectedImages[0]);
+    }
+
+    setState(() {
+      images = selectedImages;
+      counts = images.isEmpty ? 0 : images.length - 2;
+      widget.setGlimpseCount(counts);
+    });
+
+    await loadAndCacheThumbnail(selectedImages);
+  }
+
+  Future<void> extractExifDataFromAsset(AssetEntity asset) async {
+    final file = await asset.file;
+
+    if (file != null) {
+      final imageBytes = await file.readAsBytes();
+
+      final data = await readExifFromBytes(imageBytes);
+      if (data != null && data.isNotEmpty) {
+        print('Exif data:');
+        for (var entry in data.entries) {
+          print('${entry.key}: ${entry.value}');
+        }
+
+        final cameraModel = data['Image Model'];
+        final dateTime = data['EXIF DateTimeOriginal'];
+
+        print('📷 Camera Model: ${cameraModel?.printable}');
+        print('🕓 Date Time: ${dateTime?.printable}');
+      } else {
+        print('No EXIF data found.');
+      }
+    }
+  }
+
 
   Future<void> loadAndCacheThumbnail(List<AssetEntity> selectedImages) async {
     for (var image in selectedImages) {
@@ -154,8 +216,7 @@ class _WaterfallViewState extends State<WaterfallView> {
   @override
   void didUpdateWidget(WaterfallView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedDate != widget.selectedDate
-    ) {
+    if (oldWidget.selectedDate != widget.selectedDate) {
       // Only fetch images if selectedDate has changed
       _fetchImages();
     }
@@ -189,9 +250,17 @@ class _WaterfallViewState extends State<WaterfallView> {
     return Uint8List.fromList(img.encodeJpg(originalImage));
   }
 
+  Future<Uint8List?> _getImageBytes(AssetEntity asset) async {
+    final file = await asset.file;
+    if (file != null) {
+      final bytes = await file.readAsBytes();
+      return bytes;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    print('====== building');
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
     double fontSizeForText = 20;
@@ -210,7 +279,7 @@ class _WaterfallViewState extends State<WaterfallView> {
     return Scaffold(
         backgroundColor: Colors.white,
         body: SingleChildScrollView(
-          child: Container(
+          child: SizedBox(
               width: screenWidth,
               height: screenHeight,
               child: Stack(
@@ -317,16 +386,33 @@ class _WaterfallViewState extends State<WaterfallView> {
                                                               ),
                                                               child: (thumbnail !=
                                                                       null)
-                                                                  ? Image
-                                                                      .memory(
-                                                                      applyNegativeEffect(
-                                                                        backLight ==
-                                                                                config.backLightW
-                                                                            ? applyNegativeEffect(thumbnail)
-                                                                            : thumbnail,
+                                                                  ? GestureDetector(
+                                                                      onTap:
+                                                                          () async {
+                                                                        final imageBytes =
+                                                                            await _getImageBytes(image);
+                                                                        Navigator
+                                                                            .push(
+                                                                          context,
+                                                                          MaterialPageRoute(
+                                                                            builder: (context) =>
+                                                                                RotatableGlimpseCardView(
+                                                                              isNeg: backLight != config.backLightW,
+                                                                              image: imageBytes!,
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      },
+                                                                      child: Image
+                                                                          .memory(
+                                                                        applyNegativeEffect(
+                                                                          backLight == config.backLightW
+                                                                              ? applyNegativeEffect(thumbnail)
+                                                                              : thumbnail,
+                                                                        ),
+                                                                        fit: BoxFit
+                                                                            .cover,
                                                                       ),
-                                                                      fit: BoxFit
-                                                                          .cover,
                                                                     )
                                                                   : Container(
                                                                       color: Colors

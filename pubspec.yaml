@@ -53,10 +53,18 @@ dependencies:
   dotted_line: ^3.1.0
   sqflite: ^2.0.0+4
   path: ^1.8.0
+  exif: ^2.0.2
+  collection: ^1.17.2
+
+  isar: ^3.1.0
+  isar_flutter_libs: any  # 若在手機使用
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  build_runner: any
+  isar_generator: any
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -132,4 +140,9 @@ flutter:
     - family: koma
       fonts:
         - asset: fonts/koma.otf
-
+    - family: Anton
+      fonts:
+        - asset: fonts/Anton-Regular.ttf
+    - family: Sacramento
+      fonts:
+       - asset: fonts/Sacramento-Regular.ttf
