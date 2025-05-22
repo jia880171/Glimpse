@@ -88,6 +88,13 @@ flutter:
   assets:
     - assets/images/monitor.png
     - assets/images/bac.jpg
+    - assets/images/noise.png
+    - assets/images/noise_blur.png
+    - assets/images/noise_blur2.png
+    - assets/images/plastic_overlay.png
+    - assets/images/plastic_overlay2.png
+    - assets/images/plastic_overlay3.png
+    - assets/images/plastic_overlay4.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
@@ -125,6 +132,9 @@ flutter:
           weight: 400
         - asset: fonts/OpenSans-BoldItalic.ttf
           weight: 500
+    - family: Open-Sans-400  # Replace with your chosen font family name
+      fonts:
+        - asset: fonts/OpenSans-ExtraBoldItalic.ttf
     - family: Ds-Digi
       fonts:
         - asset: fonts/DS-DIGI.ttf
@@ -146,3 +156,9 @@ flutter:
     - family: Sacramento
       fonts:
        - asset: fonts/Sacramento-Regular.ttf
+    - family: Jura
+      fonts:
+        - asset: fonts/Jura.ttf
+    - family: Meow
+      fonts:
+        - asset: fonts/Meow.ttf

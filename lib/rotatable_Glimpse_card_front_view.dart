@@ -1,27 +1,25 @@
-import 'dart:io';
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:exif/exif.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
-import 'package:photo_manager/photo_manager.dart';
-import './config.dart' as config;
 import 'package:image/image.dart' as img;
+
+import './config.dart' as config;
 
 class RotatableGlimpseCardFrontView extends StatefulWidget {
   final String? imagePath;
   final Uint8List image;
-  final bool isNeg;
   final Size cardSize;
+  final Map<String?, IfdTag> exifData;
 
   const RotatableGlimpseCardFrontView({
     Key? key,
     required this.image,
     required this.imagePath,
-    required this.isNeg,
     required this.cardSize,
+    required this.exifData,
   }) : super(key: key);
 
   @override
@@ -33,6 +31,7 @@ class RotatableGlimpseCardFrontViewState
     extends State<RotatableGlimpseCardFrontView> {
   LightSource _neumorphicLightSource = LightSource.topLeft;
   late Uint8List image;
+  ui.Image? _processedImage;
 
   String imageMake = '';
   String cameraModel = '';
@@ -103,11 +102,10 @@ class RotatableGlimpseCardFrontViewState
     }
   }
 
-  Future<Map<String?, IfdTag>?> extractExifFromBytes(
-      Uint8List imageBytes) async {
-    final data = await readExifFromBytes(imageBytes);
+  void setImgInformation() {
+    final data = widget.exifData;
     // print('======data ${data} ');
-    if (data != null && data.isNotEmpty) {
+    if (data.isNotEmpty) {
       print('Exif data:');
       for (var entry in data.entries) {
         print('${entry.key}: ${entry.value}');
@@ -126,6 +124,7 @@ class RotatableGlimpseCardFrontViewState
             ? formatAperture(data['EXIF ApertureValue']!.printable!)
             : '未知快門';
         dateOFPic = data['Image DateTime']?.printable ?? '未知日期';
+        iso = data['EXIF ISOSpeedRatings']?.printable ?? '未知';
       });
 
       // final dateTime = data['EXIF DateTimeOriginal'];
@@ -135,126 +134,210 @@ class RotatableGlimpseCardFrontViewState
     } else {
       print('No EXIF data found.');
     }
-    return data;
   }
 
   @override
   void initState() {
     super.initState();
-    extractExifFromBytes(widget.image); // 僅跑一次
+    setImgInformation(); // 僅跑一次
     setImage();
+    _processImage();
+  }
+
+  Future<void> _processImage() async {
+    final rawImage = await decodeAndRotateIfNeeded(image);
+    setState(() {
+      _processedImage = rawImage;
+    });
   }
 
   void setImage() {
-    image = widget.isNeg ? applyNegativeEffect(widget.image) : widget.image;
+    image = widget.image;
   }
 
   Widget _buildCard() {
     return Card(
-      color: config.hardCard,
+      color: config.hardCard.withOpacity(0),
       shape: RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(11),
       ),
       child: SizedBox(
           width: widget.cardSize.width,
           height: widget.cardSize.height,
           child: Stack(
-        children: [
-          Center(
-            child: Column(
-              children: [
-                const Spacer(),
-                Text(imageMake,
-                    style: TextStyle(
-                        fontFamily: 'Open-Sans',
-                        fontSize: widget.cardSize.width * 0.06)),
-                const Spacer(),
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Neumorphic(
-                      style: NeumorphicStyle(
-                        shape: NeumorphicShape.flat,
-                        depth: -1.36,
-                        intensity: 1,
-                        lightSource: _neumorphicLightSource,
-                      ),
-                      child: Container(
-                        // color: config.backGroundWhite,
-                        color: config.hardCard,
-                        width: widget.cardSize.width * 0.75,
-                        height: widget.cardSize.height * 0.75,
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    width: widget.cardSize.width,
+                    height: widget.cardSize.height,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(11),
+                      gradient: const LinearGradient(
+                        colors: [config.hardCard, config.hardCard],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                     ),
-                    Stack(
-                      children: [
-                        SizedBox(
-                          width: widget.cardSize.width * 0.7,
-                          height: widget.cardSize.height * 0.7,
-                          child: _buildImage(),
+                  ),
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(11),
+                      child: Opacity(
+                        opacity: 0.0766,
+                        child: Image.asset(
+                          'assets/images/noise.png',
+                          fit: BoxFit.cover,
+                          color: Colors.brown.withOpacity(0.2),
+                          colorBlendMode: BlendMode.multiply,
                         ),
-                        Positioned(
-                            bottom: 0 + widget.cardSize.width * 0.017 * 6,
-                            right: 0 - widget.cardSize.width * 0.017 * 3,
-                            child: Transform.rotate(
-                              angle: 90 * pi / 180,
-                              child: Column(
-                                children: [
-                                  Text(dateOFPic,
-                                      style: TextStyle(
-                                          fontFamily: 'DS-DIGI',
-                                          color: Colors.yellow,
-                                          fontSize:
-                                              widget.cardSize.width * 0.017)),
-                                ],
-                              ),
-                            ))
-                      ],
+                      ),
                     ),
-                  ],
-                ),
-                const Spacer(),
-                Text(cameraModel,
-                    style: TextStyle(
-                        fontFamily: 'Open-Sans',
-                        fontSize: widget.cardSize.width * 0.035)),
-                Text(lensModel,
-                    style: TextStyle(
-                        fontFamily: 'Open-Sans',
-                        fontSize: widget.cardSize.width * 0.03)),
-                const Spacer(),
-              ],
-            ),
-          ),
-          Positioned(
-              top: widget.cardSize.height * 0.5,
-              left: widget.cardSize.width * 0.88,
-              child: Transform.rotate(
-                angle: 90 * pi / 180,
+                  ),
+                ],
+              ),
+              Center(
                 child: Column(
                   children: [
-                    Text(shutterSpeed,
+                    const Spacer(),
+                    Text(imageMake,
                         style: TextStyle(
                             fontFamily: 'Open-Sans',
-                            fontSize: widget.cardSize.width * 0.02)),
-                    Text(aperture,
+                            fontSize: widget.cardSize.width * 0.06)),
+                    const Spacer(),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Neumorphic(
+                          style: NeumorphicStyle(
+                            shape: NeumorphicShape.flat,
+                            depth: -1.36,
+                            intensity: 1,
+                            lightSource: _neumorphicLightSource,
+                          ),
+                          child: Container(
+                            // color: config.backGroundWhite,
+                            color: config.hardCard,
+                            width: widget.cardSize.width * 0.75,
+                            height: widget.cardSize.height * 0.75,
+                          ),
+                        ),
+                        Positioned.fill(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(11),
+                            child: Opacity(
+                              opacity: 0.0766,
+                              child: Image.asset(
+                                'assets/images/noise.png',
+                                fit: BoxFit.cover,
+                                color: Colors.brown.withOpacity(0.2),
+                                colorBlendMode: BlendMode.multiply,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Stack(
+                          children: [
+                            SizedBox(
+                              width: widget.cardSize.width * 0.7,
+                              height: widget.cardSize.height * 0.7,
+                              child: _buildImage(),
+                            ),
+                            Positioned(
+                                bottom: 0 + widget.cardSize.width * 0.017 * 6,
+                                right: 0 - widget.cardSize.width * 0.017 * 3,
+                                child: Transform.rotate(
+                                  angle: 90 * pi / 180,
+                                  child: Column(
+                                    children: [
+                                      Text(dateOFPic,
+                                          style: TextStyle(
+                                              fontFamily: 'DS-DIGI',
+                                              color: Colors.yellow,
+                                              fontSize: widget.cardSize.width *
+                                                  0.017)),
+                                    ],
+                                  ),
+                                ))
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Text(cameraModel,
                         style: TextStyle(
                             fontFamily: 'Open-Sans',
-                            fontSize: widget.cardSize.width * 0.02)),
+                            fontSize: widget.cardSize.width * 0.035)),
+                    Text(lensModel,
+                        style: TextStyle(
+                            fontFamily: 'Open-Sans',
+                            fontSize: widget.cardSize.width * 0.03)),
+                    const Spacer(),
                   ],
                 ),
-              )),
-        ],
-      )),
+              ),
+              Positioned(
+                  top: widget.cardSize.height * 0.5,
+                  left: widget.cardSize.width * 0.73,
+                  child: Transform.rotate(
+                    angle: 90 * pi / 180,
+                    child: Container(
+                      // color: Colors.red,
+                      child: Row(
+                        children: [
+                          Text(shutterSpeed,
+                              style: TextStyle(
+                                  fontFamily: 'Open-Sans',
+                                  fontSize: widget.cardSize.width * 0.02)),
+                          SizedBox(width: widget.cardSize.height * 0.05),
+                          Text(aperture,
+                              style: TextStyle(
+                                  fontFamily: 'Open-Sans',
+                                  fontSize: widget.cardSize.width * 0.02)),
+                          SizedBox(width: widget.cardSize.height * 0.05),
+                          Text('ISO/$iso',
+                              style: TextStyle(
+                                  fontFamily: 'Open-Sans',
+                                  fontSize: widget.cardSize.width * 0.02)),
+                        ],
+                      ),
+                    ),
+                  )),
+            ],
+          )),
     );
   }
 
   Widget _buildImage() {
-    return Image.memory(
-      image,
+    return RawImage(
+      image: _processedImage,
       fit: BoxFit.contain,
     );
+  }
+
+  Future<ui.Image> decodeAndRotateIfNeeded(Uint8List data) async {
+    final codec = await ui.instantiateImageCodec(data);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+
+    if (image.width > image.height) {
+      // 橫圖 → 旋轉 90 度
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      final rotatedWidth = image.height.toDouble();
+      final rotatedHeight = image.width.toDouble();
+
+      canvas.translate(rotatedWidth, 0);
+      canvas.rotate(90 * 3.1415927 / 180);
+
+      canvas.drawImage(image, Offset.zero, Paint());
+
+      final picture = recorder.endRecording();
+      return await picture.toImage(rotatedWidth.toInt(), rotatedHeight.toInt());
+    }
+
+    return image; // 直圖，不旋轉
   }
 
   Uint8List applyNegativeEffect(Uint8List imageData) {

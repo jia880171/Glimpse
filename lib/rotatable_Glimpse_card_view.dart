@@ -1,21 +1,23 @@
 import 'dart:math';
+
+import 'package:exif/src/exif_types.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:glimpse/rotatable_Glimpse_card_back_view.dart';
 import 'package:glimpse/rotatable_Glimpse_card_front_view.dart';
-import 'package:photo_manager/photo_manager.dart';
-import './config.dart' as config;
 
 class RotatableGlimpseCardView extends StatefulWidget {
   final String? imagePath;
   final Uint8List image;
-  final bool isNeg;
+  final Map<String?, IfdTag> exifData;
+  final String imgPath;
 
   const RotatableGlimpseCardView({
     Key? key,
     required this.image,
-    required this.isNeg,
     this.imagePath,
+    required Map<String?, IfdTag> this.exifData,
+    required String this.imgPath,
   }) : super(key: key);
 
   @override
@@ -86,8 +88,8 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
       child: RotatableGlimpseCardFrontView(
         cardSize: _cardSize,
         image: widget.image,
-        isNeg: widget.isNeg,
         imagePath: widget.imagePath,
+        exifData: widget.exifData,
       ),
     );
   }

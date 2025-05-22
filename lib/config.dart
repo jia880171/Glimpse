@@ -9,13 +9,23 @@ const Color target = Color.fromRGBO(225, 225, 225, 1.0);
 
 const Color border = Color(0x00000000);
 
-const Color backGroundWhite = Color(0xfff1f1f0);
+// const Color backGroundWhite = Color(0xfff6f6f1);
+// const Color backGroundWhite = Color(0xffdddddd);
+const Color backGroundWhite = Color(0xffd7d3d0);
+
+const Color sticker = Color(0xffc7c4c2);
+
+
+const Color backGroundWhiteDark = Color(0xffcac9c9);
+
 const Color ticketWhite = Color.fromARGB(255, 255, 255, 255);
 
 const Color hardCard = Color(0xffe1e1e1);
 const Color hardCardYellowLight = Color(0xffddd1ae);
 const Color hardCardYellow = Color(0xffdecd9e);
 const Color hardCardYellowDark = Color(0xffdcc995);
+const Color hardCardYellowDarker = Color(0xffc7ae97);
+
 
 const Color hardCardRed = Color(0xff671010);
 const Color hardCardBlue = Color(0xff424f6e);

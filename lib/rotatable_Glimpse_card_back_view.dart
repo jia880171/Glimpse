@@ -1,11 +1,11 @@
 import 'dart:math';
+import 'dart:ui';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:glimpse/cirvular_text.dart';
-import 'package:photo_manager/photo_manager.dart';
-import './config.dart' as config;
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
+import 'package:glimpse/cirvular_text.dart';
+
+import './config.dart' as config;
 
 class RotatableGlimpseCardBackView extends StatefulWidget {
   final String? cardID;
@@ -70,7 +70,51 @@ class RotatableGlimpseCardBackViewState
                         _isTapped = false;
                       });
                     },
-                    child: _buildCard(),
+                    child: Stack(
+                      children: [
+                        _buildCard(),
+
+                        Positioned.fill(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            // 這邊改成你的 Card 圓角大小
+                            child: Opacity(
+                              opacity: 0.1,
+                              child: Image.asset(
+                                'assets/images/plastic_overlay2.png',
+                                fit: BoxFit.cover,
+                                colorBlendMode: BlendMode.screen,
+                                color: Colors.white.withOpacity(0),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // blur
+                        Positioned.fill(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(5),
+                            child: BackdropFilter(
+                              filter:
+                                  ImageFilter.blur(sigmaX: 0.3, sigmaY: 0.3),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.white.withOpacity(0.01),
+                                      Colors.white.withOpacity(0.05),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -110,6 +154,20 @@ class RotatableGlimpseCardBackViewState
                                   fontWeight: FontWeight.bold,
                                 ),
                               )),
+                          Positioned.fill(
+                            child:
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(11),
+                              child: Opacity(
+                                opacity: 0.0766,
+                                child: Image.asset(
+                                  'assets/images/noise.png',
+                                  fit: BoxFit.cover,
+                                  color: Colors.brown.withOpacity(0.2),
+                                  colorBlendMode: BlendMode.multiply,
+                                ),
+                              ),),
+                          )
                         ],
                       ),
                     ),
@@ -121,24 +179,59 @@ class RotatableGlimpseCardBackViewState
 
   Widget _buildCard() {
     return Card(
-      color: config.hardCardYellow,
+      color: config.hardCardYellow.withOpacity(0),
+      // color: config.hardCardYellow,
+
       shape: const BeveledRectangleBorder(
           borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
               bottomRight: Radius.circular(9))),
       child: SizedBox(
           width: widget.cardSize.width * 0.8,
           height: widget.cardSize.height * 0.85,
           child: Stack(
             children: [
+              ClipPath(
+                clipper: CustomBeveledClipper(),
+                child: Stack(
+                  children: [
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            config.hardCardYellowDark,
+                            config.hardCardYellow,
+                            // config.hardCardYellowLight,
+                            // config.hardCardYellow,
+                            config.hardCardYellowDark,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: 0.0766,
+                        child: Image.asset(
+                          'assets/images/noise.png',
+                          fit: BoxFit.cover,
+                          color: Colors.brown.withOpacity(0.2),
+                          colorBlendMode: BlendMode.multiply,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Center(
                 child: Column(
                   children: [
                     SizedBox(
                       height: widget.cardSize.height * 0.02,
                     ),
-                    buildFakeHole(size: widget.cardSize.height*0.03),
+                    buildFakeHole(size: widget.cardSize.height * 0.03),
                     buildNeumorphicTitle(
                         text: 'GLIMPSE',
                         // textColor: config.hardCardYellow,
@@ -187,11 +280,11 @@ class RotatableGlimpseCardBackViewState
                         hintSize: widget.cardSize.width * 0.03,
                         hintAngle: -0.2,
                         title:
-                            'It\'s a new dawn. It\'s a new day. It\'s a new life for me. And I\'m feeling good.',
-                        titleColor: config.backLightB.withOpacity(.5),
-                        titleSize: widget.cardSize.width * 0.05,
+                            ' It\'s a new dawn. It\'s a new day. It\'s a new life for me. And I\'m feeling good.',
+                        titleColor: config.backLightB.withOpacity(.6),
+                        titleSize: widget.cardSize.width * 0.033,
                         titleAngle: 0.5,
-                        titleFontFamily: 'Sacramento'),
+                        titleFontFamily: 'sacramento'),
                     Divider(
                         thickness: 1.5,
                         indent: widget.cardSize.width * 0.05,
@@ -240,27 +333,20 @@ class RotatableGlimpseCardBackViewState
             color: colorRim,
             shape: BoxShape.circle,
           ),
-          child: child != null
-              ? Center(child: child)
-              : null,
+          child: child != null ? Center(child: child) : null,
         ),
         Container(
-          width: size*0.75,
-          height: size*0.75,
+          width: size * 0.75,
+          height: size * 0.75,
           decoration: BoxDecoration(
             color: colorHole,
             shape: BoxShape.circle,
           ),
-          child: child != null
-              ? Center(child: child)
-              : null,
+          child: child != null ? Center(child: child) : null,
         )
       ],
     );
-
-
   }
-
 
   Widget cardSection(
       {required String hint,
@@ -293,8 +379,8 @@ class RotatableGlimpseCardBackViewState
           angle: titleAngle * pi / 180,
           child: Padding(
             padding: EdgeInsets.only(
-                left: widget.cardSize.width * 0.06,
-                right: widget.cardSize.width * 0.06),
+                left: widget.cardSize.width * 0.1,
+                right: widget.cardSize.width * 0.1),
             child: Text(
               title,
               style: TextStyle(
@@ -331,4 +417,33 @@ class RotatableGlimpseCardBackViewState
       ),
     );
   }
+}
+
+class CustomBeveledClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    const topLeftCut = 20.0;
+    const topRightCut = 20.0;
+    const bottomRightCut = 9.0;
+
+    final path = Path();
+
+    // 起點在左上切角後的點
+    path.moveTo(0, topLeftCut);
+    path.lineTo(topLeftCut, 0); // top-left 斜角
+
+    path.lineTo(size.width - topRightCut, 0);
+    path.lineTo(size.width, topRightCut); // top-right 斜角
+
+    path.lineTo(size.width, size.height - bottomRightCut);
+    path.lineTo(size.width - bottomRightCut, size.height); // bottom-right 斜角
+
+    path.lineTo(0, size.height); // bottom-left 保持直角
+    path.close();
+
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

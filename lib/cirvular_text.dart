@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+
+// stamp
 class CircularTextDemo extends StatelessWidget {
   final String text;
   final double radius;

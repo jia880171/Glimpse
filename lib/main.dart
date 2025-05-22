@@ -1,37 +1,23 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:async';
-import 'dart:developer';
 import 'dart:math' as math;
-import 'dart:ui';
-import 'package:dotted_line/dotted_line.dart';
-import 'package:flutter/material.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
-
 import 'package:geolocator/geolocator.dart';
+import 'package:glimpse/circle_menu_picker_view.dart';
 import 'package:glimpse/models/food.dart';
 import 'package:glimpse/models/place.dart';
-import 'package:glimpse/perpetual_view.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:photo_manager/photo_manager.dart';
-import ' waterfall_view.dart';
-import './config.dart' as config;
-import 'attractions_view.dart';
-import 'bottom_tourist_list_view.dart';
-import 'models/glimpse.dart';
-import 'tickets_view.dart';
-import 'database_sqlite/ticket.dart';
-import 'database_sqlite/attraction.dart';
-import 'database_sqlite/ticket_db.dart';
-import 'database_sqlite/attraction_db.dart';
-import 'package:flutter_scalable_ocr/flutter_scalable_ocr.dart';
-import './add_attraction_view.dart';
-import './add_ticket_view.dart';
 
+import './config.dart' as config;
 import 'Routes.dart';
+import 'database_sqlite/attraction.dart';
+import 'glimpse_row_in_main.dart';
+import 'models/glimpse.dart';
 
 late final Isar isar;
 
@@ -83,22 +69,60 @@ enum Modes {
 class _MyHomePageState extends State<MyHomePage> {
   bool _canPop = false;
 
+  final List<String> dayOfTheWeekList = [
+    "月曜日",
+    "火曜日",
+    "水曜日",
+    "木曜日",
+    "金曜日",
+    "土曜日",
+    "日曜日"
+  ];
+
+  final List<String> menuItems = [
+    'Add Glimpse',
+    'Trash',
+    'Receipt',
+    'Con. Sheet',
+    'Time Line',
+    'Printer'
+  ];
+
+  final List<String> menuItemsPath = [
+    '/glimpsesPicker',
+    '/trash',
+    '/receipt',
+    '/contactSheet',
+    '/albums',
+    '/printer'
+  ];
+
+  int menuPointer = 0;
+  final double _depthMax = 0.5;
+  final double _depthMin = 0;
+  final double _depthNormal = 0.3;
+  List<double> depths = [];
+  List<double> prevDepths = [];
+  Timer? _timer;
+
+  final Duration depthOutDuration = Duration(milliseconds: 500);
+  final Duration depthInDuration = Duration(milliseconds: 2000);
+
   @override
   void initState() {
     super.initState();
-  }
+    depths = List<double>.filled(menuItems.length, _depthNormal);
+    prevDepths = List<double>.filled(menuItems.length, _depthNormal);
 
+    depths[menuPointer] = _depthMax;
+  }
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery
-        .of(context)
-        .size
-        .width;
-    double screenHeight = MediaQuery
-        .of(context)
-        .size
-        .height;
+    double screenWidth = MediaQuery.of(context).size.width;
+    double stickerWidth = screenWidth * 0.56;
+
+    double screenHeight = MediaQuery.of(context).size.height;
     double paddingTopForMenuText = screenHeight * 0.035;
     double paddingLeftForMenuText = screenWidth * 0.08;
 
@@ -113,7 +137,7 @@ class _MyHomePageState extends State<MyHomePage> {
           value: const SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
             statusBarIconBrightness:
-            Brightness.dark, // Dark status bar icons (like time, battery)
+                Brightness.dark, // Dark status bar icons (like time, battery)
           ),
           child: Scaffold(
             body: SingleChildScrollView(
@@ -122,154 +146,181 @@ class _MyHomePageState extends State<MyHomePage> {
                 height: screenHeight,
                 child: Stack(
                   children: [
-                  // background
-                  Container(
-                  height: screenHeight,
-                  width: screenWidth,
-                  color: Colors.white,
-                  child: Image.asset(
-                    'assets/images/bac.jpg',
-                    height: screenHeight,
-                    fit: BoxFit.fitHeight,
-                    alignment: Alignment.center,
-                    cacheHeight: screenHeight.toInt(),
-                  ),
-                ),
-
-                // Menu
-                Container(
-                  // color: Colors.white.withOpacity(0.5),
-                  alignment: Alignment.topLeft,
-                  height: screenHeight,
-                  width: screenWidth,
-                  margin: EdgeInsets.only(
-                    top: screenHeight * 0.25,
-                    left: screenWidth * 0.1,),
-                    child: Column(
-                      children: [
-                        GestureDetector(
-                          onTap: (){
-                            Navigator.pushNamed(
-                              context,
-                              '/filmRoll',
-                            );
-                          },
-                          child: Container(
-                              color: Colors.white.withOpacity(0.5),
-                              width: screenWidth * 0.5,
-                              padding: EdgeInsets.only(
-                                  left: paddingLeftForMenuText,
-                                  right: paddingLeftForMenuText,
-                                  top: paddingTopForMenuText),
-                              child: const Text(
-                                'Film Roll',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                ),
-                              )),
-                        ),
-
-                        GestureDetector(
-                          onTap: (){
-                            Navigator.pushNamed(
-                              context,
-                              '/trash',
-                            );
-                          },
-                          child: Container(
-                              color: Colors.white.withOpacity(0.5),
-                              width: screenWidth * 0.5,
-                              padding: EdgeInsets.only(
-                                  left: paddingLeftForMenuText,
-                                  right: paddingLeftForMenuText,
-                                  top: paddingTopForMenuText),
-                              child: const Text(
-                                'Trash',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                ),
-                              )),
-                        ),
-
-                        GestureDetector(
-                          onTap: (){
-                            Navigator.pushNamed(
-                              context,
-                              '/receipt',
-                            );
-                          },
-                          child: Container(
-                              color: Colors.white.withOpacity(0.5),
-                              width: screenWidth * 0.5,
-                              padding: EdgeInsets.only(
-                                  left: paddingLeftForMenuText,
-                                  right: paddingLeftForMenuText,
-                                  top: paddingTopForMenuText),
-                              child: const Text(
-                                'Receipt',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                ),
-                              )),
-                        ),
-
-                        Container(
-                            color: Colors.white.withOpacity(0.5),
-                            width: screenWidth * 0.5,
-                            padding: EdgeInsets.only(
-                                left: paddingLeftForMenuText,
-                                right: paddingLeftForMenuText,
-                                top: paddingTopForMenuText),
-                            child: const Text(
-                              'Contact Sheet',
-                              style: TextStyle(
-                                color: Colors.black,
-                              ),
-                            )),
-                        Container(
-                            color: Colors.white.withOpacity(0.5),
-                            width: screenWidth * 0.5,
-                            padding: EdgeInsets.only(
-                                left: paddingLeftForMenuText,
-                                right: paddingLeftForMenuText,
-                                top: paddingTopForMenuText),
-                            child: const Text(
-                              'Albums',
-                              style: TextStyle(
-                                color: Colors.black,
-                              ),
-                            )),
-                        Container(
-                            color: Colors.white.withOpacity(0.5),
-                            width: screenWidth * 0.5,
-                            padding: EdgeInsets.only(
-                                left: paddingLeftForMenuText,
-                                right: paddingLeftForMenuText,
-                                top: paddingTopForMenuText),
-                            child: const Text(
-                              'Printer',
-                              style: TextStyle(
-                                color: Colors.black,
-                              ),
-                            )),
-                        Container(
-                            color: Colors.white.withOpacity(0.5),
-                            width: screenWidth * 0.5,
-                            padding: EdgeInsets.only(
-                                left: paddingLeftForMenuText,
-                                right: paddingLeftForMenuText,
-                                top: paddingTopForMenuText,
-                                bottom: paddingTopForMenuText
-                            ),
-                            child: const Text(
-                              'Setting',
-                              style: TextStyle(
-                                color: Colors.black,
-                              ),
-                            )),
-                      ],
+                    Container(
+                      height: screenHeight,
+                      width: screenWidth,
+                      color: config.backGroundWhite,
                     ),
-                  ),
+
+                    Positioned(
+                      top: screenHeight * 0.1,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        // alignment: Alignment.center,
+                        child: Container(
+                            // color: Colors.red,
+                            width: screenWidth * 0.8,
+                            // height: screenHeight * 0.1,
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Glimpses',
+                                  style: TextStyle(
+                                      fontFamily: 'Jura',
+                                      fontSize: screenWidth * 0.8 * 0.1,
+                                      color: Colors.black),
+                                ),
+                                SizedBox(
+                                  height: screenHeight * 0.05,
+                                ),
+
+                                SizedBox(
+                                  height: screenHeight, // 👉 你可以根據需要調整這個高度
+                                  child: SingleChildScrollView(
+                                    child: Column(
+                                      children: List.generate(
+                                        66,
+                                            (i) {
+                                          return GlimpseRowCard(
+                                            date: DateTime.now().subtract(
+                                              Duration(days: math.Random().nextInt(90)),
+                                            ),
+                                            screenWidth: screenWidth,
+                                            dayOfTheWeekList: dayOfTheWeekList,
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                )
+
+
+                              ],
+                            )),
+                      ),
+                    ),
+
+                    // sticker
+                    // Positioned(
+                    //     left: 0,
+                    //     // right: 0,
+                    //     bottom: screenHeight * 0.25,
+                    //     child: Center(
+                    //       child: Transform.rotate(
+                    //         angle: -12 * pi / 180,
+                    //         child: Card(
+                    //           shape: RoundedRectangleBorder(
+                    //             borderRadius: BorderRadius.circular(11),
+                    //           ),
+                    //           color: config.sticker,
+                    //           elevation: 0.3,
+                    //           child: SizedBox(
+                    //               width: stickerWidth,
+                    //               child: Column(
+                    //                 children: [
+                    //                   SizedBox(
+                    //                     height: screenHeight * 0.05,
+                    //                   ),
+                    //                   Row(
+                    //                     children: [
+                    //                       const Spacer(),
+                    //
+                    //                       // index
+                    //                       Column(
+                    //                         children: List.generate(6, (i) {
+                    //                           return AnimatedNeumorphicText(
+                    //                             text: '$i',
+                    //                             prevDepth: prevDepths[i],
+                    //                             depth: depths[i],
+                    //                             onTap: () {
+                    //                               Navigator.pushNamed(context,
+                    //                                   menuItemsPath[i]);
+                    //                             },
+                    //                             fontSize: stickerWidth * 0.123,
+                    //                             color: config.sticker,
+                    //                             depthInDuration:
+                    //                                 depthInDuration,
+                    //                             depthOutDuration:
+                    //                                 depthOutDuration,
+                    //                           );
+                    //                         }),
+                    //                       ),
+                    //
+                    //                       SizedBox(
+                    //                         width: screenWidth * 0.05,
+                    //                       ),
+                    //
+                    //                       // items
+                    //                       Column(
+                    //                         children: List.generate(6, (i) {
+                    //                           return AnimatedNeumorphicText(
+                    //                             text: menuItems[i],
+                    //                             prevDepth: prevDepths[i],
+                    //                             depth: depths[i],
+                    //                             onTap: () {
+                    //                               Navigator.pushNamed(context,
+                    //                                   menuItemsPath[i]);
+                    //                             },
+                    //                             fontSize: stickerWidth * 0.123,
+                    //                             color: config.sticker,
+                    //                             depthInDuration:
+                    //                                 depthInDuration,
+                    //                             depthOutDuration:
+                    //                                 depthOutDuration,
+                    //                           );
+                    //                         }),
+                    //                       ),
+                    //                       const Spacer(),
+                    //                     ],
+                    //                   ),
+                    //                   SizedBox(
+                    //                     height: screenHeight * 0.05,
+                    //                   ),
+                    //                 ],
+                    //               )),
+                    //         ),
+                    //       ),
+                    //     )),
+
+                    Container(
+                      height: screenHeight,
+                      width: screenWidth,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Positioned(
+                              bottom: 0,
+                              child: ClipRect(
+                                child: Container(
+                                  // color: Colors.black,
+                                  width: screenWidth,
+                                  height: screenWidth * 0.5,
+                                  child: OverflowBox(
+                                    maxHeight: double.infinity,
+                                    maxWidth: double.infinity,
+                                    alignment: Alignment.topCenter,
+                                    child: Align(
+                                      // 再貼一次 child 到頂部
+                                      alignment: Alignment.topCenter,
+                                      child: Container(
+                                        margin: EdgeInsets.only(
+                                            top: screenHeight * 0.01),
+                                        // ← 這裡加入 margin
+                                        child: CircleMenuPickerView(
+                                          onItemSelected: onItemSelected,
+                                          items: menuItems,
+                                          radius: screenWidth * 0.41,
+                                          menuItemsPath: menuItemsPath,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ))
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -278,25 +329,73 @@ class _MyHomePageState extends State<MyHomePage> {
         ));
   }
 
+  void onItemSelected(int newIndex) {
+    if (newIndex == menuPointer) return;
+
+    // 👉 取消先前設定的延遲動畫，避免動畫疊加。
+    _timer?.cancel();
+
+    final oldIndex = menuPointer;
+
+    // 👉 在動畫前，先記錄下每個項目的目前 depth 狀態，供動畫補間用。
+    for (int i = 0; i < depths.length; i++) {
+      prevDepths[i] = depths[i];
+    }
+
+    // 👉 讓舊的選中項目先變凹陷（浮起 ➝ 凹陷），動畫開始。
+    // setState(() {
+    //   depths[oldIndex] = _depthMin;
+    // });
+
+    // 👉 延遲結束後，做兩件事：
+    //
+    // 舊的選中項目變成靜止狀態（浮起 ➝ 0.3）。
+    //
+    // 新選中項目進入凹陷過渡狀態（0.3 ➝ 0.0）。
+    //
+    // 更新 menuPointer。
+    _timer = Timer(Duration(milliseconds: 500), () {
+      // 👉 設定一個延遲 1000ms 的 Timer，等動畫執行完再做下一步。
+      setState(() {
+        for (int i = 0; i < depths.length; i++) {
+          prevDepths[i] = depths[i]; // 儲存當前狀態
+        }
+
+        depths[oldIndex] = _depthNormal;
+        depths[newIndex] = _depthMax;
+        menuPointer = newIndex;
+      });
+
+      // Timer(Duration(milliseconds: 500), () { // 👉 再設定下一段延遲動畫（1000ms），做最後一段動畫。
+      //   setState(() {
+      //     for (int i = 0; i < depths.length; i++) {
+      //       prevDepths[i] = depths[i]; // 再次更新
+      //     }
+      //
+      //     depths[newIndex] = _depthMax; // 👉 把新選中項目從凹陷 ➝ 浮起，讓動畫從 0.0 ➝ 0.8。
+      //   });
+      // });
+    });
+  }
+
   void _showPopWarningDialog() async {
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (context) =>
-          AlertDialog(
-            title: const Text('正在離開...'),
-            content: const Text(''),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                // Close the app
-                child: const Text('關閉app'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false), // Cancel
-                child: const Text('取消'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('正在離開...'),
+        content: const Text(''),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            // Close the app
+            child: const Text('關閉app'),
           ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), // Cancel
+            child: const Text('取消'),
+          ),
+        ],
+      ),
     );
 
     if (shouldPop == true) {
@@ -312,7 +411,7 @@ class _MyHomePageState extends State<MyHomePage> {
 class VisitingText extends StatefulWidget {
   final Attraction visitingAttraction;
   final Function(BuildContext context, double screenHeight, double screenWidth)
-  clickAddNewTicketButton;
+      clickAddNewTicketButton;
 
   const VisitingText(this.visitingAttraction, this.clickAddNewTicketButton,
       {Key? key})
@@ -332,14 +431,8 @@ class _VisitingTextState extends State<VisitingText> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery
-        .of(context)
-        .size
-        .width;
-    double screenHeight = MediaQuery
-        .of(context)
-        .size
-        .height;
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
     return Container(
       width: screenWidth,
       height: screenHeight * 0.1,
@@ -380,7 +473,8 @@ class ChasingView extends StatefulWidget {
   final Attraction visitingAttraction;
   final VoidCallback toggleChasingMode;
 
-  const ChasingView(this.toggleChasingMode,
+  const ChasingView(
+      this.toggleChasingMode,
       this.screenHeight,
       this.screenWidth,
       this.chasingViewHeight,
@@ -424,9 +518,9 @@ class _ChasingViewState extends State<ChasingView> {
 
     // Set up a periodic timer to call _getUserLocation every 5 seconds
     _timer = Timer.periodic(Duration(seconds: fetchLocationIntervalSeconds),
-            (timer) {
-          _getUserLocation(widget.home);
-        });
+        (timer) {
+      _getUserLocation(widget.home);
+    });
 
     print('====== endof init');
   }
@@ -467,10 +561,10 @@ class _ChasingViewState extends State<ChasingView> {
   void _initCompass() {
     Stream<CompassEvent> emptyStream = Stream<CompassEvent>.empty();
     _compassStreamSubscription = FlutterCompass.events?.listen((event) {
-      setState(() {
-        _currentHeading = event.heading ?? 0.0;
-      });
-    }) ??
+          setState(() {
+            _currentHeading = event.heading ?? 0.0;
+          });
+        }) ??
         emptyStream.listen((event) {});
   }
 
@@ -501,12 +595,12 @@ class _ChasingViewState extends State<ChasingView> {
       double leftX = centerX +
           AngleCalculator()
               .radiusProjector(bottles[i].bearingAngle + _currentHeading,
-              targetRadiusToCenter)
+                  targetRadiusToCenter)
               .dx;
       double topY = centerY -
           AngleCalculator()
               .radiusProjector(bottles[i].bearingAngle + _currentHeading,
-              targetRadiusToCenter)
+                  targetRadiusToCenter)
               .dy;
       targets.add(Positioned(
         left: leftX,
@@ -599,137 +693,135 @@ class _ChasingViewState extends State<ChasingView> {
 
                   child: Center(
                       child: SizedBox(
-                        height: (sensorRadius) * 2,
-                        width: (sensorRadius) * 2,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // monitor background
-                            Center(
-                              child: Container(
+                    height: (sensorRadius) * 2,
+                    width: (sensorRadius) * 2,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // monitor background
+                        Center(
+                          child: Container(
+                            width: sensorRadius * 2,
+                            height: sensorRadius * 2,
+                            decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                image: DecorationImage(
+                                  image:
+                                      AssetImage('assets/images/monitor.png'),
+                                  fit: BoxFit.cover,
+                                )),
+                          ),
+                        ),
+                        Center(
+                            child: SizedBox(
                                 width: sensorRadius * 2,
                                 height: sensorRadius * 2,
-                                decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    image: DecorationImage(
-                                      image:
-                                      AssetImage('assets/images/monitor.png'),
-                                      fit: BoxFit.cover,
-                                    )),
-                              ),
-                            ),
-                            Center(
-                                child: SizedBox(
-                                    width: sensorRadius * 2,
-                                    height: sensorRadius * 2,
-                                    child: Column(
+                                child: Column(
+                                  children: [
+                                    const Spacer(),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
                                       children: [
                                         const Spacer(),
-                                        Row(
-                                          crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                          children: [
-                                            const Spacer(),
-                                            SizedBox(
-                                              child: Text(
-                                                'Next 新幹線 leaves in : ',
-                                                overflow: TextOverflow.clip,
-                                                maxLines: 1,
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                  fontSize:
+                                        SizedBox(
+                                          child: Text(
+                                            'Next 新幹線 leaves in : ',
+                                            overflow: TextOverflow.clip,
+                                            maxLines: 1,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize:
                                                   widget.screenWidth * 0.03,
-                                                  fontWeight: FontWeight.w500,
-                                                  fontFamily:
+                                              fontWeight: FontWeight.w500,
+                                              fontFamily:
                                                   'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                                ),
-                                              ),
                                             ),
-                                            const Spacer(),
-                                          ],
-                                        ),
-                                        Row(
-                                          crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                          children: [
-                                            const Spacer(),
-                                            SizedBox(
-                                              child: Text(
-                                                '1 H : 30 M',
-                                                overflow: TextOverflow.clip,
-                                                maxLines: 1,
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                  fontSize:
-                                                  widget.screenWidth * 0.06,
-                                                  fontWeight: FontWeight.w500,
-                                                  fontFamily:
-                                                  'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                                ),
-                                              ),
-                                            ),
-                                            const Spacer(),
-                                          ],
-                                        ),
-                                        Row(
-                                          crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                          children: [
-                                            const Spacer(),
-                                            SizedBox(
-                                              child: Text(
-                                                'Home: ',
-                                                overflow: TextOverflow.clip,
-                                                maxLines: 1,
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                  fontSize:
-                                                  widget.screenWidth * 0.035,
-                                                  fontWeight: FontWeight.w500,
-                                                  fontFamily:
-                                                  'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(
-                                                child: Text(
-                                                  (widget.home.distance != null)
-                                                      ? widget.home.distance!
-                                                      .toStringAsFixed(3)
-                                                      : 'calc...',
-                                                  overflow: TextOverflow.clip,
-                                                  maxLines: 1,
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize:
-                                                    widget.screenWidth * 0.035,
-                                                    fontWeight: FontWeight.w500,
-                                                    fontFamily:
-                                                    'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                                  ),
-                                                )),
-                                            SizedBox(
-                                                width: widget.screenWidth *
-                                                    0.01),
-                                            Text(
-                                              'KM',
-                                              style: TextStyle(
-                                                fontSize: widget.screenWidth *
-                                                    0.02,
-                                                fontWeight: FontWeight.w500,
-                                                fontFamily:
-                                                'Open-Sans', // Replace 'SecondFontFamily' with your desired font family
-                                              ),
-                                            ),
-                                            const Spacer(),
-                                          ],
+                                          ),
                                         ),
                                         const Spacer(),
                                       ],
-                                    ))),
-                          ],
-                        ),
-                      )),
+                                    ),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        const Spacer(),
+                                        SizedBox(
+                                          child: Text(
+                                            '1 H : 30 M',
+                                            overflow: TextOverflow.clip,
+                                            maxLines: 1,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  widget.screenWidth * 0.06,
+                                              fontWeight: FontWeight.w500,
+                                              fontFamily:
+                                                  'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                            ),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                      ],
+                                    ),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        const Spacer(),
+                                        SizedBox(
+                                          child: Text(
+                                            'Home: ',
+                                            overflow: TextOverflow.clip,
+                                            maxLines: 1,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  widget.screenWidth * 0.035,
+                                              fontWeight: FontWeight.w500,
+                                              fontFamily:
+                                                  'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                            child: Text(
+                                          (widget.home.distance != null)
+                                              ? widget.home.distance!
+                                                  .toStringAsFixed(3)
+                                              : 'calc...',
+                                          overflow: TextOverflow.clip,
+                                          maxLines: 1,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize:
+                                                widget.screenWidth * 0.035,
+                                            fontWeight: FontWeight.w500,
+                                            fontFamily:
+                                                'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                          ),
+                                        )),
+                                        SizedBox(
+                                            width: widget.screenWidth * 0.01),
+                                        Text(
+                                          'KM',
+                                          style: TextStyle(
+                                            fontSize: widget.screenWidth * 0.02,
+                                            fontWeight: FontWeight.w500,
+                                            fontFamily:
+                                                'Open-Sans', // Replace 'SecondFontFamily' with your desired font family
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                      ],
+                                    ),
+                                    const Spacer(),
+                                  ],
+                                ))),
+                      ],
+                    ),
+                  )),
                 )),
           ),
 
