@@ -6,7 +6,10 @@ import 'package:vibration/vibration.dart';
 
 import './config.dart' as config;
 import 'AnimatedNeumorphicText.dart';
+import 'RotarySelectorRing.dart';
 import 'circle_date_picker_view.dart';
+
+const filmFinderItemName = '+Glimpse';
 
 class CircleMenuPickerView extends StatefulWidget {
   final List<String> items;
@@ -32,14 +35,13 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
   final double _depthMin = 0.0;
   final double _depthNormal = 0.3;
 
-  late final double radius = widget.radius;
-  late final double radiusItem = widget.radius * 0.95;
-  late final double rimRadius = widget.radius * 0.6;
-  late final double dentRadius = widget.radius * 0.56;
-  late final double dashWidth = widget.radius * 0.2;
+  late final double radiusMax = widget.radius;
+  late final double radiusItem = widget.radius * 0.7;
+  late final double dentRadius = widget.radius * 0.3;
+  late final double dashWidth = widget.radius * 0.15;
 
-  final Duration depthOutDuration = Duration(milliseconds: 500);
-  final Duration depthInDuration = Duration(milliseconds: 500);
+  final Duration depthOutDuration = Duration(milliseconds: 600);
+  final Duration depthInDuration = Duration(milliseconds: 600);
 
   Timer? _timer;
 
@@ -48,226 +50,153 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
   late List<double> prevDepths =
       List<double>.filled(widget.items.length, _depthMin);
 
-  int _pointer = 0; // 當前指到哪個 item
-  double _accumulatedAngle = 0; // 累積旋轉角度
-  double _totalTurns = 0;
-  double? _lastAngle;
-  late Offset _center;
-  final GlobalKey _key = GlobalKey();
-
+  int _menuPointer = 0;
+  int _datePointer = 0;
   final LightSource neumorphicLightSource = LightSource.topRight;
 
   @override
   void initState() {
     super.initState();
-    depths[_pointer] = _depthMax;
+    depths[_menuPointer] = _depthMax;
   }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-        height: radius * 2,
-        width: radius * 2,
+        height: radiusMax * 2,
+        width: radiusMax * 2,
         child: Stack(
           children: [
-            // panel
-            Neumorphic(
-                style: NeumorphicStyle(
-                    lightSource: neumorphicLightSource,
-                    shape: NeumorphicShape.convex,
-                    boxShape: const NeumorphicBoxShape.circle(),
-                    intensity: 0.8,
-                    depth: 0.8),
-                child: Container(
-                  color: config.backGroundWhite,
-                  width: radius * 2,
-                  height: radius * 2,
-                )),
+            // panel or datePicker
+            Center(
+              child: datePickerOrRim(),
+            ),
 
             // items
-            Center(
-              child: Neumorphic(
-                  style: NeumorphicStyle(
-                      lightSource: neumorphicLightSource,
-                      shape: NeumorphicShape.convex,
-                      boxShape: const NeumorphicBoxShape.circle(),
-                      intensity: 0.6,
-                      depth: -0.6),
-                  child: Container(
-                    color: config.backGroundWhite,
-                    width: radiusItem * 2,
-                    height: radiusItem * 2,
-                  )),
-            ),
-
-            //  items' GestureDetector
-            GestureDetector(
-              onPanStart: (details) {
-                final box =
-                    _key.currentContext!.findRenderObject() as RenderBox;
-
-                _center = box.size.center(Offset.zero);
-
-                final localPos = box.globalToLocal(details.globalPosition);
-
-                _lastAngle = _getAngleFromOffset(_center, localPos);
+            RotarySelectorRing(
+              itemRadius: radiusItem,
+              dentRadius: dentRadius,
+              dashWidth: dashWidth,
+              items: widget.items,
+              onItemSelected: (int oldIndex, int newIndex) {
+                widget.onItemSelected(newIndex);
+                itemSwitchAni(oldIndex, newIndex);
+                updatePointer(newIndex);
               },
-              onPanUpdate: (details) {
-                final box =
-                    _key.currentContext!.findRenderObject() as RenderBox;
-                final localPos = box.globalToLocal(details.globalPosition);
-                final currentAngle = _getAngleFromOffset(_center, localPos);
-
-                if (_lastAngle != null) {
-                  final delta = _normalizeAngle(currentAngle - _lastAngle!);
-                  setState(() {
-                    _totalTurns += delta / (2 * pi); // convert radians to turns
-                    _accumulatedAngle += delta;
-
-                    const sensitivity = 0.9; // 0.5 表示只要轉動一半的角度就觸發（越小越敏感）
-                    final itemAngle = (pi / widget.items.length) * sensitivity;
-
-                    final int oldPointer = _pointer;
-
-                    // 根據累積角度來調整 pointer
-                    while (_accumulatedAngle.abs() >= itemAngle) {
-                      Vibration.vibrate(duration: 50, amplitude: 255);
-
-                      if (_accumulatedAngle > 0) {
-                        _pointer = (_pointer + 1) % widget.items.length;
-                        _accumulatedAngle -= itemAngle;
-                      } else {
-                        _pointer = (_pointer - 1 + widget.items.length) %
-                            widget.items.length;
-                        _accumulatedAngle += itemAngle;
-                      }
-
-                      // 呼叫 callback，通知外部選到了什麼
-                      widget.onItemSelected(_pointer);
-                      print('selected item: ${widget.items[_pointer]}');
-
-                      onItemSelected(oldPointer);
-                    }
-                  });
-                }
-
-                _lastAngle = currentAngle;
-              },
-              onPanEnd: (_) {
-                _lastAngle = null;
-                _accumulatedAngle = 0; // 清除暫存角度
-              },
-              child: Align(
-                alignment: Alignment.center,
-                child: SizedBox(
-                  key: _key,
-                  height: radius * 2,
-                  width: radius * 2,
-                  child: Stack(
-                    children: [
-                      AnimatedRotation(
-                          turns: _totalTurns,
-                          duration: const Duration(milliseconds: 200),
-                          child: Stack(
-                            children: [
-                              Container(
-                                color: config.backGroundWhite.withOpacity(0),
-                                width: radiusItem * 2,
-                                height: radiusItem * 2,
-                              ),
-                              IgnorePointer(
-                                child: Align(
-                                  alignment: Alignment.center,
-                                  child: CustomPaint(
-                                    size: Size(dentRadius * 2, dentRadius * 2),
-                                    // Adjust the size as needed
-                                    painter: DashedCirclePainter(
-                                        dx: dentRadius,
-                                        dy: dentRadius,
-                                        radius: radiusItem,
-                                        margin: dentRadius * 0.1,
-                                        dashCount: 31,
-                                        dashWidth: dashWidth,
-                                        strokeWidth: dashWidth * 0.035,
-                                        strockColor: config.backGroundWhiteDark,
-                                        isMonth: false),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // rim
-            Align(
-              alignment: Alignment.center,
-              child: Neumorphic(
-                  style: NeumorphicStyle(
-                    lightSource: neumorphicLightSource,
-                    shape: NeumorphicShape.convex,
-                    boxShape: const NeumorphicBoxShape.circle(),
-                    intensity: 1,
-                    depth: 0.8,
-                  ),
-                  child: Container(
-                    color: config.backGroundWhite,
-                    width: (rimRadius * 2),
-                    height: (rimRadius * 2),
-                  )),
+              initialPointer: _menuPointer,
+              rimColor: config.menuPickerWhite,
+              dashColor: config.backGroundWhiteDark,
+              lightSource: neumorphicLightSource,
             ),
 
             //dent
             Align(
               alignment: Alignment.center,
-              child: Neumorphic(
-                  style: NeumorphicStyle(
-                    shape: NeumorphicShape.flat,
-                    boxShape: const NeumorphicBoxShape.circle(),
-                    intensity: 0.6,
-                    lightSource: neumorphicLightSource,
-                    color: config.backGroundWhite,
-                    depth: -0.8,
-                  ),
-                  child: Container(
-                      color: config.backGroundWhite,
-                      width: (dentRadius * 2),
-                      height: (dentRadius * 2),
-                      child: Stack(
-                          children: List.generate(
-                        6,
-                        (i) {
-                          return Center(
-                            child: AnimatedNeumorphicText(
-                              text: '${widget.items[i]}',
-                              prevDepth: prevDepths[i],
-                              depth: depths[i],
-                              onTap: () {
-                                Navigator.pushNamed(context, widget.menuItemsPath[i]);
-                              },
-                              fontSize: dentRadius * 0.23,
-                              color: config.backGroundWhite,
-                              depthInDuration: depthInDuration,
-                              depthOutDuration: depthOutDuration,
-                            ),
-                          );
-                        },
-                      ))
+              child: NeumorphicButton(
+                style: NeumorphicStyle(
+                  shape: NeumorphicShape.flat,
+                  boxShape: const NeumorphicBoxShape.circle(),
+                  intensity: 1,
+                  depth: .8,
+                  lightSource: neumorphicLightSource,
+                  color: config.menuPickerWhite,
+                  // color: Colors.black,
+                ),
+                onPressed: () {
+                  print('===== pointer $_menuPointer');
 
-                      )),
+                  // Delay to allow the button dent animation to finish before navigation.
+                  Timer(
+                      const Duration(milliseconds: 100),
+                      () => Navigator.pushNamed(
+                          context, widget.menuItemsPath[_menuPointer]));
+                },
+                child: SizedBox(
+                    // color: config.menuPickerWhite,
+                    width: (dentRadius * 2),
+                    height: (dentRadius * 2),
+                    child: Stack(
+                        children: List.generate(
+                      6,
+                      (i) {
+                        return Center(
+                          child: AnimatedNeumorphicText(
+                            text: widget.items[i],
+                            prevDepth: prevDepths[i],
+                            depth: depths[i],
+                            onTap: () {
+                              Navigator.pushNamed(
+                                  context, widget.menuItemsPath[i]);
+                            },
+                            fontSize: dentRadius * 0.33,
+                            color: config.menuPickerWhite,
+                            depthInDuration: depthInDuration,
+                            depthOutDuration: depthOutDuration,
+                          ),
+                        );
+                      },
+                    ))),
+              ),
             ),
           ],
         ));
   }
 
-  void onItemSelected(int oldIndex) {
-    print('====== oldIndex: ${oldIndex}');
-    print('====== newIndex: ${_pointer}');
+  Widget datePickerOrRim() {
+    return widget.items[_menuPointer] == filmFinderItemName
+        ? datePicker()
+        : Neumorphic(
+            style: NeumorphicStyle(
+                lightSource: neumorphicLightSource,
+                shape: NeumorphicShape.convex,
+                boxShape: const NeumorphicBoxShape.circle(),
+                intensity: 0.8,
+                depth: -1),
+            child: Container(
+              color: config.menuPickerWhite,
+              width: radiusItem * 1.05 * 2,
+              height: radiusItem * 1.05 * 2,
+            ));
+  }
 
-    if (oldIndex == _pointer) return;
+  Widget datePicker() {
+    return             RotarySelectorRing(
+      itemRadius: radiusMax,
+      dentRadius: radiusItem,
+      dashWidth: dashWidth,
+      items: widget.items,
+      onItemSelected: (int oldIndex, int newIndex) {
+        // widget.onItemSelected(newIndex);
+        // itemSwitchAni(oldIndex, newIndex);
+        // updatePointer(newIndex);
+      },
+      initialPointer: _datePointer,
+      rimColor: config.menuPickerWhite,
+      dashColor: config.backGroundWhiteDark,
+      lightSource: neumorphicLightSource,
+    );
+
+
+
+      Neumorphic(
+        style: NeumorphicStyle(
+            lightSource: neumorphicLightSource,
+            shape: NeumorphicShape.convex,
+            boxShape: const NeumorphicBoxShape.circle(),
+            intensity: 0.8,
+            depth: -1),
+        child: Container(
+          color: config.menuPickerWhite,
+          width: radiusMax * 2,
+          height: radiusMax * 2,
+        ));
+  }
+
+  void itemSwitchAni(int oldIndex, int newIndex) {
+    print('====== oldIndex: ${oldIndex}');
+    print('====== newIndex: ${newIndex}');
+
+    if (oldIndex == newIndex) return;
 
     // 👉 取消先前設定的延遲動畫，避免動畫疊加。
     _timer?.cancel();
@@ -291,7 +220,7 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
       }
 
       setState(() {
-        depths[_pointer] = _depthMax;
+        depths[newIndex] = _depthMax;
         print('====== new new Depteh: ${depths}');
       });
 
@@ -304,6 +233,12 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
       //     depths[newIndex] = _depthMax; // 👉 把新選中項目從凹陷 ➝ 浮起，讓動畫從 0.0 ➝ 0.8。
       //   });
       // });
+    });
+  }
+
+  void updatePointer(int newPointer){
+    setState(() {
+      _menuPointer = newPointer;
     });
   }
 

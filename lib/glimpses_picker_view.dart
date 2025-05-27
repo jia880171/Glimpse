@@ -1,11 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:glimpse/circle_date_picker_view.dart';
 
-import 'film_roll_view.dart';
+import 'light_box_view.dart';
 
 class GlimpsesPickerView extends StatefulWidget {
   const GlimpsesPickerView({super.key});
@@ -40,6 +39,7 @@ class _GlimpsesPickerViewState extends State<GlimpsesPickerView> {
     print('====== film roll building');
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
+    Size widgetSize = Size(screenWidth, screenHeight);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
@@ -55,9 +55,10 @@ class _GlimpsesPickerViewState extends State<GlimpsesPickerView> {
                     child: SizedBox(
                       width: screenWidth,
                       height: screenHeight,
-                      child: FilmRollView(
+                      child: LightBoxView(
                         selectedDate: selectedDate,
                         setGlimpseCount: setGlimpseCount,
+                        widgetSize: widgetSize,
                       ),
                     )),
 

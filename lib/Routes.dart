@@ -11,7 +11,15 @@ class Routes {
   static final Map<String, WidgetBuilder> routes = {
     '/': (BuildContext context) => const MyHomePage(title: 'home?'),
     '/createGlimpse': (BuildContext context) => CreateGlimpse(),
+
+    // filmViewer is used to view film in main
+    // filmFinder is used as a dependent page to find film
+    '/filmFinder': (BuildContext context) => const GlimpsesPickerView(),
+
+
+    // prototype for test
     '/glimpsesPicker': (BuildContext context) => const GlimpsesPickerView(),
+
     '/trash': (BuildContext context) => TrashView(),
     // '/receipt': (BuildContext context) => RotatableGlimpseCardView(),
     '/datePicker': (BuildContext context) => DatePickerView(),

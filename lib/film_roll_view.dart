@@ -1,951 +1,253 @@
-import 'dart:async';
-import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'dart:ui';
 
-import 'package:collection/collection.dart';
 import 'package:exif/exif.dart';
-import 'package:flutter/src/services/message_codec.dart';
-import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
+import 'package:flutter/material.dart';
+import 'package:glimpse/common/utils/image_utils.dart';
 import 'package:glimpse/rotatable_Glimpse_card_view.dart';
-import 'package:image/image.dart' as img;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 import './config.dart' as config;
 
 class FilmRollView extends StatefulWidget {
-  final DateTime selectedDate;
-  final Function setGlimpseCount;
+  final Size viewSize;
+  final List<AssetEntity> images;
+  final Map<String, ui.Image> thumbnailCache;
+  final Color backLight;
 
   const FilmRollView(
-      {Key? key, required this.selectedDate, required this.setGlimpseCount})
-      : super(key: key);
+      {super.key,
+      required this.viewSize,
+      required this.images,
+      required this.thumbnailCache,
+      required this.backLight});
 
   @override
-  FilmRollViewState createState() => FilmRollViewState();
+  State<StatefulWidget> createState() {
+    return _FilmRollViewState();
+  }
 }
 
-double filmWidthRatio = 0.4;
-
-class FilmRollViewState extends State<FilmRollView>
-    with WidgetsBindingObserver {
-  bool lightOn = false;
-  int thumbnailSize = 135;
-
-  int counts = 0;
-  String? selectedImageId;
-
-  Color backLight = config.backLightW;
-
-  // 縮略圖快取Map
-  final Map<String, ui.Image> _originalThumbnailCache = {};
-  final Map<String, ui.Image> _thumbnailCache = {};
-
-  String targetAlbumName = "Pictures";
-
-  List<String> albumNames = [];
-  List<AssetEntity> images = [];
-  List<AssetPathEntity> _cachedAlbums = [];
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _initAlbumsAndListen();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    PhotoManager.removeChangeCallback(_onPhotoChange);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // App refreshes when returning to the foreground from the background
-    if (state == AppLifecycleState.resumed) {
-      _initAlbumsAndListen();
-    }
-  }
-
-  void _onPhotoChange(MethodCall call) {
-    // 系統照片有改變，自動刷新
-    _initAlbumsAndListen();
-  }
-
-  Future<void> _initAlbumsAndListen() async {
-    if (!await hasPhotoAccess()) {
-      PhotoManager.openSetting();
-      return; //設定回來之後 會回來這裡?????
-    }
-
-    // 註冊系統照片庫改變監聽（第一次呼叫時註冊，之後移除重註冊也沒問題）
-    PhotoManager.removeChangeCallback(_onPhotoChange);
-    PhotoManager.addChangeCallback(_onPhotoChange);
-
-    // 取得相簿列表並緩存
-    _cachedAlbums = await PhotoManager.getAssetPathList();
-
-    setState(() {
-      albumNames = _cachedAlbums.map((e) => e.name).toList();
-    });
-  }
-
-  Future<bool> hasPhotoAccess() async {
-    final permission = await PhotoManager.requestPermissionExtend();
-    return permission.isAuth || permission == PermissionStatus.limited;
-  }
-
-  Future<List<AssetEntity>> getAssetEntitiesFromCachedAlbums(
-      String targetAlbumName) async {
-    final targetAlbum = _cachedAlbums.firstWhereOrNull(
-      (album) => album.name == targetAlbumName,
-    );
-
-    if (targetAlbum == null) {
-      print("目標相簿不存在");
-      return [];
-    }
-
-    final List<AssetEntity> allImages =
-        await targetAlbum.getAssetListPaged(page: 0, size: 100);
-    final selectedImages = filterImagesByDate(allImages);
-
-    return selectedImages;
-  }
-
-  Future<void> _fetchImages() async {
-    // Check if permission is authorized
-    if (!await hasPhotoAccess()) {
-      print('====== permission is not authed');
-      PhotoManager.openSetting();
-      return;
-    }
-
-    if (_cachedAlbums.isEmpty) {
-      await _initAlbumsAndListen();
-    }
-
-    List<AssetEntity> selectedImages =
-        await getAssetEntitiesFromCachedAlbums(targetAlbumName);
-
-    if (selectedImages.isNotEmpty) {
-      selectedImages.insert(0, selectedImages[0]);
-      selectedImages.insert(selectedImages.length, selectedImages[0]);
-    }
-
-    await loadAndCacheThumbnail(selectedImages);
-
-    setState(() {
-      images = selectedImages;
-      counts = images.isEmpty ? 0 : images.length - 2;
-      widget.setGlimpseCount(counts);
-    });
-  }
-
-  Future<void> extractExifDataFromAsset(AssetEntity asset) async {
-    final file = await asset.file;
-
-    if (file != null) {
-      final imageBytes = await file.readAsBytes();
-
-      final data = await readExifFromBytes(imageBytes);
-      if (data != null && data.isNotEmpty) {
-        print('Exif data:');
-        for (var entry in data.entries) {
-          print('${entry.key}: ${entry.value}');
-        }
-
-        final cameraModel = data['Image Model'];
-        final dateTime = data['EXIF DateTimeOriginal'];
-
-        print('📷 Camera Model: ${cameraModel?.printable}');
-        print('🕓 Date Time: ${dateTime?.printable}');
-      } else {
-        print('No EXIF data found.');
-      }
-    }
-  }
-
-  Future<void> loadAndCacheThumbnail(List<AssetEntity> selectedImages) async {
-    for (var image in selectedImages) {
-      final thumbnailData = await image.thumbnailDataWithSize(
-        ThumbnailSize(thumbnailSize, thumbnailSize),
-      );
-
-      if (thumbnailData != null) {
-        final codec = await ui.instantiateImageCodec(thumbnailData);
-        final frame = await codec.getNextFrame();
-        final ui.Image rawImage = frame.image;
-
-        // 如果是橫圖，轉 90 度
-        if (rawImage.width > rawImage.height) {
-          final recorder = ui.PictureRecorder();
-          final canvas = Canvas(recorder);
-
-          final rotatedWidth = rawImage.height.toDouble();
-          final rotatedHeight = rawImage.width.toDouble();
-
-          // 轉 90 度，並將圖繪製在轉換後的位置
-          canvas.translate(rotatedWidth, 0);
-          canvas.rotate(90 * 3.1415927 / 180);
-          final paint = Paint();
-          canvas.drawImage(rawImage, Offset.zero, paint);
-
-          final picture = recorder.endRecording();
-          final rotatedImage = await picture.toImage(
-            rotatedWidth.toInt(),
-            rotatedHeight.toInt(),
-          );
-
-          _originalThumbnailCache[image.id] = rotatedImage;
-        } else {
-          _originalThumbnailCache[image.id] = rawImage;
-        }
-      }
-    }
-
-    updateThumbnailsForLightState();
-  }
-
-  List<AssetEntity> filterImagesByDate(List<AssetEntity> allImages) {
-    return allImages.where((image) {
-      final DateTime createDate = image.createDateTime;
-      return createDate.year == widget.selectedDate.year &&
-          createDate.month == widget.selectedDate.month &&
-          createDate.day == widget.selectedDate.day;
-    }).toList();
-  }
-
-  @override
-  void didUpdateWidget(FilmRollView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    _fetchImages();
-  }
-
-  // 將 Uint8List 圖片資料轉為負片效果
-  Uint8List applyNegativeEffect(Uint8List imageData) {
-    // 解碼圖片
-    final originalImage = img.decodeImage(imageData);
-    if (originalImage == null) {
-      throw Exception("無法解碼圖片");
-    }
-
-    // 套用負片效果
-    for (int y = 0; y < originalImage.height; y++) {
-      for (int x = 0; x < originalImage.width; x++) {
-        final pixel = originalImage.getPixel(x, y);
-
-        // 取出 RGB 值
-        final r = img.getRed(pixel);
-        final g = img.getGreen(pixel);
-        final b = img.getBlue(pixel);
-
-        // 取反 RGB 值
-        final invertedColor = img.getColor(255 - r, 255 - g, 255 - b);
-        originalImage.setPixel(x, y, invertedColor);
-      }
-    }
-
-    // 將處理後的圖片編碼回 Uint8List
-    return Uint8List.fromList(img.encodeJpg(originalImage));
-  }
-
-  Future<Uint8List?> _getImageBytes(AssetEntity asset) async {
-    final file = await asset.file;
-    if (file != null) {
-      final bytes = await file.readAsBytes();
-      return bytes;
-    }
-    return null;
-  }
+class _FilmRollViewState extends State<FilmRollView> {
+  String filmMaker = '';
+  String filmDate = '';
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
-    double fontSizeForText = 20;
+    _initExifData();
+    return filmRoll();
+  }
 
-    double frameHeight = screenHeight * 0.25;
-    double frameWidth = screenWidth * 0.5;
-    double marginBuffer = 10;
+  void setFilmMaker(String filmMaker) {
+    setState(() {
+      this.filmMaker = filmMaker;
+    });
+  }
 
-    const rectangleWidth = 15;
-    const sizeBoxWidth = 10;
-    final rowWidth = rectangleWidth * 2 + sizeBoxWidth * 4 + screenWidth * 0.5;
+  void setFilmDate(String filmDate) {
+    setState(() {
+      this.filmDate = filmDate;
+    });
+  }
 
-    Color dateColor = const Color(0xFFF9A825);
-    double dateSectionHeight = 100;
+  Future<void> _initExifData() async {
+    final imageBytes = await ImageUtils.getImageBytes(widget.images[0]);
+    final exifData = await readExifFromBytes(imageBytes!);
 
-    return Scaffold(
-        backgroundColor: Colors.white,
-        body: SingleChildScrollView(
-          child: SizedBox(
-              width: screenWidth,
-              height: screenHeight,
-              child: Stack(
-                children: [
-                  Center(
-                    child: SizedBox(
-                      width: screenWidth,
-                      height: screenHeight,
-                      child: images.isEmpty
-                          ? const Center(
-                              child: Text("No images found for this date"))
-                          : Padding(
-                              padding: const EdgeInsets.all(0.0),
-                              child: Container(
-                                color: backLight,
-                                width: screenWidth,
-                                height: screenHeight,
-                                child: ListView.builder(
-                                  // crossAxisCount: 1,
-                                  itemCount: images.length,
-                                  itemBuilder: (context, index) {
-                                    final image = images[index];
-                                    final thumbnail = _thumbnailCache[image.id];
-                                    final isFirst = index == 0;
-                                    final isLast = index == images.length - 1;
+    setState(() {
+      setFilmMaker(exifData?['Image Make']?.printable ?? '未知品牌');
+      setFilmDate(exifData?['Image DateTime']?.printable ?? '未知日期');
+    });
+  }
 
-                                    return GestureDetector(
-                                      child: Container(
-                                        child: isFirst
-                                            ? Row(
-                                                children: [
-                                                  const Spacer(),
-                                                  Container(
-                                                    color:
-                                                        const Color(0xFF8B4513)
-                                                            .withOpacity(0.65),
-                                                    child: FilmHead(
-                                                      screenWidth: screenWidth,
-                                                      frameHeight: frameHeight,
-                                                      backLight: backLight,
-                                                    ),
-                                                  ),
-                                                  const Spacer()
-                                                ],
-                                              )
-                                            : isLast
-                                                ? Row(
-                                                    children: [
-                                                      const Spacer(),
-                                                      Container(
-                                                        color: const Color(
-                                                                0xFF8B4513)
-                                                            .withOpacity(0.65),
-                                                        child: Transform.rotate(
-                                                          angle: pi,
-                                                          child: FilmHead(
-                                                            screenWidth:
-                                                                screenWidth,
-                                                            frameHeight:
-                                                                frameHeight,
-                                                            backLight:
-                                                                backLight,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const Spacer(),
-                                                    ],
-                                                  )
-                                                : Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      const Spacer(),
-                                                      Container(
-                                                        color: const Color(
-                                                                0xFF8B4513)
-                                                            .withOpacity(0.65),
-                                                        child: Stack(
-                                                          children: [
-                                                            Row(
-                                                              children: [
-                                                                const SizedBox(
-                                                                    width: 10),
-                                                                Rectangles(
-                                                                  totalHeight:
-                                                                      frameHeight,
-                                                                  backLight:
-                                                                      backLight,
-                                                                ),
-                                                                const SizedBox(
-                                                                    width: 10),
-                                                                Container(
-                                                                  width: screenWidth *
-                                                                      filmWidthRatio,
-                                                                  decoration:
-                                                                      const BoxDecoration(
-                                                                    color: Colors
-                                                                        .black,
-                                                                  ),
-                                                                  child: (thumbnail !=
-                                                                          null)
-                                                                      ? GestureDetector(
-                                                                          onTap:
-                                                                              () async {
-                                                                            final isNeg =
-                                                                                backLight != config.backLightW;
+  Widget filmRoll() {
+    Size viewSize = widget.viewSize;
+    // double picRatio = 3 / 4;
+    double picRatio = 2 / 3;
+    // double picRatio = 9 / 16;
 
-                                                                            // 取得圖片 bytes
-                                                                            final imageBytes =
-                                                                                await _getImageBytes(image);
+    double photoFrameHeight = viewSize.height * 0.35;
+    double photoFrameWidth = photoFrameHeight * picRatio;
+    double filmRollWidth = photoFrameWidth * 1.4;
+    double headerHeight = photoFrameHeight * 1.2;
 
-                                                                            // Get EXIF here. The exif will disappear after applying the neg. effect
-                                                                            final exifData =
-                                                                                await readExifFromBytes(imageBytes!);
+    return Container(
+        color: widget.backLight,
+        // color: config.backLightB,
+        width: viewSize.width,
+        height: viewSize.height,
+        child: Center(
+          child: widget.images.isEmpty
+              ? const Center(child: Text("No images found for this date"))
+              : ListView.builder(
+                  itemCount: widget.images.length,
+                  itemBuilder: (context, index) {
+                    final image = widget.images[index];
+                    final thumbnail = widget.thumbnailCache[image.id];
 
-                                                                            // Get the path of the image
-                                                                            final file =
-                                                                                await image.file;
-                                                                            final imgPath =
-                                                                                file?.path;
-
-                                                                            final processedImage = isNeg
-                                                                                ? applyNegativeEffect(imageBytes)
-                                                                                : imageBytes;
-
-                                                                            Navigator.push(
-                                                                              context,
-                                                                              MaterialPageRoute(
-                                                                                builder: (context) => RotatableGlimpseCardView(
-                                                                                  image: processedImage!,
-                                                                                  exifData: exifData!,
-                                                                                  imgPath: imgPath!,
-                                                                                ),
-                                                                              ),
-                                                                            );
-                                                                          },
-                                                                          child:
-                                                                              RawImage(
-                                                                            image:
-                                                                                _thumbnailCache[image.id],
-                                                                            fit:
-                                                                                BoxFit.cover,
-                                                                          ),
-                                                                        )
-                                                                      : Container(
-                                                                          color:
-                                                                              Colors.grey[200],
-                                                                          height:
-                                                                              100,
-                                                                        ),
-                                                                ),
-                                                                const SizedBox(
-                                                                    width: 10),
-                                                                Rectangles(
-                                                                  totalHeight:
-                                                                      frameHeight,
-                                                                  backLight:
-                                                                      backLight,
-                                                                ),
-                                                                const SizedBox(
-                                                                    width: 10),
-                                                              ],
-                                                            ),
-                                                            Positioned.fill(
-                                                                child:
-                                                                    IgnorePointer(
-                                                              child: Opacity(
-                                                                opacity: 0.1,
-                                                                child:
-                                                                    Image.asset(
-                                                                  'assets/images/noise.png',
-                                                                  fit: BoxFit
-                                                                      .cover,
-                                                                  color: Colors
-                                                                      .brown
-                                                                      .withOpacity(
-                                                                          0.2),
-                                                                  colorBlendMode:
-                                                                      BlendMode
-                                                                          .multiply,
-                                                                ),
-                                                              ),
-                                                            )),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      const Spacer()
-                                                    ],
-                                                  ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
-
-                  // menu
-                  Positioned(
-                      top: (screenWidth - (dateSectionHeight / 2)) / 2,
-                      left: screenWidth * 0.02,
-                      child: Transform.rotate(
-                        angle: 90 * pi / 180,
-                        child: PopupMenu(
-                          items: albumNames,
-                          onSelected: (value) {
-                            setState(() {
-                              targetAlbumName = value;
-                              _fetchImages();
-                            });
-                          },
+                    return Align(
+                      alignment: Alignment.center,
+                      child: SizedBox(
+                        // color: widget.backLight,
+                        width: filmRollWidth,
+                        child: FilmFrame(
+                          image: image,
+                          index: index,
+                          imagesLength: widget.images.length,
+                          thumbnail: thumbnail!,
+                          filmRollWidth: filmRollWidth,
+                          headerHeight: headerHeight,
+                          photoFrameWidth: photoFrameWidth,
+                          photoFrameHeight: photoFrameHeight,
+                          picRatio: picRatio,
+                          filmColor: config.filmColor,
+                          backLight: widget.backLight,
+                          filmMaker: filmMaker,
+                          filmDate: filmDate,
+                          onTapPic: onTapPic,
                         ),
-                      )),
-
-                  // date section
-                  Positioned(
-                      top: (screenWidth - (dateSectionHeight / 2)) / 2,
-                      left: screenWidth / 2 - 60,
-                      child: Transform.rotate(
-                        angle: 90 * pi / 180,
-                        child: SizedBox(
-                          width: screenWidth,
-                          height: dateSectionHeight,
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  // year
-                                  SizedBox(
-                                    width: fontSizeForText * 4,
-                                    child: Text(
-                                      widget.selectedDate.year.toString(),
-                                      overflow: TextOverflow.clip,
-                                      maxLines: 1,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: dateColor,
-                                        fontSize: fontSizeForText,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily:
-                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                      ),
-                                    ),
-                                  ),
-
-                                  // /
-                                  SizedBox(
-                                    child: Text(
-                                      '/',
-                                      overflow: TextOverflow.clip,
-                                      maxLines: 1,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: dateColor,
-                                        fontSize: fontSizeForText,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily:
-                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                      ),
-                                    ),
-                                  ),
-
-                                  // month
-                                  SizedBox(
-                                    width: fontSizeForText * 2,
-                                    child: Text(
-                                      widget.selectedDate.month < 10
-                                          ? '0${widget.selectedDate.month}'
-                                          : widget.selectedDate.month
-                                              .toString(),
-                                      overflow: TextOverflow.clip,
-                                      maxLines: 1,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: dateColor,
-                                        fontSize: fontSizeForText,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily:
-                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                      ),
-                                    ),
-                                  ),
-
-                                  // /
-                                  SizedBox(
-                                    child: Text(
-                                      '/',
-                                      overflow: TextOverflow.clip,
-                                      maxLines: 1,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: dateColor,
-                                        fontSize: fontSizeForText,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily:
-                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                      ),
-                                    ),
-                                  ),
-
-                                  // date
-                                  SizedBox(
-                                      width: fontSizeForText * 2,
-                                      child: Text(
-                                        widget.selectedDate.day < 10
-                                            ? '0${widget.selectedDate.day}'
-                                            : widget.selectedDate.day
-                                                .toString(),
-                                        overflow: TextOverflow.clip,
-                                        maxLines: 1,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: dateColor,
-                                          fontSize: fontSizeForText,
-                                          fontWeight: FontWeight.w500,
-                                          fontFamily:
-                                              'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
-                                        ),
-                                      )),
-                                ],
-                              ),
-                              GestureDetector(
-                                onTap: () {},
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      'counts: ${counts}',
-                                      style: TextStyle(color: dateColor),
-                                    ),
-                                    const SizedBox(
-                                      width: 30,
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )),
-
-                  // light switch
-                  Positioned(
-                    top: screenHeight * .6,
-                    left: screenWidth * 0.02,
-                    child: Switch(
-                      value: lightOn,
-                      activeColor: Colors.red,
-                      onChanged: (bool value) async {
-                        setState(() {
-                          lightOn = value;
-                          setBackLight(lightOn);
-                        });
-
-                        await updateThumbnailsForLightState();
-
-                        setState(() {}); // 重新繪製畫面
-                      },
-                    ),
-                  )
-                ],
-              )),
+                      ),
+                    );
+                  },
+                ),
         ));
   }
 
-  void setBackLight(bool lightOn) {
-    setState(() {
-      backLight = lightOn ? config.backLightB : config.backLightW;
-    });
-  }
+  Future<void> onTapPic(image) async {
+    final isNeg = config.backLightB == widget.backLight;
 
-  Future<void> updateThumbnailsForLightState() async {
-    for (var entry in _originalThumbnailCache.entries) {
-      final original = entry.value;
-      if (lightOn) {
-        _thumbnailCache[entry.key] = await invertColors(original);
-      } else {
-        _thumbnailCache[entry.key] = original;
-      }
-    }
-  }
+    // 取得圖片 bytes
+    final imageBytes = await ImageUtils.getImageBytes(image);
 
-  Future<ui.Image> invertColors(ui.Image image) async {
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-    if (byteData == null) throw Exception("Unable to convert image");
+    // Get EXIF here. The exif will disappear after applying the neg. effect
+    final exifData = await readExifFromBytes(imageBytes!);
 
-    final rgbaBytes = byteData.buffer.asUint8List();
-    final width = image.width;
-    final height = image.height;
+    // Get the path of the image
+    final file = await image.file;
+    final imgPath = file?.path;
 
-    for (int i = 0; i < rgbaBytes.length; i += 4) {
-      rgbaBytes[i] = 255 - rgbaBytes[i]; // R
-      rgbaBytes[i + 1] = 255 - rgbaBytes[i + 1]; // G
-      rgbaBytes[i + 2] = 255 - rgbaBytes[i + 2]; // B
-      // A (alpha) 保留 rgbaBytes[i + 3]
-    }
+    final processedImage =
+        isNeg ? ImageUtils.applyNegativeEffect(imageBytes) : imageBytes;
 
-    final completer = Completer<ui.Image>();
-    ui.decodeImageFromPixels(
-      rgbaBytes,
-      width,
-      height,
-      ui.PixelFormat.rgba8888,
-      (ui.Image result) => completer.complete(result),
-    );
-    return completer.future;
-  }
-}
-
-class PopupMenu extends StatelessWidget {
-  final List<String> items;
-  final ValueChanged<String> onSelected;
-
-  PopupMenu({required this.items, required this.onSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      onSelected: onSelected,
-      itemBuilder: (BuildContext context) {
-        return items.map((String choice) {
-          return PopupMenuItem<String>(
-            value: choice,
-            child: Text(choice),
-          );
-        }).toList();
-      },
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.6),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Icon(Icons.menu, color: Colors.white),
-      ),
-    );
-  }
-}
-
-class SwitchButton extends StatefulWidget {
-  final double screenHeight;
-  final Function callBackFunction;
-
-  const SwitchButton({
-    Key? key,
-    required this.screenHeight,
-    required this.callBackFunction,
-  }) : super(key: key);
-
-  @override
-  _SwitchButtonState createState() => _SwitchButtonState();
-}
-
-class _SwitchButtonState extends State<SwitchButton> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    double widgetHeight = widget.screenHeight * 0.1;
-    double widgetWidth = widget.screenHeight * 0.05;
-    return Container(
-      color: Colors.grey,
-      height: widgetHeight,
-      width: widgetWidth,
-      child: Stack(
-        children: [
-          Align(
-            alignment: Alignment.topCenter,
-            // alignment: Alignment.bottomCenter,
-            child: GestureDetector(
-              onTap: () {
-                widget.callBackFunction();
-              },
-              child: Neumorphic(
-                margin: EdgeInsets.only(
-                    top: widgetHeight * 0.1, bottom: widgetHeight * 0.1),
-                style: const NeumorphicStyle(
-                  shape: NeumorphicShape.flat,
-                  boxShape: NeumorphicBoxShape.rect(),
-                  intensity: 0.8,
-                  depth: 1.5,
-                  lightSource: LightSource.top,
-                  color: Colors.yellow, // Use the current state for color
-                ),
-                child: SizedBox(
-                  height: widgetHeight * 0.3,
-                  width: widgetWidth * 0.5,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 白點生成
-class Dots extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: List.generate(
-        8, // 點的數量
-        (index) => Container(
-          width: 5,
-          height: 5,
-          margin: EdgeInsets.symmetric(vertical: 2),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-          ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RotatableGlimpseCardView(
+          image: processedImage!,
+          exifData: exifData!,
+          imgPath: imgPath!,
         ),
       ),
     );
   }
 }
 
-class Rectangles extends StatelessWidget {
-  final double
-      totalHeight; // Total height (including spacing) passed as a parameter
-  final double rectangleHeight; // The height of each rectangle
-  final double margin; // The margin between the rectangles
+class FilmFrame extends StatelessWidget {
+  final dynamic image;
+  final int index;
+  final int imagesLength;
+  final ui.Image thumbnail;
+  final double filmRollWidth;
+  final double headerHeight;
+  final double photoFrameWidth;
+  final double photoFrameHeight;
+  final double picRatio;
+  final Color filmColor;
   final Color backLight;
+  final String filmMaker;
+  final String filmDate;
+  final Future<void> Function(dynamic image) onTapPic;
 
-  Rectangles({
-    required this.totalHeight,
-    this.rectangleHeight = 10, // Default rectangle height
-    this.margin = 10, // Default margin
+  const FilmFrame({
+    super.key,
+    required this.image,
+    required this.index,
+    required this.imagesLength,
+    required this.thumbnail,
+    required this.filmRollWidth,
+    required this.headerHeight,
+    required this.photoFrameWidth,
+    required this.photoFrameHeight,
+    required this.picRatio,
+    required this.filmColor,
     required this.backLight,
+    required this.filmMaker,
+    required this.filmDate,
+    required this.onTapPic,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Calculate the number of rectangles that can fit within the total height
-    final numberOfRectangles =
-        (totalHeight / (rectangleHeight + margin)).floor() - 2;
+    final isFirst = index == 0;
+    final isLast = index == imagesLength - 1;
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: List.generate(
-        numberOfRectangles, // Number of rectangles calculated dynamically
-        (index) {
-          // Determine color for the first and last rectangle
-          Color rectangleColor = backLight;
-
-          return Container(
-            width: 15, // Rectangle width
-            height: rectangleHeight, // Rectangle height
-            margin: EdgeInsets.symmetric(vertical: margin), // Rectangle margin
-            decoration: BoxDecoration(
-              color: rectangleColor, // Set the color of the rectangle
-              borderRadius: BorderRadius.circular(3), // Rounded corners
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class FilmHead extends StatelessWidget {
-  final double screenWidth;
-  final double frameHeight;
-  final Color backLight;
-
-  final double cutHeight = 210;
-
-  const FilmHead({
-    Key? key,
-    required this.screenWidth,
-    required this.frameHeight,
-    required this.backLight,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(width: 10),
-            Rectangles(
-              totalHeight: frameHeight,
-              backLight: backLight,
-            ),
-            const SizedBox(width: 10),
-            Container(
-              width: screenWidth * filmWidthRatio,
-              decoration: BoxDecoration(
-                color: backLight,
-              ),
-              child: Container(
-                color: const Color(0xFF8B4513).withOpacity(0.65),
-                height: 200,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Rectangles(
-              totalHeight: frameHeight,
-              backLight: backLight,
-            ),
-            const SizedBox(width: 10),
-          ],
-        ),
-
-        Positioned.fill(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(0),
-            child: Opacity(
-              opacity: 0.1,
-              child: Image.asset(
-                'assets/images/noise.png',
-                fit: BoxFit.cover,
-                color: Colors.brown.withOpacity(0.2),
-                colorBlendMode: BlendMode.multiply,
-              ),
-            ),
-          ),
-        ),
-
-        // curve
-        Row(
-          children: [
-            Container(
-              width: screenWidth * filmWidthRatio * 0.5,
-              height: cutHeight,
-              decoration: BoxDecoration(
-                color: backLight,
-                borderRadius: const BorderRadius.only(
-                  bottomRight: Radius.circular(150),
-                ),
-              ),
-            ),
-            Stack(
+    if (isFirst) {
+      return FilmHead(
+        filmRollWidth: filmRollWidth,
+        headerHeight: headerHeight,
+        filmColor: filmColor,
+        backLight: backLight,
+        filmMaker: filmMaker,
+        filmDate: filmDate,
+      );
+    } else if (isLast) {
+      return const SizedBox();
+    } else {
+      return Row(
+        children: [
+          Container(
+            width: photoFrameWidth * 1.4,
+            height: photoFrameHeight,
+            color: filmColor,
+            child: Stack(
               children: [
-                Container(
-                    width: screenWidth * 0.3,
-                    height: cutHeight,
-                    color: backLight),
-
-                Container(
-                  width: screenWidth * 0.3,
-                  height: cutHeight,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B4513).withOpacity(0.65),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(10),
+                Row(
+                  children: [
+                    FilmRowLeftSide(
+                      index: index,
+                      height: photoFrameHeight,
+                      width: photoFrameWidth * 0.2,
+                      holeHeight: photoFrameWidth * 0.05,
+                      backLight: backLight,
                     ),
-                  ),
+                    SizedBox(
+                      width: photoFrameWidth,
+                      child: (thumbnail != null)
+                          ? GestureDetector(
+                              onTap: () async {
+                                await onTapPic(image);
+                              },
+                              child: Container(
+                                color: filmColor,
+                                height: photoFrameHeight * 0.9,
+                                width: photoFrameHeight * 0.9 * picRatio,
+                                child: FittedBox(
+                                  fit: BoxFit.fitHeight,
+                                  alignment: Alignment.center,
+                                  child: RawImage(
+                                    image: thumbnail,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: Colors.grey[200],
+                              height: 100,
+                              width: 100 * picRatio,
+                            ),
+                    ),
+                    FilmRowRightSide(
+                      height: photoFrameHeight,
+                      width: photoFrameWidth * 0.2,
+                      holeHeight: photoFrameWidth * 0.05,
+                      backLight: backLight,
+                      filmMaker: filmMaker,
+                      filmDate: filmDate,
+                    ),
+                  ],
                 ),
-
-                // noise
                 Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(0),
+                  child: IgnorePointer(
                     child: Opacity(
                       opacity: 0.1,
                       child: Image.asset(
@@ -959,9 +261,374 @@ class FilmHead extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      );
+    }
+  }
+}
+
+class FilmRowRightSide extends StatelessWidget {
+  final double height; // Total height (including spacing) passed as a parameter
+  final double width;
+  final double holeHeight; // The height of each hole
+  final Color backLight;
+  final String filmMaker;
+  final String filmDate;
+
+  const FilmRowRightSide({
+    super.key,
+    required this.height,
+    required this.holeHeight,
+    required this.backLight,
+    required this.width,
+    required this.filmMaker,
+    required this.filmDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final gapWidthBetweenHole = holeHeight;
+    // Calculate the number of rectangles that can fit within the total height
+    final numberOfRectangles =
+        (height / (holeHeight + gapWidthBetweenHole)).floor();
+
+    return SizedBox(
+        width: width,
+        height: height,
+        child: Stack(
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: RotatedBox(
+                quarterTurns: 1, // 90 degrees clockwise
+                child: Container(
+                    width: height,
+                    height: width * 0.3,
+                    // color: Colors.red,
+                    alignment: Alignment.center,
+                    child: Row(
+                      children: [
+                        const Spacer(),
+                        Text(
+                          '${filmMaker}',
+                          style: TextStyle(
+                              fontSize: width * 0.3 * 0.8,
+                              color: config.dateColor,
+                              fontFamily: 'DS-DIGI'),
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${filmDate.split(' ')[0]}',
+                          style: TextStyle(
+                              fontSize: width * 0.3 * 0.8,
+                              color: config.dateColor,
+                              fontFamily: 'DS-DIGI'),
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                        ),
+                        const Spacer(),
+                      ],
+                    )),
+              ),
+            ),
+            Column(
+              children: List.generate(
+                numberOfRectangles,
+                (index) {
+                  return Row(
+                    children: [
+                      SizedBox(
+                        width: width * 0.3,
+                        height: holeHeight,
+                      ),
+                      Container(
+                        width: width * 0.4,
+                        height: holeHeight,
+                        margin: EdgeInsets.only(
+                            top: gapWidthBetweenHole / 2,
+                            bottom: gapWidthBetweenHole / 2),
+                        decoration: BoxDecoration(
+                          color: backLight,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                      SizedBox(
+                        width: width * 0.3,
+                        height: holeHeight,
+                      )
+                    ],
+                  );
+                },
+              ),
+            ),
           ],
+        ));
+  }
+}
+
+class FilmRowLeftSide extends StatelessWidget {
+  final double height; // Total height (including spacing) passed as a parameter
+  final double width;
+  final double holeHeight; // The height of each hole
+  final Color backLight;
+  final int index;
+
+  const FilmRowLeftSide({
+    super.key,
+    required this.height,
+    required this.holeHeight,
+    required this.backLight,
+    required this.width,
+    required this.index,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final gapWidthBetweenHole = holeHeight;
+    // Calculate the number of rectangles that can fit within the total height
+    final numberOfRectangles =
+        (height / (holeHeight + gapWidthBetweenHole)).floor();
+
+    return SizedBox(
+        width: width,
+        height: height,
+        child: Stack(
+          children: [
+            Align(
+              alignment: Alignment.topLeft,
+              child: RotatedBox(
+                quarterTurns: 1, // 90 degrees clockwise
+                child: Container(
+                  width: height,
+                  height: width * 0.35,
+                  // color: Colors.red,
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${index}',
+                    style: TextStyle(
+                        color: config.dateColor,
+                        fontSize: width * 0.3 * 0.68,
+                        fontFamily: 'Anton'),
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                  ),
+                ),
+              ),
+            ),
+            Column(
+              children: List.generate(
+                numberOfRectangles,
+                (index) {
+                  return Row(
+                    children: [
+                      SizedBox(
+                        width: width * 0.3,
+                        height: holeHeight,
+                      ),
+                      Container(
+                        width: width * 0.4,
+                        height: holeHeight,
+                        margin: EdgeInsets.only(
+                            top: gapWidthBetweenHole / 2,
+                            bottom: gapWidthBetweenHole / 2),
+                        decoration: BoxDecoration(
+                          color: backLight,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                      SizedBox(
+                        width: width * 0.3,
+                        height: holeHeight,
+                      )
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ));
+  }
+}
+
+class FilmHead extends StatelessWidget {
+  final double filmRollWidth;
+  final double headerHeight;
+  final Color filmColor;
+  final Color backLight;
+  final String filmMaker;
+  final String filmDate;
+
+  const FilmHead({
+    Key? key,
+    required this.filmRollWidth,
+    required this.headerHeight,
+    required this.filmColor,
+    required this.backLight,
+    required this.filmMaker,
+    required this.filmDate,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        CustomPaint(
+          size: Size(filmRollWidth, headerHeight),
+          painter: FilmHeadPainter(
+            filmColor: config.filmColor,
+          ),
+        ),
+        Positioned.fill(
+          child: ClipPath(
+            clipper: FilmHeadClipper(),
+            child: Opacity(
+              opacity: 1,
+              child: Row(
+                children: [
+                  FilmRowLeftSide(
+                    height: headerHeight,
+                    width: filmRollWidth * 0.2,
+                    holeHeight: filmRollWidth * 0.05,
+                    backLight: backLight,
+                    index: 0,
+                  ),
+                  SizedBox(
+                    width: filmRollWidth * 0.6,
+                    child: Container(
+                      color: config.filmColor,
+                      height: headerHeight,
+                    ),
+                  ),
+                  FilmRowRightSide(
+                    height: headerHeight,
+                    width: filmRollWidth * 0.2,
+                    holeHeight: filmRollWidth * 0.05,
+                    backLight: backLight,
+                    filmMaker: filmMaker,
+                    filmDate: filmDate,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: ClipPath(
+            clipper: FilmHeadClipper(),
+            child: Opacity(
+              opacity: 0.1,
+              child: Image.asset(
+                'assets/images/noise.png',
+                fit: BoxFit.cover,
+                color: Colors.brown.withOpacity(0.2),
+                colorBlendMode: BlendMode.multiply,
+              ),
+            ),
+          ),
         ),
       ],
     );
   }
+}
+
+Path buildFilmHeadPath(Size size) {
+  final path = Path();
+
+  // Set start point
+  double xTemp = 0;
+  double yTemp = size.height;
+
+  // 1 up height
+  double firstUpHeight = size.height * 0.3;
+
+  // 2 outer
+  double secondOuter = size.width * 0.16;
+
+  // 3
+  double thirdEdgeBetween = size.width * 0.088;
+
+  // 4 inner
+  double fourthInner = size.width * 0.25;
+
+  // 5 outer
+  double fifthOuter = size.width * 0.16;
+
+  // Start point
+  path.moveTo(xTemp, yTemp);
+
+  // 1 up
+  yTemp -= firstUpHeight;
+  path.lineTo(xTemp, yTemp);
+
+  // 2 draw first outer arc (凸)
+  // xTemp += secondOuter;
+  // yTemp -= secondOuter;
+  // path.quadraticBezierTo(
+  //   xTemp - secondOuter * 0.9, yTemp - secondOuter * 0.0, // 控制點 (根據形狀手動調)
+  //   xTemp, yTemp, // 終點
+  // );
+
+  // edgeBetween
+  xTemp += thirdEdgeBetween;
+  path.lineTo(xTemp, yTemp);
+
+  // 3 draw first outer arc (凹)
+  xTemp += fourthInner;
+  yTemp -= fourthInner;
+  path.quadraticBezierTo(
+    xTemp + fourthInner * 0.03, yTemp + fourthInner * 0.95, // 控制點 (根據形狀手動調)
+    xTemp, yTemp, // 終點
+  );
+
+  // 4 draw up
+  yTemp = fifthOuter;
+  path.lineTo(xTemp, yTemp);
+
+  // 5 draw second outer arc (凸)
+  xTemp += fifthOuter;
+  yTemp -= fifthOuter;
+  path.quadraticBezierTo(
+    xTemp - fifthOuter * 0.9, yTemp - fifthOuter * 0.0, // 控制點 (根據形狀手動調)
+    xTemp, yTemp, // 終點
+  );
+
+  // Top edge
+  path.lineTo(size.width, 0);
+
+  // Right edge down
+  path.lineTo(size.width, size.height);
+
+  path.close();
+
+  return path;
+}
+
+class FilmHeadPainter extends CustomPainter {
+  final Color filmColor;
+
+  FilmHeadPainter({required this.filmColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = filmColor
+      ..style = PaintingStyle.fill;
+
+    final path = buildFilmHeadPath(size);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class FilmHeadClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) => buildFilmHeadPath(size);
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

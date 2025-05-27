@@ -8,8 +8,10 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:glimpse/circle_menu_picker_view.dart';
+import 'package:glimpse/light_box_view.dart';
 import 'package:glimpse/models/food.dart';
 import 'package:glimpse/models/place.dart';
+import 'package:glimpse/trash_view.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -80,20 +82,20 @@ class _MyHomePageState extends State<MyHomePage> {
   ];
 
   final List<String> menuItems = [
-    'Add Glimpse',
+    '+Glimpse',
+    'Glimpses',
     'Trash',
     'Receipt',
     'Con. Sheet',
-    'Time Line',
     'Printer'
   ];
 
   final List<String> menuItemsPath = [
-    '/glimpsesPicker',
+    '/filmFinder',
+    '/glimpses',
     '/trash',
     '/receipt',
     '/contactSheet',
-    '/albums',
     '/printer'
   ];
 
@@ -149,7 +151,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     Container(
                       height: screenHeight,
                       width: screenWidth,
-                      color: config.backGroundWhite,
+                      color: config.mainBackGroundWhite,
                     ),
 
                     Positioned(
@@ -174,28 +176,55 @@ class _MyHomePageState extends State<MyHomePage> {
                                 SizedBox(
                                   height: screenHeight * 0.05,
                                 ),
-
-                                SizedBox(
-                                  height: screenHeight, // 👉 你可以根據需要調整這個高度
-                                  child: SingleChildScrollView(
-                                    child: Column(
-                                      children: List.generate(
-                                        66,
-                                            (i) {
-                                          return GlimpseRowCard(
-                                            date: DateTime.now().subtract(
-                                              Duration(days: math.Random().nextInt(90)),
-                                            ),
-                                            screenWidth: screenWidth,
-                                            dayOfTheWeekList: dayOfTheWeekList,
-                                          );
-                                        },
-                                      ),
-                                    ),
+                                Neumorphic(
+                                  style: NeumorphicStyle(
+                                      // lightSource: neumorphicLightSource,
+                                      color: config.mainBackGroundWhite,
+                                      shape: NeumorphicShape.convex,
+                                      boxShape: NeumorphicBoxShape.roundRect(
+                                          BorderRadius.circular(20)),
+                                      intensity: 1,
+                                      depth: -1),
+                                  child: Container(
+                                    // color: Colors.grey.withOpacity(0.3),
+                                    height: screenHeight * 0.5,
+                                    width: screenWidth * 0.8,
+                                    child: menuItems[menuPointer] == 'Trash'
+                                        ? TrashView()
+                                        : menuItems[menuPointer] == '+Glimpse'
+                                            ? LightBoxView(
+                                                widgetSize: Size(
+                                                  screenWidth * 0.8,
+                                                  screenHeight * 0.5,
+                                                ),
+                                                selectedDate: DateTime(2025, 05, 10),
+                                                setGlimpseCount: setGlimpseCount,
+                                              )
+                                            : SingleChildScrollView(
+                                                child: Column(
+                                                  children: List.generate(
+                                                    66,
+                                                    (i) {
+                                                      return GlimpseRowCard(
+                                                        date: DateTime.now()
+                                                            .subtract(
+                                                          Duration(
+                                                              days:
+                                                                  math.Random()
+                                                                      .nextInt(
+                                                                          90)),
+                                                        ),
+                                                        rowWidth:
+                                                            screenWidth * 0.8,
+                                                        dayOfTheWeekList:
+                                                            dayOfTheWeekList,
+                                                      );
+                                                    },
+                                                  ),
+                                                ),
+                                              ),
                                   ),
                                 )
-
-
                               ],
                             )),
                       ),
@@ -283,7 +312,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     //       ),
                     //     )),
 
-                    Container(
+                    SizedBox(
                       height: screenHeight,
                       width: screenWidth,
                       child: Stack(
@@ -293,25 +322,40 @@ class _MyHomePageState extends State<MyHomePage> {
                               bottom: 0,
                               child: ClipRect(
                                 child: Container(
-                                  // color: Colors.black,
-                                  width: screenWidth,
-                                  height: screenWidth * 0.5,
-                                  child: OverflowBox(
-                                    maxHeight: double.infinity,
-                                    maxWidth: double.infinity,
-                                    alignment: Alignment.topCenter,
-                                    child: Align(
-                                      // 再貼一次 child 到頂部
+                                  color: Colors.white,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      // color: Colors.white.withOpacity(0.2),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.white.withOpacity(.3),
+                                          Colors.white.withOpacity(.5),
+                                        ],
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                      ),
+                                    ),
+                                    // color: Colors.white.withOpacity(.6),
+
+                                    width: screenWidth,
+                                    height: screenHeight * 0.26,
+                                    child: OverflowBox(
+                                      maxHeight: double.infinity,
+                                      maxWidth: double.infinity,
                                       alignment: Alignment.topCenter,
-                                      child: Container(
-                                        margin: EdgeInsets.only(
-                                            top: screenHeight * 0.01),
-                                        // ← 這裡加入 margin
-                                        child: CircleMenuPickerView(
-                                          onItemSelected: onItemSelected,
-                                          items: menuItems,
-                                          radius: screenWidth * 0.41,
-                                          menuItemsPath: menuItemsPath,
+                                      child: Align(
+                                        alignment: Alignment.topCenter,
+                                        child: SizedBox(
+                                          width: screenWidth,
+                                          height: screenWidth,
+                                          child: Center(
+                                            child: CircleMenuPickerView(
+                                              onItemSelected: onItemSelected,
+                                              items: menuItems,
+                                              radius: screenWidth * 0.45,
+                                              menuItemsPath: menuItemsPath,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -327,6 +371,9 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ),
         ));
+  }
+
+  void setGlimpseCount(int count) {
   }
 
   void onItemSelected(int newIndex) {
@@ -364,6 +411,7 @@ class _MyHomePageState extends State<MyHomePage> {
         depths[oldIndex] = _depthNormal;
         depths[newIndex] = _depthMax;
         menuPointer = newIndex;
+        print('====== itme: ${menuItems[menuPointer]}');
       });
 
       // Timer(Duration(milliseconds: 500), () { // 👉 再設定下一段延遲動畫（1000ms），做最後一段動畫。

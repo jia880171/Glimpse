@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import './config.dart' as config;
+
 
 class TrashView extends StatefulWidget {
   @override
@@ -13,8 +15,6 @@ class _TrashViewState extends State<TrashView> {
   final ScrollController _hourController = ScrollController();
   final ScrollController _minController = ScrollController();
   final ScrollController _secController = ScrollController();
-
-  final darkRed = Colors.red[800]!;
 
   late int selectedWeekdayIndex;
   late int selectedHour;
@@ -35,8 +35,6 @@ class _TrashViewState extends State<TrashView> {
   late List<String> displayGarbageList;
 
   List<String> weekdaysList = ["月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日"];
-  // List<String> weekdaysList = ["月曜", "火曜", "水曜", "木曜", "金曜", "土曜", "日曜"];
-  // List<String> weekdaysList = ["月", "火", "水", "木", "金", "土", "日"];
   late List<String> displayWeekdaysList;
 
   List<int> hoursList = List.generate(24, (index) => index);
@@ -167,52 +165,61 @@ class _TrashViewState extends State<TrashView> {
     displayWeekdaysList = [...lastThree, ...weekdaysList, ...firstThree];
   }
 
-  void _scrollToCurrentTimeSlot(double itemHeight, int currentHour,
+  void _scrollToCurrentTimeSlot(double itemHeight, int currentTime,
       double redLineOffset, ScrollController controller) {
-    double targetOffsetHour = (itemHeight * 3) +
-        (currentHour * itemHeight) -
+    double targetOffset = (itemHeight * 3) +
+        (currentTime * itemHeight) -
         redLineOffset +
         (itemHeight / 2);
 
-    controller.animateTo(
-      targetOffsetHour,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOut,
-    );
+    if (controller.hasClients) {
+      controller.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _scrollToCurrentHour(double itemHeight, int currentHour,
       double redLineOffset, ScrollController controller) {
-    double targetOffsetHour = (itemHeight * 3) +
+    double targetOffset = (itemHeight * 3) +
         (currentHour * itemHeight) -
         redLineOffset +
         (itemHeight / 2);
 
-    controller.animateTo(
-      targetOffsetHour,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOut,
-    );
-    selectedHour = getSelectedHour(_dayController, hoursList);
+    if (controller.hasClients) {
+      controller.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
+    }
+
+    if (_dayController.hasClients) {
+      selectedHour = getSelectedHour(_dayController, hoursList);
+    }
   }
 
   void _scrollToCurrentWeekday(
       double itemHeight, int currentWeekday, double redLineOffset) {
     currentWeekday = currentWeekday - 1;
 
-    double targetOffsetDay = (itemHeight * 3) +
+    double targetOffset = (itemHeight * 3) +
         (currentWeekday * itemHeight) -
         redLineOffset +
         (itemHeight / 2);
 
-    _dayController.animateTo(
-      targetOffsetDay,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOut,
-    );
+    if (_dayController.hasClients) {
+      _dayController.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
 
-    selectedWeekdayIndex =
-        getSelectedWeekdayIndex(_dayController, weekdaysList);
+      selectedWeekdayIndex =
+          getSelectedWeekdayIndex(_dayController, weekdaysList);
+    }
   }
 
   void _scrollToGarbage() {
@@ -224,16 +231,19 @@ class _TrashViewState extends State<TrashView> {
       }
     });
 
-    double targetOffsetGarbage = (selectedGarbageIndex * garbageItemHeight) -
+    double targetOffset = (selectedGarbageIndex * garbageItemHeight) -
         redLineOffset +
         (garbageItemHeight / 2);
 
-    _typeController.animateTo(
-      targetOffsetGarbage,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOut,
-    );
+    if (_typeController.hasClients) {
+      _typeController.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -304,7 +314,7 @@ class _TrashViewState extends State<TrashView> {
               right: 0,
               child: Container(
                 height: 3,
-                color: darkRed,
+                color: config.trashPointerRed,
               ),
             ),
           ],
@@ -361,42 +371,6 @@ class _TrashViewState extends State<TrashView> {
             },
             child:
 
-          //   ListView(
-          //   controller: controller,
-          //   children: items
-          //       .map((item) => Container(
-          //     decoration: BoxDecoration(
-          //       border: Border(
-          //         top: BorderSide(
-          //             color: Colors.black.withOpacity(0.3),
-          //             width: horizontalLineWidth), // 上邊框
-          //       ),
-          //     ),
-          //     height: weekdayItemHeight,
-          //     child: ClipRect(
-          //       child: Align(
-          //         alignment: Alignment.bottomCenter, // 讓文字靠底部
-          //         child: Transform.translate(
-          //           offset: Offset(weekdayItemHeight * 0.05, weekdayItemHeight * 0.15),
-          //           child: Text(
-          //             item.toString().split('').join('\n'),
-          //             style: TextStyle(
-          //               color: (item.toString()[0] == '土' ||
-          //                   item.toString()[0] == '日')
-          //                   ? darkRed.withOpacity(0.8)
-          //                   : Colors.black.withOpacity(0.6),
-          //               fontFamily: 'asa',
-          //               fontSize: weekdayItemHeight * 0.5,
-          //             ),
-          //             textAlign: TextAlign.center, // 確保文字內部也水平方向居中
-          //           ),
-          //         ),
-          //       ),
-          //     )
-          //     ,
-          //   ))
-          //       .toList(),
-          // )
             ListView(
               controller: controller,
               children: items
@@ -416,7 +390,7 @@ class _TrashViewState extends State<TrashView> {
                         style: TextStyle(
                             color: (item.toString()[0] == '土' ||
                                 item.toString()[0] == '日')
-                                ? darkRed.withOpacity(0.8)
+                                ? config.trashPointerRed.withOpacity(0.8)
                                 : Colors.black.withOpacity(0.6),
                             fontFamily: 'asa',
                             fontSize: weekdayItemHeight * 0.15),
@@ -491,7 +465,7 @@ class _TrashViewState extends State<TrashView> {
                                   fontFamily: 'asa',
                                   color: item.toString().split(' ')[1] == 'なし'
                                       ? Colors.black.withOpacity(0.6)
-                                      : darkRed.withOpacity(0.8),
+                                      : config.trashPointerRed.withOpacity(0.8),
                                   fontSize: garbageItemHeight * 0.16,
                                 ),
                               ),
@@ -630,7 +604,7 @@ class _TrashViewState extends State<TrashView> {
                             child: Text(item.toString(),
                                 style: TextStyle(
                                     fontSize: 10,
-                                    color: darkRed.withOpacity(0.5)))),
+                                    color: config.trashPointerRed.withOpacity(0.5)))),
                       ),
                       Expanded(
                           flex: ((widthFraction / 3) * 100).toInt(),
@@ -640,25 +614,25 @@ class _TrashViewState extends State<TrashView> {
                                   decoration: BoxDecoration(
                                       border: Border(
                                     left: BorderSide(
-                                        color: darkRed.withOpacity(0.5),
+                                        color: config.trashPointerRed.withOpacity(0.5),
                                         width: verticalLineWidth),
                                     right: BorderSide(
-                                        color: darkRed.withOpacity(0.5),
+                                        color: config.trashPointerRed.withOpacity(0.5),
                                         width: verticalLineWidth),
                                   )),
                                   height: secondItemHeight / 4),
                               Container(
                                 height: secondItemHeight / 2,
-                                color: darkRed.withOpacity(0.5),
+                                color: config.trashPointerRed.withOpacity(0.5),
                               ),
                               Container(
                                   decoration: BoxDecoration(
                                       border: Border(
                                     left: BorderSide(
-                                        color: darkRed.withOpacity(0.5),
+                                        color: config.trashPointerRed.withOpacity(0.5),
                                         width: verticalLineWidth),
                                     right: BorderSide(
-                                        color: darkRed.withOpacity(0.5),
+                                        color: config.trashPointerRed.withOpacity(0.5),
                                         width: verticalLineWidth),
                                   )),
                                   height: secondItemHeight / 4),

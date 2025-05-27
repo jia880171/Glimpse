@@ -12,7 +12,13 @@ const Color border = Color(0x00000000);
 // const Color backGroundWhite = Color(0xfff6f6f1);
 // const Color backGroundWhite = Color(0xffdddddd);
 const Color backGroundWhite = Color(0xffd7d3d0);
+const Color mainBackGroundWhite = Color(0xffffffff);
+const Color menuPickerWhite = Color(0xfff5f5f5);
+const Color datePickerWhite = Color(0xffe1e0e0);
 
+const Color trashPointerRed = Color(0xff951919);
+
+const Color filmColor = Color(0xFF8B4513);
 const Color sticker = Color(0xffc7c4c2);
 
 
@@ -26,13 +32,15 @@ const Color hardCardYellow = Color(0xffdecd9e);
 const Color hardCardYellowDark = Color(0xffdcc995);
 const Color hardCardYellowDarker = Color(0xffc7ae97);
 
+Color dateColor = const Color(0xFFF9A825);
+
+
+
+const Color receipt = Color(0xffd9d7ca);
+
 
 const Color hardCardRed = Color(0xff671010);
 const Color hardCardBlue = Color(0xff424f6e);
-
-
-// red
-// const Color dragButton = Color.fromARGB(255, 195, 14, 14);
 
 const Color dragButton = Color.fromARGB(255, 242, 160, 90);
 
@@ -44,8 +52,6 @@ const Color backLightB = Colors.black;
 // orange
 const Color dragButtonOrange = Color.fromARGB(255, 238, 149, 101);
 
-// black
-// const Color dragButton = Color.fromARGB(255, 34, 32, 32);
 
 
 

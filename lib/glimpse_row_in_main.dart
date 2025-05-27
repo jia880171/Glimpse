@@ -3,20 +3,20 @@ import 'package:flutter/material.dart';
 
 class GlimpseRowCard extends StatelessWidget {
   final DateTime date;
-  final double screenWidth;
+  final double rowWidth;
   final List<String> dayOfTheWeekList;
 
   const GlimpseRowCard({
     super.key,
     required this.date,
-    required this.screenWidth, required this.dayOfTheWeekList,
+    required this.rowWidth, required this.dayOfTheWeekList,
   });
 
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: screenWidth * 0.8,
+      width: rowWidth * 0.8,
       child: Stack(
         children: [
           Divider(),
@@ -26,7 +26,7 @@ class GlimpseRowCard extends StatelessWidget {
                 'Date:    ',
                 style: TextStyle(
                   fontFamily: 'Jura',
-                  fontSize: screenWidth * 0.8 * 0.6 * 0.1,
+                  fontSize: rowWidth * 0.8 * 0.6 * 0.1,
                   color: Colors.black,
                 ),
               ),
@@ -36,7 +36,7 @@ class GlimpseRowCard extends StatelessWidget {
                   '${date.year} / ${date.month} / ${date.day}',
                   style: TextStyle(
                     fontFamily: 'Meow',
-                    fontSize: screenWidth * 0.8 * 0.6 * 0.138,
+                    fontSize: rowWidth * 0.8 * 0.6 * 0.138,
                     color: Colors.black.withOpacity(0.36),
                   ),
                 ),
@@ -55,7 +55,7 @@ class GlimpseRowCard extends StatelessWidget {
                   textAlign: TextAlign.right,
                   style: TextStyle(
                     fontFamily: 'asa',
-                    fontSize: screenWidth * 0.8 * 0.6 * 0.066,
+                    fontSize: rowWidth * 0.8 * 0.6 * 0.066,
                     color: Colors.black,
                   ),
                 ),

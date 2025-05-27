@@ -36,7 +36,7 @@ class CircleDatePickerView extends StatefulWidget {
 
 class CircleDatePickerViewState extends State<CircleDatePickerView> {
   static const IconData fingerprint =
-      IconData(0xe287, fontFamily: 'MaterialIcons');
+  IconData(0xe287, fontFamily: 'MaterialIcons');
 
   AngleCalculator angleCalculator = AngleCalculator();
 
@@ -76,7 +76,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
 
     DateTime firstDayOfNextMonth = DateTime(yearOfNextMonth, nextMonth, 1);
     DateTime lastDayOfCurrentMonth =
-        firstDayOfNextMonth.subtract(const Duration(days: 1));
+    firstDayOfNextMonth.subtract(const Duration(days: 1));
 
     return lastDayOfCurrentMonth.day;
   }
@@ -168,7 +168,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
   double calculateDegreeBetween(Offset oldPosition, Offset newPosition) {
 // 使用一個固定旋轉中心，通常是畫布中心點
     final Offset center =
-        Offset(centerX - radiusOfDragObject, centerY - radiusOfDragObject);
+    Offset(centerX - radiusOfDragObject, centerY - radiusOfDragObject);
 
     // 計算兩個向量分別相對於中心的角度
     final double angleOfNewPosition = (newPosition - center).direction;
@@ -203,18 +203,18 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
 
   void rotateMonthPanel(Offset newFingerPosition) {
     final Offset center =
-        Offset(centerX - radiusOfDragObject, centerY - radiusOfDragObject);
+    Offset(centerX - radiusOfDragObject, centerY - radiusOfDragObject);
     final double newFingerAngelToCenterInDegree =
-        angleInDegrees((newFingerPosition - center).direction);
+    angleInDegrees((newFingerPosition - center).direction);
     final double oldFingerAngelToCenterInDegree =
-        angleInDegrees((dragObjectPositionOfMonth - center).direction);
+    angleInDegrees((dragObjectPositionOfMonth - center).direction);
 
     setState(() {
       if (isCrossingOneDegree(
           newFingerAngelToCenterInDegree, oldFingerAngelToCenterInDegree)) {
         double amountOfRotationInDegrees = 1;
         double amountOfRotationInTurns =
-            calculateRadiansInDegreeToTurns(amountOfRotationInDegrees);
+        calculateRadiansInDegreeToTurns(amountOfRotationInDegrees);
         if (newFingerAngelToCenterInDegree > oldFingerAngelToCenterInDegree) {
           _totalRotation += amountOfRotationInTurns;
           degreeOfRotated12OClockPositionOfMonth += amountOfRotationInDegrees;
@@ -239,7 +239,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
     int oldDragMonth = dragMonth;
 
     double adjustedDegrees =
-        ((degrees % 360) < 0) ? (degrees + 360) % 360 : (degrees % 360);
+    ((degrees % 360) < 0) ? (degrees + 360) % 360 : (degrees % 360);
 
     double degreesPerMonth = 360 / 12;
 
@@ -332,7 +332,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
         radiusOfCenterMoniterCircle + radiusOfDragObject;
     // center
     final dragPositionCenter =
-        Offset(centerX, centerY - distanceFromDayCenterToScreenCenter);
+    Offset(centerX, centerY - distanceFromDayCenterToScreenCenter);
     // the position of the drag object of day
     dragDayPosition = angleCalculator.calibrateCoordination(
         dragPositionCenter, radiusOfDragObject);
@@ -341,7 +341,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
     distanceFromMonthCenterToScreenCenter =
         radiusOfCenterMoniterCircle + radiusOfDragObject * 3.5;
     final dragMonthPositionCenter =
-        Offset(centerX, centerY - distanceFromMonthCenterToScreenCenter);
+    Offset(centerX, centerY - distanceFromMonthCenterToScreenCenter);
 
     dragObjectPositionOfMonth = angleCalculator.calibrateCoordination(
         dragMonthPositionCenter, radiusOfDragObject);
@@ -389,7 +389,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                             child: Stack(
                               children: [
                                 Container(
-                                  color: config.backGroundWhite,
+                                  color: config.datePickerWhite,
                                   width: widget.screenWidth,
                                   height: widget.perpetualViewHeight,
                                 ),
@@ -430,7 +430,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                   depth: 0.8,
                 ),
                 child: Container(
-                  color: config.backGroundWhite,
+                  color: config.datePickerWhite,
                   width: (backgroundRadius * 2),
                   height: (backgroundRadius * 2),
                 )),
@@ -445,11 +445,11 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                   boxShape: const NeumorphicBoxShape.circle(),
                   intensity: 0.8,
                   lightSource: neumorphicLightSource,
-                  color: config.backGroundWhite,
+                  color: config.datePickerWhite,
                   depth: -0.8,
                 ),
                 child: Container(
-                  color: config.backGroundWhite,
+                  color: config.datePickerWhite,
                   width: (dentRadius * 2),
                   height: (dentRadius * 2),
                 )),
@@ -469,7 +469,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                     intensity: 0.8,
                     depth: 0.8,
                     lightSource: neumorphicLightSource,
-                    color: config.backGroundWhite,
+                    color: config.datePickerWhite,
                   ),
                   onPressed: () {
                     widget._togglePanel();
@@ -526,7 +526,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                           fontSize: fontSizeForText,
                                           fontWeight: FontWeight.w500,
                                           fontFamily:
-                                              'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                          'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
                                         ),
                                       ),
                                     ),
@@ -542,7 +542,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                           fontSize: fontSizeForText,
                                           fontWeight: FontWeight.w500,
                                           fontFamily:
-                                              'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                          'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
                                         ),
                                       ),
                                     ),
@@ -561,7 +561,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                           fontSize: fontSizeForText,
                                           fontWeight: FontWeight.w500,
                                           fontFamily:
-                                              'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                          'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
                                         ),
                                       ),
                                     ),
@@ -577,7 +577,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                           fontSize: fontSizeForText,
                                           fontWeight: FontWeight.w500,
                                           fontFamily:
-                                              'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                          'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
                                         ),
                                       ),
                                     ),
@@ -596,7 +596,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                             fontSize: fontSizeForText,
                                             fontWeight: FontWeight.w500,
                                             fontFamily:
-                                                'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
                                           ),
                                         )),
                                     const Spacer(),
@@ -608,7 +608,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                   children: [
                                     const Spacer(),
                                     Container(
-                                        // color: Colors.blue,
+                                      // color: Colors.blue,
                                         width: radiusOfCenterMoniterCircle *
                                             1.9 *
                                             0.4,
@@ -616,21 +616,21 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                           widget.glimpseCount == 0
                                               ? '00'
                                               : widget.glimpseCount < 10
-                                                  ? '0${widget.glimpseCount}'
-                                                  : widget.glimpseCount
-                                                      .toString(),
+                                              ? '0${widget.glimpseCount}'
+                                              : widget.glimpseCount
+                                              .toString(),
                                           overflow: TextOverflow.clip,
                                           maxLines: 1,
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
                                             fontSize:
-                                                radiusOfCenterMoniterCircle *
-                                                    1.9 *
-                                                    0.5 *
-                                                    0.5,
+                                            radiusOfCenterMoniterCircle *
+                                                1.9 *
+                                                0.5 *
+                                                0.5,
                                             fontWeight: FontWeight.w500,
                                             fontFamily:
-                                                'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                            'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
                                           ),
                                         )),
                                     const Spacer(),
@@ -642,7 +642,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                   children: [
                                     const Spacer(),
                                     SizedBox(
-                                        // color: Colors.blue,
+                                      // color: Colors.blue,
                                         width: radiusOfCenterMoniterCircle *
                                             1.9 *
                                             0.4,
@@ -655,7 +655,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                         fontSize: widget.screenWidth * 0.02,
                                         fontWeight: FontWeight.w500,
                                         fontFamily:
-                                            'Ds-Digi', // Replace 'SecondFontFamily' with your desired font family
+                                        'Ds-Digi', // Replace 'SecondFontFamily' with your desired font family
                                       ),
                                     ),
                                     const Spacer(),
@@ -743,11 +743,11 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                           final dragPositionCenter = Offset(
                             centerX +
                                 ((radiusOfCenterMoniterCircle +
-                                        radiusOfDragObject) *
+                                    radiusOfDragObject) *
                                     cos(angle)),
                             centerY +
                                 (radiusOfCenterMoniterCircle +
-                                        radiusOfDragObject) *
+                                    radiusOfDragObject) *
                                     sin(angle),
                           );
 
@@ -784,14 +784,14 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                     Center(
                                         child: SizedBox(
                                             width:
-                                                radiusOfCenterMoniterCircle * 2,
+                                            radiusOfCenterMoniterCircle * 2,
                                             height:
-                                                radiusOfCenterMoniterCircle * 2,
+                                            radiusOfCenterMoniterCircle * 2,
                                             child: Center(
                                               child:
-                                                  // Icon(fingerprint),
-                                                  // Icon(null),
-                                                  Text(
+                                              // Icon(fingerprint),
+                                              // Icon(null),
+                                              Text(
                                                 // dragDay.toString(),
                                                 '',
                                                 overflow: TextOverflow.clip,
@@ -799,10 +799,10 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                                 textAlign: TextAlign.center,
                                                 style: TextStyle(
                                                   fontSize:
-                                                      widget.screenWidth * 0.03,
+                                                  widget.screenWidth * 0.03,
                                                   fontWeight: FontWeight.w500,
                                                   fontFamily:
-                                                      'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
+                                                  'Ds-Digi', // Replace 'FirstFontFamily' with your desired font family
                                                 ),
                                               ),
                                             ))),
@@ -852,7 +852,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                             depth: 1.8,
                           ),
                           child: Container(
-                            color: config.backGroundWhite,
+                            color: config.datePickerWhite,
                             width: (radiusOfDragObject * 2),
                             height: (radiusOfDragObject * 2),
                           )),
@@ -914,7 +914,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                               lightSource: neumorphicLightSource,
                             ),
                             child: Container(
-                                color: config.backGroundWhite,
+                                color: config.datePickerWhite,
                                 width: radiusOfDragObject * (0.9) * 2,
                                 height: radiusOfDragObject * (0.9) * 2,
                                 child: Stack(
@@ -937,9 +937,9 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                     Center(
                                         child: SizedBox(
                                             width:
-                                                radiusOfCenterMoniterCircle * 2,
+                                            radiusOfCenterMoniterCircle * 2,
                                             height:
-                                                radiusOfCenterMoniterCircle * 2,
+                                            radiusOfCenterMoniterCircle * 2,
                                             child: const Center(
                                               child: Icon(fingerprint),
                                               // Text(
@@ -958,14 +958,14 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                                             ))),
                                   ],
                                 )
-                                // Align(
-                                //   alignment: Alignment.center,
-                                //   child: Text(dragDay.toString(),
-                                //       style: TextStyle(
-                                //           fontSize: 0.36 * smallSensorRadius,
-                                //           fontWeight: FontWeight.bold)),
-                                // )
-                                )),
+                              // Align(
+                              //   alignment: Alignment.center,
+                              //   child: Text(dragDay.toString(),
+                              //       style: TextStyle(
+                              //           fontSize: 0.36 * smallSensorRadius,
+                              //           fontWeight: FontWeight.bold)),
+                              // )
+                            )),
                       ),
                     ),
                   ],
@@ -1008,7 +1008,7 @@ class AngleCalculator {
 
   Offset calibrateCoordination(Offset originCoordination, double radius) {
     Offset calibratedCoordination =
-        Offset(originCoordination.dx - radius, originCoordination.dy - radius);
+    Offset(originCoordination.dx - radius, originCoordination.dy - radius);
 
     return calibratedCoordination;
   }
@@ -1053,14 +1053,14 @@ class DashedCirclePainter extends CustomPainter {
 
   DashedCirclePainter(
       {required this.dx,
-      required this.dy,
-      required this.radius,
-      required this.margin,
-      required this.dashCount,
-      required this.dashWidth,
-      required this.strokeWidth,
-      required this.strockColor,
-      required this.isMonth});
+        required this.dy,
+        required this.radius,
+        required this.margin,
+        required this.dashCount,
+        required this.dashWidth,
+        required this.strokeWidth,
+        required this.strockColor,
+        required this.isMonth});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1091,7 +1091,7 @@ class DashedCirclePainter extends CustomPainter {
 
         // Adjust the position to center the text around the point
         final offset =
-            Offset(x - textPainter.width / 2, y - textPainter.height / 2);
+        Offset(x - textPainter.width / 2, y - textPainter.height / 2);
         textPainter.paint(canvas, offset);
       }
     } else {

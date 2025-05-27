@@ -74,6 +74,15 @@ class RotatableGlimpseCardBackViewState
                       children: [
                         _buildCard(),
 
+                        // Positioned(
+                        //   top: widget.cardSize.height * 0.4,
+                        //   left: widget.cardSize.width * 0.1,
+                        //   child: Transform.rotate(
+                        //     angle: 1 * pi / 180,
+                        //     child: _buildReceiptCard(),
+                        //   ),
+                        // ),
+
                         Positioned.fill(
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(3),
@@ -89,7 +98,6 @@ class RotatableGlimpseCardBackViewState
                             ),
                           ),
                         ),
-
                         // blur
                         Positioned.fill(
                           child: ClipRRect(
@@ -113,6 +121,11 @@ class RotatableGlimpseCardBackViewState
                             ),
                           ),
                         ),
+
+                        Positioned(
+                            top: 0,
+                            right: widget.cardSize.width * 0.1,
+                            child: sticker()),
                       ],
                     ),
                   ),
@@ -155,8 +168,7 @@ class RotatableGlimpseCardBackViewState
                                 ),
                               )),
                           Positioned.fill(
-                            child:
-                            ClipRRect(
+                            child: ClipRRect(
                               borderRadius: BorderRadius.circular(11),
                               child: Opacity(
                                 opacity: 0.0766,
@@ -166,7 +178,8 @@ class RotatableGlimpseCardBackViewState
                                   color: Colors.brown.withOpacity(0.2),
                                   colorBlendMode: BlendMode.multiply,
                                 ),
-                              ),),
+                              ),
+                            ),
                           )
                         ],
                       ),
@@ -178,6 +191,10 @@ class RotatableGlimpseCardBackViewState
   }
 
   Widget _buildCard() {
+    return buildPlaceCard();
+  }
+
+  Widget buildPlaceCard() {
     return Card(
       color: config.hardCardYellow.withOpacity(0),
       // color: config.hardCardYellow,
@@ -317,6 +334,65 @@ class RotatableGlimpseCardBackViewState
     );
   }
 
+  Widget _buildReceiptCard() {
+    return Card(
+      child: Stack(
+        children: [
+          Container(
+            width: widget.cardSize.width * 0.5,
+            height: widget.cardSize.height * 0.5,
+            color: config.receipt,
+          ),
+          Container(
+              width: widget.cardSize.width * 0.5,
+              child: Column(
+                children: [
+                  // Container(
+                  //   width: widget.cardSize.width * 0.5,
+                  //   height: widget.cardSize.height * 0.5,
+                  //   color: config.receipt,
+                  // ),
+                  Container(
+                    margin: EdgeInsets.only(top: widget.cardSize.height*0.02),
+                    width: widget.cardSize.width * 0.5,
+                    child: Row(
+                      children: [
+                        const Spacer(),
+                        Center(
+                          // color: Colors.red,
+                          // width: widget.cardSize.width * 0.3,
+                          // height: widget.cardSize.height * 0.5 * 0.1,
+                          child: Text(
+                            'Receipt',
+                            style: TextStyle(
+                              fontFamily: 'Ds-Digi',
+                              fontSize: widget.cardSize.width * 0.5 * 0.1,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                      ],
+                    ),
+                  ),
+
+                  Container(
+                    // color: Colors.red,
+                    width: widget.cardSize.width * 0.5,
+                    child:  Divider(
+                      color: Colors.black,
+                      endIndent: widget.cardSize.width * 0.5 * 0.1,
+                      indent: widget.cardSize.width * 0.5 * 0.1,
+                    ),
+                  ),
+                ],
+              )
+          )
+        ],
+      ),
+    );
+  }
+
   Widget buildFakeHole({
     double size = 10,
     Color colorHole = Colors.white,
@@ -414,6 +490,58 @@ class RotatableGlimpseCardBackViewState
         fontSize: fontSize,
         fontWeight: fontWeight,
         fontFamily: fontFamily,
+      ),
+    );
+  }
+
+  Widget sticker() {
+    return Card(
+      elevation: 3,
+      margin: EdgeInsets.zero,
+      child: Column(
+        children: [
+          Container(
+            color: Colors.white,
+            width: widget.cardSize.width * 0.25,
+            // height: widget.cardSize.height * 0.1,
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: widget.cardSize.width * 0.06,
+                  left: widget.cardSize.width * 0.02,
+                  right: widget.cardSize.width * 0.02,
+                  bottom: widget.cardSize.width * 0.03,
+                ),
+                child: Transform.rotate(
+                  angle: 3.5 * pi / 180,
+                  child: Text(
+                    'Glimpse\nPack.',
+                    style: TextStyle(
+                        fontFamily: 'Jura',
+                        fontSize: widget.cardSize.width * 0.035,
+                        color: Colors.black),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: widget.cardSize.width * 0.25,
+            child: Divider(
+              endIndent: 5,
+              indent: 5,
+              color: Colors.black.withOpacity(0.3), // 調整顏色
+              thickness: 0.66,
+            ),
+          ),
+          Text(
+            'Limited',
+            style: TextStyle(
+                fontFamily: 'Jura',
+                fontSize: widget.cardSize.width * 0.03,
+                color: Colors.black),
+          )
+        ],
       ),
     );
   }
