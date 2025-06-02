@@ -2,20 +2,24 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
-import 'package:vibration/vibration.dart';
+import 'package:glimpse/common/utils/rotation_utils.dart';
 
 import './config.dart' as config;
 import 'AnimatedNeumorphicText.dart';
-import 'RotarySelectorRing.dart';
 import 'circle_date_picker_view.dart';
+import 'models/rotary_selector_with_drag_handle.dart';
 
-const filmFinderItemName = '+Glimpse';
+const filmFinderItemName = 'FILMS';
+const contactSheetItemName = 'CONTACT SHEET';
 
 class CircleMenuPickerView extends StatefulWidget {
   final List<String> items;
+  final int datesLength;
   final Function onItemSelected;
+  final Function setTargetDatePointer;
   final double radius;
   final List<String> menuItemsPath;
+  final Size widgetSize;
 
   const CircleMenuPickerView(
       {Key? key,
@@ -23,7 +27,10 @@ class CircleMenuPickerView extends StatefulWidget {
       required this.items,
       required this.radius,
       required this.menuItemsPath,
-      l})
+      l,
+      required this.setTargetDatePointer,
+      required this.datesLength,
+      required this.widgetSize})
       : super(key: key);
 
   @override
@@ -31,17 +38,23 @@ class CircleMenuPickerView extends StatefulWidget {
 }
 
 class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
+  static const IconData fingerprint =
+      IconData(0xe287, fontFamily: 'MaterialIcons');
+
   final double _depthMax = 0.5;
   final double _depthMin = 0.0;
   final double _depthNormal = 0.3;
 
+  double menuTurns = 0;
+  double dateAngleShiftAmount = 0;
+
   late final double radiusMax = widget.radius;
-  late final double radiusItem = widget.radius * 0.7;
+  late final double itemRadius = widget.radius * 0.7;
   late final double dentRadius = widget.radius * 0.3;
   late final double dashWidth = widget.radius * 0.15;
 
-  final Duration depthOutDuration = Duration(milliseconds: 600);
-  final Duration depthInDuration = Duration(milliseconds: 600);
+  final Duration depthOutDuration = const Duration(milliseconds: 600);
+  final Duration depthInDuration = const Duration(milliseconds: 600);
 
   Timer? _timer;
 
@@ -54,15 +67,50 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
   int _datePointer = 0;
   final LightSource neumorphicLightSource = LightSource.topRight;
 
+  late final double distanceFromMenuCenterToScreenCenter;
+  late Offset dragMenuPosition; // left top
+  late double radiusOfDragMenu;
+
+  late final double distanceFromDateCenterToScreenCenter;
+  late Offset dragDatePosition; // left top
+  late double radiusOfDragDate;
+
+
+
+  late final double centerX;
+  late final double centerY;
+
   @override
   void initState() {
     super.initState();
+
+    radiusOfDragMenu = (itemRadius - dentRadius) / 2 * 0.66;
+    distanceFromMenuCenterToScreenCenter = itemRadius - radiusOfDragMenu;
+
+    radiusOfDragDate = (radiusMax - itemRadius) / 2 * 0.78;
+    distanceFromDateCenterToScreenCenter = radiusMax - radiusOfDragDate;
+
+    centerX = radiusMax;
+    centerY = radiusMax;
+
+    final dragMenuPositionCenter =
+        Offset(centerX, centerY - distanceFromMenuCenterToScreenCenter);
+    dragMenuPosition = RotationUtils.centerToTopLeft(
+        dragMenuPositionCenter, radiusOfDragMenu);
+
+    final dragDatePositionCenter =
+    Offset(centerX, centerY - distanceFromDateCenterToScreenCenter);
+    dragDatePosition = RotationUtils.centerToTopLeft(
+        dragDatePositionCenter, radiusOfDragDate);
+
+    // text's ani
     depths[_menuPointer] = _depthMax;
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Container(
+        // color: Colors.red,
         height: radiusMax * 2,
         width: radiusMax * 2,
         child: Stack(
@@ -72,21 +120,28 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
               child: datePickerOrRim(),
             ),
 
-            // items
-            RotarySelectorRing(
-              itemRadius: radiusItem,
+            RotarySelectorWithDragHandle(
+              itemRadius: itemRadius,
               dentRadius: dentRadius,
               dashWidth: dashWidth,
-              items: widget.items,
+              itemLength: widget.items.length,
+              initialPointer: _menuPointer,
               onItemSelected: (int oldIndex, int newIndex) {
                 widget.onItemSelected(newIndex);
                 itemSwitchAni(oldIndex, newIndex);
                 updatePointer(newIndex);
               },
-              initialPointer: _menuPointer,
               rimColor: config.menuPickerWhite,
               dashColor: config.backGroundWhiteDark,
               lightSource: neumorphicLightSource,
+              // sensitivity: 1,
+              initialDragObjPosition: dragMenuPosition,
+              centerX: centerX,
+              centerY: centerY,
+              radiusOfDragObj: radiusOfDragMenu,
+              distanceFromDragObjCenterToScreenCenter:
+                  distanceFromMenuCenterToScreenCenter,
+              dragHandleColor: Colors.orange,
             ),
 
             //dent
@@ -103,7 +158,7 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
                   // color: Colors.black,
                 ),
                 onPressed: () {
-                  print('===== pointer $_menuPointer');
+                  // print('===== pointer $_menuPointer');
 
                   // Delay to allow the button dent animation to finish before navigation.
                   Timer(
@@ -111,8 +166,8 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
                       () => Navigator.pushNamed(
                           context, widget.menuItemsPath[_menuPointer]));
                 },
-                child: SizedBox(
-                    // color: config.menuPickerWhite,
+                child: Container(
+                    // color: Colors.black,
                     width: (dentRadius * 2),
                     height: (dentRadius * 2),
                     child: Stack(
@@ -129,7 +184,7 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
                                   context, widget.menuItemsPath[i]);
                             },
                             fontSize: dentRadius * 0.33,
-                            color: config.menuPickerWhite,
+                            color: config.backLightB,
                             depthInDuration: depthInDuration,
                             depthOutDuration: depthOutDuration,
                           ),
@@ -142,8 +197,18 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
         ));
   }
 
+  void rotateMenuPanel(double angleInRadian) {
+    double totalTurns = angleInRadian / (2 * pi);
+    setMenuTurns(totalTurns);
+  }
+
+  void setMenuTurns(double turns) {
+    menuTurns = turns;
+  }
+
   Widget datePickerOrRim() {
-    return widget.items[_menuPointer] == filmFinderItemName
+    return (widget.items[_menuPointer] == filmFinderItemName ||
+            widget.items[_menuPointer] == contactSheetItemName)
         ? datePicker()
         : Neumorphic(
             style: NeumorphicStyle(
@@ -154,42 +219,91 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
                 depth: -1),
             child: Container(
               color: config.menuPickerWhite,
-              width: radiusItem * 1.05 * 2,
-              height: radiusItem * 1.05 * 2,
+              width: itemRadius * 1.05 * 2,
+              height: itemRadius * 1.05 * 2,
             ));
   }
 
+  int takeTheComplementOf12(int month) {
+    int complement = 12 - month;
+    if (complement <= 0) {
+      return 12;
+    } else {
+      return complement;
+    }
+  }
+
+  void rotateMonthPanel(Offset newFingerPosition) {
+    final Offset center =
+        Offset(centerX - radiusOfDragMenu, centerY - radiusOfDragMenu);
+    final double newFingerAngelToCenterInDegree =
+        angleInDegrees((newFingerPosition - center).direction);
+    final double oldFingerAngelToCenterInDegree =
+        angleInDegrees((dragMenuPosition - center).direction);
+
+    setState(() {
+      if (isCrossingOneDegree(
+          newFingerAngelToCenterInDegree, oldFingerAngelToCenterInDegree)) {
+        double amountOfRotationInDegrees = 1;
+        double amountOfRotationInTurns =
+            calculateRadiansInDegreeToTurns(amountOfRotationInDegrees);
+        // if (newFingerAngelToCenterInDegree > oldFingerAngelToCenterInDegree) {
+        //   _totalRotation += amountOfRotationInTurns;
+        //   degreeOfRotated12OClockPositionOfMonth += amountOfRotationInDegrees;
+        // } else {
+        //   _totalRotation -= amountOfRotationInTurns;
+        //   degreeOfRotated12OClockPositionOfMonth -= amountOfRotationInDegrees;
+        // }
+      }
+    });
+  }
+
+  double calculateRadiansInDegreeToTurns(double degree) {
+    return degree * (1 / 360);
+  }
+
+  bool isCrossingOneDegree(double angle1, double angle2) {
+    // 確保角度在 0 到 360 之間
+    angle1 = angle1 % 360;
+    angle2 = angle2 % 360;
+
+    // 將角度排序
+    double start = angle1 < angle2 ? angle1 : angle2;
+    double end = angle1 > angle2 ? angle1 : angle2;
+
+    double unitDegree = 1;
+
+    double lowerMultiple = (start / unitDegree).ceil() * unitDegree;
+    double upperMultiple = (end / unitDegree).floor() * unitDegree;
+
+    return lowerMultiple <= upperMultiple;
+  }
+
+  double angleInDegrees(double angle) {
+    return angle * (180 / pi);
+  }
+
   Widget datePicker() {
-    return             RotarySelectorRing(
+    return RotarySelectorWithDragHandle(
       itemRadius: radiusMax,
-      dentRadius: radiusItem,
+      dentRadius: itemRadius,
       dashWidth: dashWidth,
-      items: widget.items,
-      onItemSelected: (int oldIndex, int newIndex) {
-        // widget.onItemSelected(newIndex);
-        // itemSwitchAni(oldIndex, newIndex);
-        // updatePointer(newIndex);
-      },
+      itemLength: widget.datesLength,
       initialPointer: _datePointer,
+      onItemSelected: (int oldIndex, int newIndex) {
+        widget.setTargetDatePointer(newIndex - oldIndex);
+      },
       rimColor: config.menuPickerWhite,
       dashColor: config.backGroundWhiteDark,
       lightSource: neumorphicLightSource,
+      initialDragObjPosition: dragDatePosition,
+      centerX: centerX,
+      centerY: centerY,
+      radiusOfDragObj: radiusOfDragDate,
+      distanceFromDragObjCenterToScreenCenter:
+          distanceFromDateCenterToScreenCenter,
+      dragHandleColor: Colors.transparent,
     );
-
-
-
-      Neumorphic(
-        style: NeumorphicStyle(
-            lightSource: neumorphicLightSource,
-            shape: NeumorphicShape.convex,
-            boxShape: const NeumorphicBoxShape.circle(),
-            intensity: 0.8,
-            depth: -1),
-        child: Container(
-          color: config.menuPickerWhite,
-          width: radiusMax * 2,
-          height: radiusMax * 2,
-        ));
   }
 
   void itemSwitchAni(int oldIndex, int newIndex) {
@@ -236,10 +350,23 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
     });
   }
 
-  void updatePointer(int newPointer){
+  void updatePointer(int newPointer) {
     setState(() {
       _menuPointer = newPointer;
     });
+  }
+
+  double alignDegreeTo12OClock(double angleInDegrees) {
+    // Adjust the angle to align 12 o'clock as the 0-degree reference point.
+    // By default, angles are measured from the 3 o'clock position (0 degrees).
+    // Adding 90 degrees shifts the reference to 12 o'clock (previously -90 degrees).
+    double alignedDegrees = angleInDegrees + 90;
+
+    // Ensure the resulting angle stays within the range of 0 to 360 degrees.
+    if (alignedDegrees < 0) {
+      alignedDegrees += 360;
+    }
+    return alignedDegrees;
   }
 
   double _getAngleFromOffset(Offset center, Offset point) {

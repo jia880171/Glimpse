@@ -6,16 +6,16 @@ import 'package:glimpse/circle_date_picker_view.dart';
 
 import 'light_box_view.dart';
 
-class GlimpsesPickerView extends StatefulWidget {
-  const GlimpsesPickerView({super.key});
+class FilmFinderView extends StatefulWidget {
+  const FilmFinderView({super.key});
 
   @override
   State<StatefulWidget> createState() {
-    return _GlimpsesPickerViewState();
+    return _FilmFinderViewState();
   }
 }
 
-class _GlimpsesPickerViewState extends State<GlimpsesPickerView> {
+class _FilmFinderViewState extends State<FilmFinderView> {
   bool isShowFilms = true;
 
   late DateTime selectedDate;
@@ -57,7 +57,7 @@ class _GlimpsesPickerViewState extends State<GlimpsesPickerView> {
                       height: screenHeight,
                       child: LightBoxView(
                         selectedDate: selectedDate,
-                        setGlimpseCount: setGlimpseCount,
+                        setTargetAlbum: setGlimpseCount,
                         widgetSize: widgetSize,
                       ),
                     )),

@@ -7,12 +7,17 @@ import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:image/image.dart' as img;
 
 import './config.dart' as config;
+import 'film_roll_right_view.dart';
+import 'film_roll_view.dart';
 
 class RotatableGlimpseCardFrontView extends StatefulWidget {
   final String? imagePath;
   final Uint8List image;
   final Size cardSize;
   final Map<String?, IfdTag> exifData;
+  final Color backLight;
+  final int index;
+  final bool isNeg;
 
   const RotatableGlimpseCardFrontView({
     Key? key,
@@ -20,6 +25,9 @@ class RotatableGlimpseCardFrontView extends StatefulWidget {
     required this.imagePath,
     required this.cardSize,
     required this.exifData,
+    required this.backLight,
+    required this.index,
+    required this.isNeg,
   }) : super(key: key);
 
   @override
@@ -106,10 +114,10 @@ class RotatableGlimpseCardFrontViewState
     final data = widget.exifData;
     // print('======data ${data} ');
     if (data.isNotEmpty) {
-      print('Exif data:');
-      for (var entry in data.entries) {
-        print('${entry.key}: ${entry.value}');
-      }
+      print('====== setting setImgInformation [Exif data]');
+      // for (var entry in data.entries) {
+      //   print('${entry.key}: ${entry.value}');
+      // }
 
       // final cameraModel = data['Image Model'];
 
@@ -218,8 +226,8 @@ class RotatableGlimpseCardFrontViewState
                           child: Container(
                             // color: config.backGroundWhite,
                             color: config.hardCard,
-                            width: widget.cardSize.width * 0.75,
-                            height: widget.cardSize.height * 0.75,
+                            width: widget.cardSize.width * 0.8,
+                            height: widget.cardSize.height * 0.8,
                           ),
                         ),
                         Positioned.fill(
@@ -236,31 +244,58 @@ class RotatableGlimpseCardFrontViewState
                             ),
                           ),
                         ),
-                        Stack(
-                          children: [
-                            SizedBox(
-                              width: widget.cardSize.width * 0.7,
-                              height: widget.cardSize.height * 0.7,
-                              child: _buildImage(),
-                            ),
-                            Positioned(
-                                bottom: 0 + widget.cardSize.width * 0.017 * 6,
-                                right: 0 - widget.cardSize.width * 0.017 * 3,
-                                child: Transform.rotate(
-                                  angle: 90 * pi / 180,
-                                  child: Column(
+                        SizedBox(
+                            // color: Colors.red,
+                            width: widget.cardSize.width * 0.8,
+                            height: widget.cardSize.height * 0.8,
+                            child: Center(
+                              child:
+                              Transform.rotate(
+                                  angle: -1 * pi / 180,
+                                  child:Stack(
                                     children: [
-                                      Text(dateOFPic,
-                                          style: TextStyle(
-                                              fontFamily: 'DS-DIGI',
-                                              color: Colors.yellow,
-                                              fontSize: widget.cardSize.width *
-                                                  0.017)),
+                                      _buildFrameUnit(
+                                          widget.cardSize.width * 0.75,
+                                          widget.cardSize.height * 0.75,
+                                          widget.backLight),
+                                      !widget.isNeg
+                                          ? Positioned.fill(
+                                        child: IgnorePointer(
+                                          child: ClipRRect(
+                                            // borderRadius: BorderRadius.circular(11),
+                                            child: Opacity(
+                                              opacity: 0.2,
+                                              child: Image.asset(
+                                                'assets/images/noise.png',
+                                                fit: BoxFit.cover,
+                                                color: Colors.brown
+                                                    .withOpacity(0.3),
+                                                colorBlendMode:
+                                                BlendMode.multiply,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                          : Positioned.fill(
+                                        child: IgnorePointer(
+                                          child: Opacity(
+                                            opacity: 0.2,
+                                            child: Image.asset(
+                                              'assets/images/noise.png',
+                                              fit: BoxFit.cover,
+                                              color:
+                                              Colors.red.withOpacity(0.2),
+                                              colorBlendMode:
+                                              BlendMode.multiply,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                ))
-                          ],
-                        ),
+                              ),
+                            )),
                       ],
                     ),
                     const Spacer(),
@@ -276,31 +311,30 @@ class RotatableGlimpseCardFrontViewState
                   ],
                 ),
               ),
+
+              // text on the right
               Positioned(
                   top: widget.cardSize.height * 0.5,
                   left: widget.cardSize.width * 0.73,
                   child: Transform.rotate(
                     angle: 90 * pi / 180,
-                    child: Container(
-                      // color: Colors.red,
-                      child: Row(
-                        children: [
-                          Text(shutterSpeed,
-                              style: TextStyle(
-                                  fontFamily: 'Open-Sans',
-                                  fontSize: widget.cardSize.width * 0.02)),
-                          SizedBox(width: widget.cardSize.height * 0.05),
-                          Text(aperture,
-                              style: TextStyle(
-                                  fontFamily: 'Open-Sans',
-                                  fontSize: widget.cardSize.width * 0.02)),
-                          SizedBox(width: widget.cardSize.height * 0.05),
-                          Text('ISO/$iso',
-                              style: TextStyle(
-                                  fontFamily: 'Open-Sans',
-                                  fontSize: widget.cardSize.width * 0.02)),
-                        ],
-                      ),
+                    child: Row(
+                      children: [
+                        Text(shutterSpeed,
+                            style: TextStyle(
+                                fontFamily: 'Open-Sans',
+                                fontSize: widget.cardSize.width * 0.02)),
+                        SizedBox(width: widget.cardSize.height * 0.05),
+                        Text(aperture,
+                            style: TextStyle(
+                                fontFamily: 'Open-Sans',
+                                fontSize: widget.cardSize.width * 0.02)),
+                        SizedBox(width: widget.cardSize.height * 0.05),
+                        Text('ISO/$iso',
+                            style: TextStyle(
+                                fontFamily: 'Open-Sans',
+                                fontSize: widget.cardSize.width * 0.02)),
+                      ],
                     ),
                   )),
             ],
@@ -308,10 +342,47 @@ class RotatableGlimpseCardFrontViewState
     );
   }
 
-  Widget _buildImage() {
-    return RawImage(
-      image: _processedImage,
-      fit: BoxFit.contain,
+  Widget _buildFrameUnit(
+      double frameWidth, double frameHeight, Color backLight) {
+    final double photoFrameHeight = frameHeight * 0.7;
+    final holeHeight = frameHeight * 0.06;
+
+    return Container(
+      width: frameWidth,
+      height: frameHeight,
+      color: config.backLightB.withOpacity(0.8),
+      child: Center(
+        child: Row(
+          children: [
+            FilmRowLeftSide(
+              height: frameHeight,
+              width: frameWidth * 0.15,
+              holeHeight: holeHeight,
+              backLight: config.backLightB,
+              index: widget.index,
+            ),
+            SizedBox(
+              height: photoFrameHeight,
+              width: frameWidth * 0.7,
+              child: FittedBox(
+                  fit: BoxFit.fitWidth,
+                  alignment: Alignment.center,
+                  child: RawImage(
+                    image: _processedImage,
+                    fit: BoxFit.contain,
+                  )),
+            ),
+            FilmRowRightSide(
+              height: frameHeight,
+              width: frameWidth * 0.15,
+              holeHeight: holeHeight,
+              backLight: config.backLightB,
+              filmMaker: imageMake,
+              filmDate: dateOFPic,
+            )
+          ],
+        ),
+      ),
     );
   }
 

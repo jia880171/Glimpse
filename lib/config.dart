@@ -18,7 +18,11 @@ const Color datePickerWhite = Color(0xffe1e0e0);
 
 const Color trashPointerRed = Color(0xff951919);
 
-const Color filmColor = Color(0xFF8B4513);
+const Color filmColorBrown = Color(0xFF8B4513);
+
+
+// const Color filmColor = Color(0xFF171313);
+const Color filmColor = Colors.black;
 const Color sticker = Color(0xffc7c4c2);
 
 

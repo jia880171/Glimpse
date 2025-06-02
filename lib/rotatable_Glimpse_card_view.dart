@@ -11,6 +11,9 @@ class RotatableGlimpseCardView extends StatefulWidget {
   final Uint8List image;
   final Map<String?, IfdTag> exifData;
   final String imgPath;
+  final Color backLight;
+  final bool isNeg;
+  final int index;
 
   const RotatableGlimpseCardView({
     Key? key,
@@ -18,6 +21,9 @@ class RotatableGlimpseCardView extends StatefulWidget {
     this.imagePath,
     required Map<String?, IfdTag> this.exifData,
     required String this.imgPath,
+    required this.backLight,
+    this.index = 0,
+    required this.isNeg,
   }) : super(key: key);
 
   @override
@@ -86,10 +92,13 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
       // width: _cardSize.width,
       // height: _cardSize.height,
       child: RotatableGlimpseCardFrontView(
+        index: widget.index,
         cardSize: _cardSize,
         image: widget.image,
         imagePath: widget.imagePath,
         exifData: widget.exifData,
+        backLight: widget.backLight,
+        isNeg: widget.isNeg,
       ),
     );
   }

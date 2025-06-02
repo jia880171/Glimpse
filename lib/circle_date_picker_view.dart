@@ -7,6 +7,8 @@ import 'database_sqlite/attraction.dart';
 import 'main.dart';
 import 'dart:math' as math;
 import 'package:vibration/vibration.dart';
+import 'package:glimpse/common/utils/rotation_utils.dart';
+
 
 class CircleDatePickerView extends StatefulWidget {
   final double perpetualViewHeight;
@@ -37,8 +39,6 @@ class CircleDatePickerView extends StatefulWidget {
 class CircleDatePickerViewState extends State<CircleDatePickerView> {
   static const IconData fingerprint =
   IconData(0xe287, fontFamily: 'MaterialIcons');
-
-  AngleCalculator angleCalculator = AngleCalculator();
 
   double test = 0;
   late LightSource neumorphicLightSource;
@@ -271,7 +271,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
       centerY + (distanceFromMonthCenterToScreenCenter * sin(angle)),
     );
     setState(() {
-      dragObjectPositionOfMonth = angleCalculator.calibrateCoordination(
+      dragObjectPositionOfMonth = RotationUtils.centerToTopLeft(
           dragPositionCenter, radiusOfDragObject);
     });
   }
@@ -292,7 +292,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
         centerY + (distanceFromDayCenterToScreenCenter * sin(angle)));
 
     setState(() {
-      dragDayPosition = angleCalculator.calibrateCoordination(
+      dragDayPosition = RotationUtils.centerToTopLeft(
           centerOfDragDay, radiusOfDragObject);
     });
   }
@@ -334,7 +334,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
     final dragPositionCenter =
     Offset(centerX, centerY - distanceFromDayCenterToScreenCenter);
     // the position of the drag object of day
-    dragDayPosition = angleCalculator.calibrateCoordination(
+    dragDayPosition = RotationUtils.centerToTopLeft(
         dragPositionCenter, radiusOfDragObject);
 
     // Initialise the position
@@ -343,7 +343,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
     final dragMonthPositionCenter =
     Offset(centerX, centerY - distanceFromMonthCenterToScreenCenter);
 
-    dragObjectPositionOfMonth = angleCalculator.calibrateCoordination(
+    dragObjectPositionOfMonth = RotationUtils.centerToTopLeft(
         dragMonthPositionCenter, radiusOfDragObject);
   }
 
@@ -754,7 +754,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                           setState(() {
                             // dragPosition = Offset(tdx, tdy);
                             dragDayPosition =
-                                angleCalculator.calibrateCoordination(
+                                RotationUtils.centerToTopLeft(
                                     dragPositionCenter, radiusOfDragObject);
 
                             calculateDragDayByDegree(degrees);
@@ -897,7 +897,7 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
                           setState(() {
                             // left top
                             dragObjectPositionOfMonth =
-                                angleCalculator.calibrateCoordination(
+                                RotationUtils.centerToTopLeft(
                                     dragPositionCenter, radiusOfDragObject);
                           });
                         },
@@ -990,53 +990,6 @@ class CircleDatePickerViewState extends State<CircleDatePickerView> {
         ],
       ),
     );
-  }
-}
-
-class AngleCalculator {
-  Offset radiusProjector(double degree, double radius) {
-    degree = 2 * math.pi * (degree / 360);
-    double x = radius * math.cos(degree);
-    double y = radius * math.sin(degree);
-
-    return Offset(x, y);
-  }
-
-  double calculateRotateAngleForContainer(double degree) {
-    return -(2 * math.pi * ((degree) / 360));
-  }
-
-  Offset calibrateCoordination(Offset originCoordination, double radius) {
-    Offset calibratedCoordination =
-    Offset(originCoordination.dx - radius, originCoordination.dy - radius);
-
-    return calibratedCoordination;
-  }
-
-  double calculateLeftOfObject(
-      double centerX, double centerXOfObject, double radius) {
-    late double newLeft;
-
-    if (centerXOfObject >= centerX) {
-      newLeft = centerXOfObject + radius;
-    } else {
-      newLeft = centerXOfObject - radius;
-    }
-
-    return newLeft;
-  }
-
-  double calculateTopOfObject(
-      double centerY, double centerYOfObject, double radius) {
-    late double newTop;
-
-    if (centerYOfObject >= centerY) {
-      newTop = centerYOfObject + radius;
-    } else {
-      newTop = centerYOfObject - radius;
-    }
-
-    return newTop;
   }
 }
 

@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:collection/collection.dart';
 import 'package:exif/exif.dart';
 import 'package:flutter/src/services/message_codec.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
+import 'package:glimpse/common/utils/image_utils.dart';
 import 'package:glimpse/film_roll_view.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -14,13 +14,13 @@ import './config.dart' as config;
 
 class LightBoxView extends StatefulWidget {
   final DateTime selectedDate;
-  final Function setGlimpseCount;
+  final Function setTargetAlbum;
   final Size widgetSize;
 
   const LightBoxView(
       {Key? key,
       required this.selectedDate,
-      required this.setGlimpseCount,
+      required this.setTargetAlbum,
       required this.widgetSize})
       : super(key: key);
 
@@ -33,9 +33,10 @@ double filmWidthRatio = 0.4;
 class LightBoxViewState extends State<LightBoxView>
     with WidgetsBindingObserver {
   bool lightOn = false;
+  bool isNeg = false;
   int thumbnailSize = 135;
 
-  int counts = 0;
+  int visibleImageCount = 0;
   String? selectedImageId;
 
   Color backLight = config.backLightW;
@@ -44,10 +45,10 @@ class LightBoxViewState extends State<LightBoxView>
   final Map<String, ui.Image> _originalThumbnailCache = {};
   final Map<String, ui.Image> _thumbnailCache = {};
 
-  String targetAlbumName = "Pictures";
+  String? targetAlbumName;
 
   List<String> albumNames = [];
-  List<AssetEntity> images = [];
+  List<AssetEntity> visibleImages = [];
   List<AssetPathEntity> _cachedAlbums = [];
 
   @override
@@ -76,7 +77,7 @@ class LightBoxViewState extends State<LightBoxView>
   void didUpdateWidget(LightBoxView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedDate != widget.selectedDate) {
-      _fetchImages();
+      _loadImagesForSelectedDate();
     }
   }
 
@@ -89,176 +90,194 @@ class LightBoxViewState extends State<LightBoxView>
     double dateSectionHeight = 100;
 
     return Scaffold(
-        // backgroundColor: backLight,
         body: SingleChildScrollView(
-      child: Container(
-          // color: backLight,
-          width: widgetSize.width,
-          height: widgetSize.height,
-          child: Stack(
-            children: [
-
-              Center(
-                  child: FilmRollView(
-                viewSize: Size(widgetSize.width, widgetSize.height),
-                images: images,
-                thumbnailCache: _thumbnailCache,
-                backLight: backLight,
-              )),
-
-              // menu
-              Positioned(
-                  top: (widgetSize.width - (dateSectionHeight / 2)) / 2,
-                  left: widgetSize.width * 0.02,
-                  child: Transform.rotate(
-                    angle: 90 * pi / 180,
-                    child: PopupMenu(
-                      items: albumNames,
-                      onSelected: (value) {
-                        setState(() {
-                          targetAlbumName = value;
-                          _fetchImages();
-                        });
-                      },
-                    ),
-                  )),
-
-              // date section
-              Positioned(
-                top: 0,
-                right: 0,
-                child: RotatedBox(
-                  quarterTurns: 1,
+      child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: widgetSize.height, // 確保至少跟螢幕一樣高
+          ),
+          child: IntrinsicHeight(
+            child: Stack(
+              children: [
+                // film
+                Center(
                   child: SizedBox(
-                    width: widgetSize.width,
-                    height: dateSectionHeight,
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            // year
-                            SizedBox(
-                              width: fontSizeForText * 4,
-                              child: Text(
-                                widget.selectedDate.year.toString(),
-                                overflow: TextOverflow.clip,
-                                maxLines: 1,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: dateColor,
-                                  fontSize: fontSizeForText,
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: 'Ds-Digi',
-                                ),
-                              ),
-                            ),
-
-                            // /
-                            Text(
-                              '/',
-                              overflow: TextOverflow.clip,
-                              maxLines: 1,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: dateColor,
-                                fontSize: fontSizeForText,
-                                fontWeight: FontWeight.w500,
-                                fontFamily: 'Ds-Digi',
-                              ),
-                            ),
-
-                            // month
-                            SizedBox(
-                              width: fontSizeForText * 2,
-                              child: Text(
-                                widget.selectedDate.month
-                                    .toString()
-                                    .padLeft(2, '0'),
-                                overflow: TextOverflow.clip,
-                                maxLines: 1,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: dateColor,
-                                  fontSize: fontSizeForText,
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: 'Ds-Digi',
-                                ),
-                              ),
-                            ),
-
-                            // /
-                            Text(
-                              '/',
-                              overflow: TextOverflow.clip,
-                              maxLines: 1,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: dateColor,
-                                fontSize: fontSizeForText,
-                                fontWeight: FontWeight.w500,
-                                fontFamily: 'Ds-Digi',
-                              ),
-                            ),
-
-                            // day
-                            SizedBox(
-                              width: fontSizeForText * 2,
-                              child: Text(
-                                widget.selectedDate.day
-                                    .toString()
-                                    .padLeft(2, '0'),
-                                overflow: TextOverflow.clip,
-                                maxLines: 1,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: dateColor,
-                                  fontSize: fontSizeForText,
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: 'Ds-Digi',
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            SizedBox(
-                              width: widgetSize.width*0.1,
-                            ),
-                            Text(
-                              'counts: $counts',
-                              style: TextStyle(color: dateColor),
-                            ),
-                          ],
-                        )
-                      ],
+                    width: widgetSize.width * 0.8,
+                    // height: widgetSize.height,
+                    child: FilmRollView(
+                      viewSize: Size(widgetSize.width * 0.8, widgetSize.height),
+                      images: visibleImages,
+                      thumbnailCache: _thumbnailCache,
+                      backLight: backLight,
+                      noHeader: false,
+                      isNeg: isNeg,
+                      isContactSheet: false,
                     ),
                   ),
                 ),
-              ),
 
-              // light switch
-              Positioned(
-                top: widgetSize.height * .6,
-                left: widgetSize.width * 0.02,
-                child: Switch(
-                  value: lightOn,
-                  activeColor: Colors.red,
-                  onChanged: (bool value) async {
-                    setState(() {
-                      lightOn = value;
-                      setBackLight(lightOn);
-                    });
+                // menu
+                Positioned(
+                    top: (widgetSize.width - (dateSectionHeight / 2)) / 2,
+                    left: widgetSize.width * 0.02,
+                    child: Transform.rotate(
+                      angle: 90 * pi / 180,
+                      child: PopupMenu(
+                        items: albumNames,
+                        onSelected: (value) {
+                          setState(() {
+                            targetAlbumName = value;
+                            _loadImagesForSelectedDate();
+                            widget.setTargetAlbum(value);
+                          });
+                        },
+                      ),
+                    )),
 
-                    await updateThumbnailsForLightState();
+                // date section
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: RotatedBox(
+                    quarterTurns: 1,
+                    child: SizedBox(
+                      width: widgetSize.width,
+                      height: dateSectionHeight,
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              // year
+                              SizedBox(
+                                width: fontSizeForText * 4,
+                                child: Text(
+                                  widget.selectedDate.year.toString(),
+                                  overflow: TextOverflow.clip,
+                                  maxLines: 1,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: dateColor,
+                                    fontSize: fontSizeForText,
+                                    fontWeight: FontWeight.w500,
+                                    fontFamily: 'Ds-Digi',
+                                  ),
+                                ),
+                              ),
 
-                    setState(() {}); // 重新繪製畫面
-                  },
+                              // /
+                              Text(
+                                '/',
+                                overflow: TextOverflow.clip,
+                                maxLines: 1,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: dateColor,
+                                  fontSize: fontSizeForText,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Ds-Digi',
+                                ),
+                              ),
+
+                              // month
+                              SizedBox(
+                                width: fontSizeForText * 2,
+                                child: Text(
+                                  widget.selectedDate.month
+                                      .toString()
+                                      .padLeft(2, '0'),
+                                  overflow: TextOverflow.clip,
+                                  maxLines: 1,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: dateColor,
+                                    fontSize: fontSizeForText,
+                                    fontWeight: FontWeight.w500,
+                                    fontFamily: 'Ds-Digi',
+                                  ),
+                                ),
+                              ),
+
+                              // /
+                              Text(
+                                '/',
+                                overflow: TextOverflow.clip,
+                                maxLines: 1,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: dateColor,
+                                  fontSize: fontSizeForText,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Ds-Digi',
+                                ),
+                              ),
+
+                              // day
+                              SizedBox(
+                                width: fontSizeForText * 2,
+                                child: Text(
+                                  widget.selectedDate.day
+                                      .toString()
+                                      .padLeft(2, '0'),
+                                  overflow: TextOverflow.clip,
+                                  maxLines: 1,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: dateColor,
+                                    fontSize: fontSizeForText,
+                                    fontWeight: FontWeight.w500,
+                                    fontFamily: 'Ds-Digi',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: widgetSize.width * 0.1,
+                              ),
+                              Text(
+                                'counts: $visibleImageCount',
+                                style: TextStyle(color: dateColor),
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              )
-            ],
+
+                // light switch
+                Positioned(
+                  top: widgetSize.height * .6,
+                  left: widgetSize.width * 0.02,
+                  child: Switch(
+                    value: lightOn,
+                    activeColor: Colors.red,
+                    onChanged: (bool value) async {
+                      setState(() {
+                        lightOn = value;
+                        setBackLight(lightOn);
+                        setIsNeg();
+                      });
+
+                      await ImageUtils.updateThumbnailsWithLightEffect(
+                          originalCache: _originalThumbnailCache,
+                          targetCache: _thumbnailCache,
+                          lightOn: lightOn);
+
+                      setState(() {}); // 重新繪製畫面
+                    },
+                  ),
+                )
+              ],
+            ),
           )),
     ));
+  }
+
+  void setIsNeg() {
+    isNeg = config.backLightB == backLight;
   }
 
   void _onPhotoChange(MethodCall call) {
@@ -289,24 +308,6 @@ class LightBoxViewState extends State<LightBoxView>
     return permission.isAuth || permission == PermissionStatus.limited;
   }
 
-  Future<List<AssetEntity>> getAssetEntitiesFromCachedAlbums(
-      String targetAlbumName) async {
-    final targetAlbum = _cachedAlbums.firstWhereOrNull(
-          (album) => album.name == targetAlbumName,
-    );
-
-    if (targetAlbum == null) {
-      print("目標相簿不存在");
-      return [];
-    }
-
-    final List<AssetEntity> allImages =
-    await targetAlbum.getAssetListPaged(page: 0, size: 100);
-    final selectedImages = filterImagesByDate(allImages);
-
-    return selectedImages;
-  }
-
   Future<void> extractExifDataFromAsset(AssetEntity asset) async {
     final file = await asset.file;
 
@@ -331,7 +332,7 @@ class LightBoxViewState extends State<LightBoxView>
     }
   }
 
-  Future<void> _fetchImages() async {
+  Future<void> _loadImagesForSelectedDate() async {
     // Check if permission is authorized
     if (!await hasPhotoAccess()) {
       print('====== permission is not authed');
@@ -343,21 +344,23 @@ class LightBoxViewState extends State<LightBoxView>
       await _initAlbumsAndListen();
     }
 
-    List<AssetEntity> selectedImages =
-    await getAssetEntitiesFromCachedAlbums(targetAlbumName);
-
-    if (selectedImages.isNotEmpty) {
-      selectedImages.insert(0, selectedImages[0]);
-      selectedImages.insert(selectedImages.length, selectedImages[0]);
+    if (targetAlbumName == null) {
+      return;
     }
 
-    await loadAndCacheThumbnail(selectedImages);
+    List<AssetEntity> visibleImages = await ImageUtils.getVisibleImagesForDate(
+      cachedAlbums: _cachedAlbums,
+      targetAlbumName: targetAlbumName!,
+      selectedDate: widget.selectedDate,
+    );
 
-    print('====== _fetchImages done');
+    visibleImages = ImageUtils.insertBoundaryDummies(visibleImages);
+
+    await generateAndCacheThumbnails(visibleImages);
+
     setState(() {
-      images = selectedImages;
-      counts = images.isEmpty ? 0 : images.length - 2;
-      widget.setGlimpseCount(counts);
+      this.visibleImages = visibleImages;
+      visibleImageCount = visibleImages.isEmpty ? 0 : visibleImages.length - 2;
     });
   }
 
@@ -367,17 +370,6 @@ class LightBoxViewState extends State<LightBoxView>
       backLight = lightOn ? config.backLightB : config.backLightW;
       print('====== backLight: ${backLight}');
     });
-  }
-
-  Future<void> updateThumbnailsForLightState() async {
-    for (var entry in _originalThumbnailCache.entries) {
-      final original = entry.value;
-      if (lightOn) {
-        _thumbnailCache[entry.key] = await invertColors(original);
-      } else {
-        _thumbnailCache[entry.key] = original;
-      }
-    }
   }
 
   Future<ui.Image> invertColors(ui.Image image) async {
@@ -406,54 +398,17 @@ class LightBoxViewState extends State<LightBoxView>
     return completer.future;
   }
 
-  Future<void> loadAndCacheThumbnail(List<AssetEntity> selectedImages) async {
-    for (var image in selectedImages) {
-      final thumbnailData = await image.thumbnailDataWithSize(
-        ThumbnailSize(thumbnailSize, thumbnailSize),
-      );
+  Future<void> generateAndCacheThumbnails(
+      List<AssetEntity> visibleImages) async {
+    await ImageUtils.generateThumbnails(
+        images: visibleImages,
+        cache: _originalThumbnailCache,
+        thumbnailSize: thumbnailSize);
 
-      if (thumbnailData != null) {
-        final codec = await ui.instantiateImageCodec(thumbnailData);
-        final frame = await codec.getNextFrame();
-        final ui.Image rawImage = frame.image;
-
-        // 如果是橫圖，轉 90 度
-        if (rawImage.width > rawImage.height) {
-          final recorder = ui.PictureRecorder();
-          final canvas = Canvas(recorder);
-
-          final rotatedWidth = rawImage.height.toDouble();
-          final rotatedHeight = rawImage.width.toDouble();
-
-          // 轉 90 度，並將圖繪製在轉換後的位置
-          canvas.translate(rotatedWidth, 0);
-          canvas.rotate(90 * 3.1415927 / 180);
-          final paint = Paint();
-          canvas.drawImage(rawImage, Offset.zero, paint);
-
-          final picture = recorder.endRecording();
-          final rotatedImage = await picture.toImage(
-            rotatedWidth.toInt(),
-            rotatedHeight.toInt(),
-          );
-
-          _originalThumbnailCache[image.id] = rotatedImage;
-        } else {
-          _originalThumbnailCache[image.id] = rawImage;
-        }
-      }
-    }
-
-    updateThumbnailsForLightState();
-  }
-
-  List<AssetEntity> filterImagesByDate(List<AssetEntity> allImages) {
-    return allImages.where((image) {
-      final DateTime createDate = image.createDateTime;
-      return createDate.year == widget.selectedDate.year &&
-          createDate.month == widget.selectedDate.month &&
-          createDate.day == widget.selectedDate.day;
-    }).toList();
+    await ImageUtils.updateThumbnailsWithLightEffect(
+        originalCache: _originalThumbnailCache,
+        targetCache: _thumbnailCache,
+        lightOn: lightOn);
   }
 }
 

@@ -14,9 +14,12 @@ import 'package:glimpse/models/place.dart';
 import 'package:glimpse/trash_view.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 import './config.dart' as config;
 import 'Routes.dart';
+import 'common/utils/rotation_utils.dart';
+import 'contact_sheet_view.dart';
 import 'database_sqlite/attraction.dart';
 import 'glimpse_row_in_main.dart';
 import 'models/glimpse.dart';
@@ -82,20 +85,20 @@ class _MyHomePageState extends State<MyHomePage> {
   ];
 
   final List<String> menuItems = [
-    '+Glimpse',
+    'FILMS',
+    'CONTACT SHEET',
     'Glimpses',
     'Trash',
     'Receipt',
-    'Con. Sheet',
     'Printer'
   ];
 
   final List<String> menuItemsPath = [
     '/filmFinder',
+    '/contactSheet',
     '/glimpses',
     '/trash',
     '/receipt',
-    '/contactSheet',
     '/printer'
   ];
 
@@ -107,8 +110,14 @@ class _MyHomePageState extends State<MyHomePage> {
   List<double> prevDepths = [];
   Timer? _timer;
 
-  final Duration depthOutDuration = Duration(milliseconds: 500);
-  final Duration depthInDuration = Duration(milliseconds: 2000);
+  String? targetAlbum;
+  int targetDatePointer = 0;
+  List<DateTime> datesOfSelectedAlbum = [];
+  Map<DateTime, int> photosCountPerDay = {};
+  DateTime selectedDate = DateTime.now();
+
+  final Duration depthOutDuration = const Duration(milliseconds: 500);
+  final Duration depthInDuration = const Duration(milliseconds: 2000);
 
   @override
   void initState() {
@@ -117,6 +126,9 @@ class _MyHomePageState extends State<MyHomePage> {
     prevDepths = List<double>.filled(menuItems.length, _depthNormal);
 
     depths[menuPointer] = _depthMax;
+    if (targetAlbum != null) {
+      setTargetAlbum(targetAlbum!);
+    }
   }
 
   @override
@@ -160,7 +172,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       right: 0,
                       child: Center(
                         // alignment: Alignment.center,
-                        child: Container(
+                        child: SizedBox(
                             // color: Colors.red,
                             width: screenWidth * 0.8,
                             // height: screenHeight * 0.1,
@@ -191,38 +203,50 @@ class _MyHomePageState extends State<MyHomePage> {
                                     width: screenWidth * 0.8,
                                     child: menuItems[menuPointer] == 'Trash'
                                         ? TrashView()
-                                        : menuItems[menuPointer] == '+Glimpse'
+                                        : menuItems[menuPointer] == 'FILMS'
                                             ? LightBoxView(
                                                 widgetSize: Size(
                                                   screenWidth * 0.8,
                                                   screenHeight * 0.5,
                                                 ),
-                                                selectedDate: DateTime(2025, 05, 10),
-                                                setGlimpseCount: setGlimpseCount,
+                                                selectedDate: selectedDate,
+                                                setTargetAlbum: setTargetAlbum,
                                               )
-                                            : SingleChildScrollView(
-                                                child: Column(
-                                                  children: List.generate(
-                                                    66,
-                                                    (i) {
-                                                      return GlimpseRowCard(
-                                                        date: DateTime.now()
-                                                            .subtract(
-                                                          Duration(
-                                                              days:
-                                                                  math.Random()
+                                            : menuItems[menuPointer] ==
+                                                    'CONTACT SHEET'
+                                                ? ContactSheetView(
+                                                    widgetSize: Size(
+                                                      screenWidth * 0.8,
+                                                      screenHeight * 0.5,
+                                                    ),
+                                                    selectedDate: selectedDate,
+                                                    setTargetAlbum:
+                                                        setTargetAlbum,
+                                                  )
+                                                : SingleChildScrollView(
+                                                    child: Column(
+                                                      children: List.generate(
+                                                        66,
+                                                        (i) {
+                                                          return GlimpseRowCard(
+                                                            date: DateTime.now()
+                                                                .subtract(
+                                                              Duration(
+                                                                  days: math
+                                                                          .Random()
                                                                       .nextInt(
                                                                           90)),
-                                                        ),
-                                                        rowWidth:
-                                                            screenWidth * 0.8,
-                                                        dayOfTheWeekList:
-                                                            dayOfTheWeekList,
-                                                      );
-                                                    },
+                                                            ),
+                                                            rowWidth:
+                                                                screenWidth *
+                                                                    0.8,
+                                                            dayOfTheWeekList:
+                                                                dayOfTheWeekList,
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
                                                   ),
-                                                ),
-                                              ),
                                   ),
                                 )
                               ],
@@ -350,10 +374,16 @@ class _MyHomePageState extends State<MyHomePage> {
                                           height: screenWidth,
                                           child: Center(
                                             child: CircleMenuPickerView(
+                                              datesLength:
+                                                  datesOfSelectedAlbum.length,
+                                              setTargetDatePointer:
+                                                  setTargetDatePointer,
                                               onItemSelected: onItemSelected,
                                               items: menuItems,
                                               radius: screenWidth * 0.45,
                                               menuItemsPath: menuItemsPath,
+                                              widgetSize: Size(screenWidth,
+                                                  screenHeight * 0.26),
                                             ),
                                           ),
                                         ),
@@ -373,7 +403,67 @@ class _MyHomePageState extends State<MyHomePage> {
         ));
   }
 
-  void setGlimpseCount(int count) {
+  Future<void> setTargetAlbum(String targetAlbum) async {
+    this.targetAlbum = targetAlbum;
+    await setDatesOfSelectedAlbum();
+    setState(() {
+      selectedDate = datesOfSelectedAlbum[0];
+    });
+  }
+
+  // 修改 使之能重用
+  Future<void> setDatesOfSelectedAlbum() async {
+    datesOfSelectedAlbum.clear();
+    photosCountPerDay.clear();
+
+    // 1. 取得所有相簿
+    final albums = await PhotoManager.getAssetPathList(
+      type: RequestType.image,
+    );
+
+    // 2. 找出符合名稱的相簿
+    final album = albums.firstWhere(
+      (a) => a.name == targetAlbum,
+      orElse: () => throw Exception('Album not found: $targetAlbum'),
+    );
+
+    // 3. 取得所有照片（不分頁）
+    final count = await album.assetCountAsync;
+
+    // 4. 一次取得全部照片
+    final assets = await album.getAssetListPaged(page: 0, size: count);
+
+    for (final asset in assets) {
+      final dt = asset.createDateTime;
+      final dateOnly = DateTime(dt.year, dt.month, dt.day);
+
+      if (!photosCountPerDay.containsKey(dateOnly)) {
+        datesOfSelectedAlbum.add(dateOnly);
+        photosCountPerDay[dateOnly] = 1;
+      } else {
+        photosCountPerDay[dateOnly] = photosCountPerDay[dateOnly]! + 1;
+      }
+    }
+
+    // 排序日期（從新到舊）
+    datesOfSelectedAlbum.sort((a, b) => b.compareTo(a));
+
+    print('====== sorted? : $datesOfSelectedAlbum');
+  }
+
+  void setTargetDatePointer(int x) {
+    if (datesOfSelectedAlbum.isEmpty) {
+      return;
+    }
+
+    targetDatePointer = (targetDatePointer + x) < 0
+        ? datesOfSelectedAlbum.length - 1
+        : (targetDatePointer + x) >= datesOfSelectedAlbum.length
+            ? 0
+            : targetDatePointer + x;
+    setState(() {
+      selectedDate = datesOfSelectedAlbum[targetDatePointer];
+    });
   }
 
   void onItemSelected(int newIndex) {
@@ -641,13 +731,11 @@ class _ChasingViewState extends State<ChasingView> {
     // display subsequent two items.
     for (int i = 0; i < bottles.length; i++) {
       double leftX = centerX +
-          AngleCalculator()
-              .radiusProjector(bottles[i].bearingAngle + _currentHeading,
+          RotationUtils.radiusProjector(bottles[i].bearingAngle + _currentHeading,
                   targetRadiusToCenter)
               .dx;
       double topY = centerY -
-          AngleCalculator()
-              .radiusProjector(bottles[i].bearingAngle + _currentHeading,
+          RotationUtils.radiusProjector(bottles[i].bearingAngle + _currentHeading,
                   targetRadiusToCenter)
               .dy;
       targets.add(Positioned(
@@ -877,20 +965,6 @@ class _ChasingViewState extends State<ChasingView> {
         ],
       ),
     );
-  }
-}
-
-class AngleCalculator {
-  Offset radiusProjector(double degree, double radius) {
-    degree = 2 * math.pi * (degree / 360);
-    double x = radius * math.cos(degree);
-    double y = radius * math.sin(degree);
-
-    return Offset(x, y);
-  }
-
-  double calculateRotateAngleForContainer(double degree) {
-    return -(2 * math.pi * ((degree) / 360));
   }
 }
 

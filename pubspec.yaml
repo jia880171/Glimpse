@@ -95,6 +95,13 @@ flutter:
     - assets/images/plastic_overlay2.png
     - assets/images/plastic_overlay3.png
     - assets/images/plastic_overlay4.png
+    - assets/images/x.png
+    - assets/images/o0.png
+    - assets/images/o1.png
+    - assets/images/o2.png
+    - assets/images/o3.png
+    - assets/images/o4.png
+    - assets/images/o5.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
