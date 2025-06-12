@@ -71,8 +71,10 @@ class ImageUtils {
       return [];
     }
 
+    final int assetCount = await targetAlbum.assetCountAsync;
+
     final List<AssetEntity> allAssets =
-        await targetAlbum.getAssetListPaged(page: 0, size: 100);
+    await targetAlbum.getAssetListRange(start: 0, end: assetCount);
 
     final List<AssetEntity> imageAssets =
         allAssets.where((asset) => asset.type == AssetType.image).toList();
@@ -88,11 +90,13 @@ class ImageUtils {
 
   static List<AssetEntity> filterImagesByExactDay(
       List<AssetEntity> images, DateTime selectedDate) {
+    final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+
     return images.where((image) {
-      final DateTime createDate = image.createDateTime;
-      return createDate.year == selectedDate.year &&
-          createDate.month == selectedDate.month &&
-          createDate.day == selectedDate.day;
+      final createDate = image.createDateTime;
+      final createDateOnly = DateTime(createDate.year, createDate.month, createDate.day);
+
+      return createDateOnly == selectedDateOnly;
     }).toList();
   }
 
@@ -115,9 +119,8 @@ class ImageUtils {
     );
 
     final filtered = filterImagesByExactDay(images, selectedDate);
-    final sorted = sortByCreationTimeAsc(filtered);
 
-    return sorted;
+    return sortByCreationTimeAsc(filtered);
   }
 
   static Future<void> generateThumbnails({

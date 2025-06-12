@@ -1,29 +1,34 @@
 import 'dart:math';
 
-import 'package:exif/src/exif_types.dart';
+import 'package:exif/exif.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:glimpse/models/glimpse.dart';
 import 'package:glimpse/rotatable_Glimpse_card_back_view.dart';
 import 'package:glimpse/rotatable_Glimpse_card_front_view.dart';
+import 'package:glimpse/services/database_service.dart';
+import 'package:isar/isar.dart';
 
 class RotatableGlimpseCardView extends StatefulWidget {
-  final String? imagePath;
   final Uint8List image;
   final Map<String?, IfdTag> exifData;
-  final String imgPath;
+  final String imagePath;
   final Color backLight;
   final bool isNeg;
   final int index;
+  final Size cardSize;
+  final Function leaveCardMode;
 
   const RotatableGlimpseCardView({
     Key? key,
     required this.image,
-    this.imagePath,
-    required Map<String?, IfdTag> this.exifData,
-    required String this.imgPath,
+    required this.exifData,
+    required this.imagePath,
     required this.backLight,
     this.index = 0,
     required this.isNeg,
+    required this.cardSize,
+    required this.leaveCardMode,
   }) : super(key: key);
 
   @override
@@ -33,13 +38,16 @@ class RotatableGlimpseCardView extends StatefulWidget {
 
 class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
     with SingleTickerProviderStateMixin {
+  Glimpse? _glimpse;
+
   double _rotationY = 0.0; // 當前旋轉角度
   late AnimationController _controller;
   late Animation<double> _animation;
   double _velocity = 0.0;
 
   Size? _screenSize;
-  Size _cardSize = Size(200, 200);
+
+  // Size _cardSize = const Size(200, 200);
 
   @override
   void initState() {
@@ -47,7 +55,7 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
 
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 3000000),
+      duration: const Duration(milliseconds: 3000000),
     );
 
     _controller.addListener(() {
@@ -61,16 +69,32 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
         _velocity = 0.0;
       }
     });
+
+    loadGlimpse();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _screenSize = MediaQuery.of(context).size;
-    _cardSize = Size(
-      _screenSize!.width * 0.9,
-      _screenSize!.height * 0.6,
-    );
+  }
+
+  Future<void> loadGlimpse() async {
+    // Get the single shared Isar instance.
+    final isar = DatabaseService.isar;
+
+    final glimpse = await isar.glimpses
+        .filter()
+        .photoPathEqualTo(widget.imagePath)
+        .findFirst();
+
+    print('====== [loading Glimpse], glimpse: ${glimpse ?? 'null'}');
+
+    if (glimpse != null) {
+      setState(() {
+        _glimpse = glimpse;
+      });
+    }
   }
 
   void _startInertiaAnimation(double velocity) {
@@ -93,12 +117,13 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
       // height: _cardSize.height,
       child: RotatableGlimpseCardFrontView(
         index: widget.index,
-        cardSize: _cardSize,
+        cardSize: widget.cardSize,
         image: widget.image,
         imagePath: widget.imagePath,
         exifData: widget.exifData,
         backLight: widget.backLight,
         isNeg: widget.isNeg,
+        leaveCardMode: widget.leaveCardMode,
       ),
     );
   }
@@ -108,7 +133,10 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
       // width: _cardSize.width,
       // height: _cardSize.height,
       child: RotatableGlimpseCardBackView(
-        cardSize: _cardSize,
+        cardSize: widget.cardSize,
+        imagePath: widget.imagePath,
+        glimpse: _glimpse,
+        exifData: widget.exifData,
       ),
     );
   }

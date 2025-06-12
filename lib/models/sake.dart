@@ -2,13 +2,13 @@ import 'package:isar/isar.dart';
 import 'package:glimpse/models/receipt.dart';
 import 'package:glimpse/models/glimpse.dart';
 
-part 'food.g.dart';
+part 'sake.g.dart';
 
 
 @collection
-class Food {
+class Sake {
   Id id = Isar.autoIncrement;
 
-  final glimpses = IsarLinks<Glimpse>();
+  final glimpses = IsarLinks<Glimpse>(); // one to many
   final receipts = IsarLinks<Receipt>();
 }

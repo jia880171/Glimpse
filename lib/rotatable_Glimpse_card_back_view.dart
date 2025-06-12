@@ -1,18 +1,30 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:exif/exif.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:glimpse/cirvular_text.dart';
+import 'package:glimpse/models/glimpse.dart';
+import 'package:glimpse/rotatable_Glimpse_card_view.dart';
+import 'package:glimpse/views/glimpse_creation_view.dart';
+import 'package:glimpse/widgets/clickable_neumorphicIcon.dart';
+import 'package:glimpse/widgets/exif_card.dart';
 
 import './config.dart' as config;
 
 class RotatableGlimpseCardBackView extends StatefulWidget {
-  final String? cardID;
+  final String imagePath;
+  final Glimpse? glimpse;
   final Size cardSize;
+  final Map<String?, IfdTag> exifData;
 
   const RotatableGlimpseCardBackView(
-      {Key? key, required this.cardSize, this.cardID})
+      {Key? key,
+      required this.cardSize,
+      required this.imagePath,
+      this.glimpse,
+      required this.exifData})
       : super(key: key);
 
   @override
@@ -47,90 +59,134 @@ class RotatableGlimpseCardBackViewState
           height: widget.cardSize.height,
           child: Stack(
             children: [
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 200),
-                left: _isTapped ? widget.cardSize.width * 0.06 : 0,
-                right: 0,
-                bottom: _isTapped ? widget.cardSize.height * 0.08 : 0,
-                // 向上移動 10
-                child: Center(
-                  child: GestureDetector(
-                    onTapDown: (_) {
-                      setState(() {
-                        _isTapped = true;
-                      });
-                    },
-                    onTapUp: (_) {
-                      setState(() {
-                        _isTapped = false;
-                      });
-                    },
-                    onTapCancel: () {
-                      setState(() {
-                        _isTapped = false;
-                      });
-                    },
-                    child: Stack(
-                      children: [
-                        _buildCard(),
+              // Package Card
+              if (widget.glimpse != null)
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 200),
+                  left: _isTapped ? widget.cardSize.width * 0.06 : 0,
+                  right: 0,
+                  bottom: _isTapped ? widget.cardSize.height * 0.08 : 0,
+                  // 向上移動 10
+                  child: Center(
+                    child: GestureDetector(
+                      onTapDown: (_) {
+                        setState(() {
+                          _isTapped = true;
+                        });
+                      },
+                      onTapUp: (_) {
+                        setState(() {
+                          _isTapped = false;
+                        });
+                      },
+                      onTapCancel: () {
+                        setState(() {
+                          _isTapped = false;
+                        });
+                      },
+                      child: Stack(
+                        children: [
+                          buildPlaceCard(),
 
-                        // Positioned(
-                        //   top: widget.cardSize.height * 0.4,
-                        //   left: widget.cardSize.width * 0.1,
-                        //   child: Transform.rotate(
-                        //     angle: 1 * pi / 180,
-                        //     child: _buildReceiptCard(),
-                        //   ),
-                        // ),
-
-                        Positioned.fill(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(3),
-                            // 這邊改成你的 Card 圓角大小
-                            child: Opacity(
-                              opacity: 0.1,
-                              child: Image.asset(
-                                'assets/images/plastic_overlay2.png',
-                                fit: BoxFit.cover,
-                                colorBlendMode: BlendMode.screen,
-                                color: Colors.white.withOpacity(0),
+                          Positioned(
+                            top: widget.cardSize.height * 0.05,
+                            left: widget.cardSize.width * 0.05,
+                            child: Transform.rotate(
+                              angle: 1 * pi / 180,
+                              child: ExifCard(
+                                glimpse: widget.glimpse!,
+                                cardSize: Size(
+                                  widget.cardSize.width * 0.6,
+                                  widget.cardSize.height * 0.6,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        // blur
-                        Positioned.fill(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(5),
-                            child: BackdropFilter(
-                              filter:
-                                  ImageFilter.blur(sigmaX: 0.3, sigmaY: 0.3),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.white.withOpacity(0.01),
-                                      Colors.white.withOpacity(0.05),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
+
+                          // Positioned(
+                          //   top: widget.cardSize.height * 0.4,
+                          //   left: widget.cardSize.width * 0.1,
+                          //   child: Transform.rotate(
+                          //     angle: 1 * pi / 180,
+                          //     child: _buildReceiptCard(),
+                          //   ),
+                          // ),
+
+                          Positioned.fill(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: Opacity(
+                                opacity: 0.1,
+                                child: Image.asset(
+                                  'assets/images/plastic_overlay2.png',
+                                  fit: BoxFit.cover,
+                                  colorBlendMode: BlendMode.screen,
+                                  color: Colors.white.withOpacity(0),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // blur
+                          Positioned.fill(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(5),
+                              child: BackdropFilter(
+                                filter:
+                                    ImageFilter.blur(sigmaX: 0.3, sigmaY: 0.3),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.white.withOpacity(0.01),
+                                        Colors.white.withOpacity(0.05),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
 
-                        Positioned(
-                            top: 0,
-                            right: widget.cardSize.width * 0.1,
-                            child: sticker()),
-                      ],
+                          Positioned(
+                              top: 0,
+                              right: widget.cardSize.width * 0.1,
+                              child: sticker()),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ),
+                )
+              else
+                Center(
+                    child: ClickableNeumorphicIcon(
+                  icon: Icons.add_circle_outline_sharp,
+                  size: widget.cardSize.width * 0.3,
+                  color: config.hardCard,
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => GlimpseCreationView(
+                          photoPath: widget.imagePath,
+                          exifData: widget.exifData,
+                        ),
+                      ),
+                    );
+
+                    // 回來後自動刷新
+                    if (context.mounted) {
+                      // 通知父層 widget 刷新
+                      final state = context.findAncestorStateOfType<RotatableGlimpseCardViewState>();
+                      state?.loadGlimpse();
+                    }
+                  },
+                )),
+
+              // Case
               Positioned(
                   left: 0,
                   bottom: 0,
@@ -190,9 +246,9 @@ class RotatableGlimpseCardBackViewState
         ));
   }
 
-  Widget _buildCard() {
-    return buildPlaceCard();
-  }
+  // Widget _buildCard() {
+  //   return buildPlaceCard();
+  // }
 
   Widget buildPlaceCard() {
     return Card(
@@ -219,8 +275,6 @@ class RotatableGlimpseCardBackViewState
                           colors: [
                             config.hardCardYellowDark,
                             config.hardCardYellow,
-                            // config.hardCardYellowLight,
-                            // config.hardCardYellow,
                             config.hardCardYellowDark,
                           ],
                           begin: Alignment.topLeft,
@@ -353,7 +407,7 @@ class RotatableGlimpseCardBackViewState
                   //   color: config.receipt,
                   // ),
                   Container(
-                    margin: EdgeInsets.only(top: widget.cardSize.height*0.02),
+                    margin: EdgeInsets.only(top: widget.cardSize.height * 0.02),
                     width: widget.cardSize.width * 0.5,
                     child: Row(
                       children: [
@@ -379,15 +433,14 @@ class RotatableGlimpseCardBackViewState
                   Container(
                     // color: Colors.red,
                     width: widget.cardSize.width * 0.5,
-                    child:  Divider(
+                    child: Divider(
                       color: Colors.black,
                       endIndent: widget.cardSize.width * 0.5 * 0.1,
                       indent: widget.cardSize.width * 0.5 * 0.1,
                     ),
                   ),
                 ],
-              )
-          )
+              ))
         ],
       ),
     );

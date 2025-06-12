@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import './config.dart' as config;
+import '../../config.dart' as config;
 
 class FilmRowRightSide extends StatefulWidget {
   final double height; // Total height (including spacing) passed as a parameter

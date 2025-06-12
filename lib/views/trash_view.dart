@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
-import './config.dart' as config;
 
+import '../config.dart' as config;
 
 class TrashView extends StatefulWidget {
+  final Size widgetSize;
+
+  const TrashView({super.key, required this.widgetSize});
+
   @override
-  _TrashViewState createState() => _TrashViewState();
+  State<TrashView> createState() => _TrashViewState();
 }
 
 class _TrashViewState extends State<TrashView> {
@@ -40,17 +45,17 @@ class _TrashViewState extends State<TrashView> {
   List<int> hoursList = List.generate(24, (index) => index);
   late List<int> displayHoursList;
 
-  double get redLineOffset => MediaQuery.of(context).size.height / 3;
+  double get redLineOffset => widget.widgetSize.height / 4;
 
-  double get weekdayItemHeight => MediaQuery.of(context).size.height / 4;
+  double get weekdayItemHeight => widget.widgetSize.height / 2.2;
 
-  double get garbageItemHeight => MediaQuery.of(context).size.height / 3;
+  double get garbageItemHeight => widget.widgetSize.height / 2;
 
-  double get hourItemHeight => MediaQuery.of(context).size.height / 4;
+  double get hourItemHeight => widget.widgetSize.height / 4;
 
-  double get minItemHeight => MediaQuery.of(context).size.height / 4;
+  double get minItemHeight => widget.widgetSize.height / 4;
 
-  double get secondItemHeight => MediaQuery.of(context).size.height / 8;
+  double get secondItemHeight => widget.widgetSize.height / 8;
 
   double verticalLineWidth = 2.0;
   double horizontalLineWidth = 2.0;
@@ -244,11 +249,10 @@ class _TrashViewState extends State<TrashView> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
-    double redLinePosition = screenHeight / 3; // 紅線固定位置
+    double redLinePosition = widget.widgetSize.height / 3; // 紅線固定位置
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
@@ -258,9 +262,9 @@ class _TrashViewState extends State<TrashView> {
             Positioned.fill(
               child: Row(
                 children: [
-                  buildWeekdayColumn(displayWeekdaysList, _dayController, 0.15),
+                  buildWeekdayColumn(displayWeekdaysList, _dayController, 0.12),
 
-                  buildTrashColumn(displayGarbageList, _typeController, 0.25),
+                  buildTrashColumn(displayGarbageList, _typeController, 0.15),
 
                   buildHourColumn(
                       displayHoursList, _hourController, 0.08 // 0 ~ 24 小時
@@ -369,38 +373,33 @@ class _TrashViewState extends State<TrashView> {
               _scrollToGarbage();
               return true; // 返回 true 表示已處理事件
             },
-            child:
-
-            ListView(
+            child: ListView(
               controller: controller,
               children: items
                   .map((item) => Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(
-                        color: Colors.black.withOpacity(0.3),
-                        width: horizontalLineWidth), // 上邊框
-                  ),
-                ),
-                height: weekdayItemHeight,
-                child:
-                    Center(
-                      child: Text(
-                        item.toString().split('').join('\n'),
-                        style: TextStyle(
-                            color: (item.toString()[0] == '土' ||
-                                item.toString()[0] == '日')
-                                ? config.trashPointerRed.withOpacity(0.8)
-                                : Colors.black.withOpacity(0.6),
-                            fontFamily: 'asa',
-                            fontSize: weekdayItemHeight * 0.15),
-                      ),
-                    )
-                ,
-              ))
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(
+                                color: Colors.black.withOpacity(0.3),
+                                width: horizontalLineWidth), // 上邊框
+                          ),
+                        ),
+                        height: weekdayItemHeight,
+                        child: Center(
+                          child: Text(
+                            item.toString().split('').join('\n'),
+                            style: TextStyle(
+                                color: (item.toString()[0] == '土' ||
+                                        item.toString()[0] == '日')
+                                    ? config.trashPointerRed.withOpacity(0.8)
+                                    : Colors.black.withOpacity(0.6),
+                                fontFamily: 'asa',
+                                fontSize: weekdayItemHeight * 0.15),
+                          ),
+                        ),
+                      ))
                   .toList(),
-            )
-            ,
+            ),
           )),
     );
   }
@@ -604,7 +603,8 @@ class _TrashViewState extends State<TrashView> {
                             child: Text(item.toString(),
                                 style: TextStyle(
                                     fontSize: 10,
-                                    color: config.trashPointerRed.withOpacity(0.5)))),
+                                    color: config.trashPointerRed
+                                        .withOpacity(0.5)))),
                       ),
                       Expanded(
                           flex: ((widthFraction / 3) * 100).toInt(),
@@ -614,10 +614,12 @@ class _TrashViewState extends State<TrashView> {
                                   decoration: BoxDecoration(
                                       border: Border(
                                     left: BorderSide(
-                                        color: config.trashPointerRed.withOpacity(0.5),
+                                        color: config.trashPointerRed
+                                            .withOpacity(0.5),
                                         width: verticalLineWidth),
                                     right: BorderSide(
-                                        color: config.trashPointerRed.withOpacity(0.5),
+                                        color: config.trashPointerRed
+                                            .withOpacity(0.5),
                                         width: verticalLineWidth),
                                   )),
                                   height: secondItemHeight / 4),
@@ -629,10 +631,12 @@ class _TrashViewState extends State<TrashView> {
                                   decoration: BoxDecoration(
                                       border: Border(
                                     left: BorderSide(
-                                        color: config.trashPointerRed.withOpacity(0.5),
+                                        color: config.trashPointerRed
+                                            .withOpacity(0.5),
                                         width: verticalLineWidth),
                                     right: BorderSide(
-                                        color: config.trashPointerRed.withOpacity(0.5),
+                                        color: config.trashPointerRed
+                                            .withOpacity(0.5),
                                         width: verticalLineWidth),
                                   )),
                                   height: secondItemHeight / 4),

@@ -7,7 +7,7 @@ import 'package:glimpse/common/utils/image_utils.dart';
 import 'package:glimpse/rotatable_Glimpse_card_view.dart';
 import 'package:photo_manager/photo_manager.dart';
 import './config.dart' as config;
-import 'light_box_view.dart';
+import 'widgets/light_box_view.dart';
 
 class FilmViewerView extends StatefulWidget {
   final Size viewSize;

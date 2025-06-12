@@ -4,15 +4,14 @@ import 'dart:math';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:glimpse/common/utils/rotation_utils.dart';
 
-import './config.dart' as config;
-import 'AnimatedNeumorphicText.dart';
-import 'circle_date_picker_view.dart';
-import 'models/rotary_selector_with_drag_handle.dart';
+import '../../config.dart' as config;
+import '../../AnimatedNeumorphicText.dart';
+import 'rotary_selector_with_drag_handle.dart';
 
 const filmFinderItemName = 'FILMS';
 const contactSheetItemName = 'CONTACT SHEET';
 
-class CircleMenuPickerView extends StatefulWidget {
+class CircleMenuPicker extends StatefulWidget {
   final List<String> items;
   final int datesLength;
   final Function onItemSelected;
@@ -21,7 +20,7 @@ class CircleMenuPickerView extends StatefulWidget {
   final List<String> menuItemsPath;
   final Size widgetSize;
 
-  const CircleMenuPickerView(
+  const CircleMenuPicker(
       {Key? key,
       required this.onItemSelected,
       required this.items,
@@ -34,10 +33,10 @@ class CircleMenuPickerView extends StatefulWidget {
       : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => CircleMenuPickerViewState();
+  State<StatefulWidget> createState() => CircleMenuPickerState();
 }
 
-class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
+class CircleMenuPickerState extends State<CircleMenuPicker> {
   static const IconData fingerprint =
       IconData(0xe287, fontFamily: 'MaterialIcons');
 
@@ -49,7 +48,7 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
   double dateAngleShiftAmount = 0;
 
   late final double radiusMax = widget.radius;
-  late final double itemRadius = widget.radius * 0.7;
+  late final double itemRadius = widget.radius * 0.6;
   late final double dentRadius = widget.radius * 0.3;
   late final double dashWidth = widget.radius * 0.15;
 
@@ -65,6 +64,7 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
 
   int _menuPointer = 0;
   int _datePointer = 0;
+
   final LightSource neumorphicLightSource = LightSource.topRight;
 
   late final double distanceFromMenuCenterToScreenCenter;
@@ -74,8 +74,6 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
   late final double distanceFromDateCenterToScreenCenter;
   late Offset dragDatePosition; // left top
   late double radiusOfDragDate;
-
-
 
   late final double centerX;
   late final double centerY;
@@ -95,13 +93,13 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
 
     final dragMenuPositionCenter =
         Offset(centerX, centerY - distanceFromMenuCenterToScreenCenter);
-    dragMenuPosition = RotationUtils.centerToTopLeft(
-        dragMenuPositionCenter, radiusOfDragMenu);
+    dragMenuPosition =
+        RotationUtils.centerToTopLeft(dragMenuPositionCenter, radiusOfDragMenu);
 
     final dragDatePositionCenter =
-    Offset(centerX, centerY - distanceFromDateCenterToScreenCenter);
-    dragDatePosition = RotationUtils.centerToTopLeft(
-        dragDatePositionCenter, radiusOfDragDate);
+        Offset(centerX, centerY - distanceFromDateCenterToScreenCenter);
+    dragDatePosition =
+        RotationUtils.centerToTopLeft(dragDatePositionCenter, radiusOfDragDate);
 
     // text's ani
     depths[_menuPointer] = _depthMax;
@@ -109,92 +107,94 @@ class CircleMenuPickerViewState extends State<CircleMenuPickerView> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-        // color: Colors.red,
-        height: radiusMax * 2,
-        width: radiusMax * 2,
-        child: Stack(
-          children: [
-            // panel or datePicker
-            Center(
-              child: datePickerOrRim(),
-            ),
-
-            RotarySelectorWithDragHandle(
-              itemRadius: itemRadius,
-              dentRadius: dentRadius,
-              dashWidth: dashWidth,
-              itemLength: widget.items.length,
-              initialPointer: _menuPointer,
-              onItemSelected: (int oldIndex, int newIndex) {
-                widget.onItemSelected(newIndex);
-                itemSwitchAni(oldIndex, newIndex);
-                updatePointer(newIndex);
-              },
-              rimColor: config.menuPickerWhite,
-              dashColor: config.backGroundWhiteDark,
-              lightSource: neumorphicLightSource,
-              // sensitivity: 1,
-              initialDragObjPosition: dragMenuPosition,
-              centerX: centerX,
-              centerY: centerY,
-              radiusOfDragObj: radiusOfDragMenu,
-              distanceFromDragObjCenterToScreenCenter:
-                  distanceFromMenuCenterToScreenCenter,
-              dragHandleColor: Colors.orange,
-            ),
-
-            //dent
-            Align(
-              alignment: Alignment.center,
-              child: NeumorphicButton(
-                style: NeumorphicStyle(
-                  shape: NeumorphicShape.flat,
-                  boxShape: const NeumorphicBoxShape.circle(),
-                  intensity: 1,
-                  depth: .8,
-                  lightSource: neumorphicLightSource,
-                  color: config.menuPickerWhite,
-                  // color: Colors.black,
-                ),
-                onPressed: () {
-                  // print('===== pointer $_menuPointer');
-
-                  // Delay to allow the button dent animation to finish before navigation.
-                  Timer(
-                      const Duration(milliseconds: 100),
-                      () => Navigator.pushNamed(
-                          context, widget.menuItemsPath[_menuPointer]));
-                },
-                child: Container(
-                    // color: Colors.black,
-                    width: (dentRadius * 2),
-                    height: (dentRadius * 2),
-                    child: Stack(
-                        children: List.generate(
-                      6,
-                      (i) {
-                        return Center(
-                          child: AnimatedNeumorphicText(
-                            text: widget.items[i],
-                            prevDepth: prevDepths[i],
-                            depth: depths[i],
-                            onTap: () {
-                              Navigator.pushNamed(
-                                  context, widget.menuItemsPath[i]);
-                            },
-                            fontSize: dentRadius * 0.33,
-                            color: config.backLightB,
-                            depthInDuration: depthInDuration,
-                            depthOutDuration: depthOutDuration,
-                          ),
-                        );
-                      },
-                    ))),
+    return Center(
+      child: Container(
+          // color: Colors.red,
+          height: radiusMax * 2,
+          width: radiusMax * 2,
+          child: Stack(
+            children: [
+              // panel or datePicker
+              Center(
+                child: datePickerOrRim(),
               ),
-            ),
-          ],
-        ));
+
+              RotarySelectorWithDragHandle(
+                itemRadius: itemRadius,
+                dentRadius: dentRadius,
+                dashWidth: dashWidth,
+                itemLength: widget.items.length,
+                initialPointer: _menuPointer,
+                onItemSelected: (int oldIndex, int newIndex) {
+                  widget.onItemSelected(newIndex);
+                  itemSwitchAni(oldIndex, newIndex);
+                  updatePointer(newIndex);
+                },
+                rimColor: config.menuPickerWhite,
+                dashColor: config.backGroundWhiteDark,
+                lightSource: neumorphicLightSource,
+                // sensitivity: 1,
+                initialDragObjPosition: dragMenuPosition,
+                centerX: centerX,
+                centerY: centerY,
+                radiusOfDragObj: radiusOfDragMenu,
+                distanceFromDragObjCenterToScreenCenter:
+                    distanceFromMenuCenterToScreenCenter,
+                dragHandleColor: Colors.orange,
+              ),
+
+              //dent
+              Align(
+                alignment: Alignment.center,
+                child: NeumorphicButton(
+                  style: NeumorphicStyle(
+                    shape: NeumorphicShape.flat,
+                    boxShape: const NeumorphicBoxShape.circle(),
+                    intensity: 1,
+                    depth: .8,
+                    lightSource: neumorphicLightSource,
+                    color: config.menuPickerWhite,
+                    // color: Colors.black,
+                  ),
+                  onPressed: () {
+                    // print('===== pointer $_menuPointer');
+
+                    // Delay to allow the button dent animation to finish before navigation.
+                    Timer(
+                        const Duration(milliseconds: 100),
+                        () => Navigator.pushNamed(
+                            context, widget.menuItemsPath[_menuPointer]));
+                  },
+                  child: Container(
+                      // color: Colors.black,
+                      width: (dentRadius * 2),
+                      height: (dentRadius * 2),
+                      child: Stack(
+                          children: List.generate(
+                        6,
+                        (i) {
+                          return Center(
+                            child: AnimatedNeumorphicText(
+                              text: widget.items[i],
+                              prevDepth: prevDepths[i],
+                              depth: depths[i],
+                              onTap: () {
+                                Navigator.pushNamed(
+                                    context, widget.menuItemsPath[i]);
+                              },
+                              fontSize: dentRadius * 0.33,
+                              color: config.backLightB,
+                              depthInDuration: depthInDuration,
+                              depthOutDuration: depthOutDuration,
+                            ),
+                          );
+                        },
+                      ))),
+                ),
+              ),
+            ],
+          )),
+    );
   }
 
   void rotateMenuPanel(double angleInRadian) {

@@ -13,10 +13,17 @@ const Color border = Color(0x00000000);
 // const Color backGroundWhite = Color(0xffdddddd);
 const Color backGroundWhite = Color(0xffd7d3d0);
 const Color mainBackGroundWhite = Color(0xffffffff);
+const Color mainBackGroundWhiteDarker = Color(0xffefeeee);
+const Color mainBackGroundWhiteDarker2 = Color(0xffdcdcdc);
+
+const Color backGroundWhiteDark = Color(0xffcac9c9);
+
+
 const Color menuPickerWhite = Color(0xfff5f5f5);
 const Color datePickerWhite = Color(0xffe1e0e0);
 
 const Color trashPointerRed = Color(0xff951919);
+const Color timelinePointerRed = Color(0xffdd2222);
 
 const Color filmColorBrown = Color(0xFF8B4513);
 
@@ -26,15 +33,25 @@ const Color filmColor = Colors.black;
 const Color sticker = Color(0xffc7c4c2);
 
 
-const Color backGroundWhiteDark = Color(0xffcac9c9);
 
 const Color ticketWhite = Color.fromARGB(255, 255, 255, 255);
 
-const Color hardCard = Color(0xffe1e1e1);
+// const Color hardCard = Color(0xffe1e1e1);
+const Color hardCard = Color(0xffffffff);
+
 const Color hardCardYellowLight = Color(0xffddd1ae);
 const Color hardCardYellow = Color(0xffdecd9e);
 const Color hardCardYellowDark = Color(0xffdcc995);
 const Color hardCardYellowDarker = Color(0xffc7ae97);
+
+const Color hardCardPaperW = Color(0xffe6e2d9);
+const Color hardCardPaperWDarker = Color(0xffe4dbc5);
+const Color hardCardPaperWFont = Color(0xffe3d1a7);
+
+const Color timeLine = Color(0xffd8d7d0);
+
+
+
 
 Color dateColor = const Color(0xFFF9A825);
 
@@ -54,7 +71,7 @@ const Color backLightB = Colors.black;
 
 
 // orange
-const Color dragButtonOrange = Color.fromARGB(255, 238, 149, 101);
+const Color dragButtonOrange = Color.fromARGB(255, 244, 78, 11);
 
 
 

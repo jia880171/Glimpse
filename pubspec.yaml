@@ -58,6 +58,7 @@ dependencies:
 
   isar: ^3.1.0
   isar_flutter_libs: any  # 若在手機使用
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
@@ -91,6 +92,8 @@ flutter:
     - assets/images/noise.png
     - assets/images/noise_blur.png
     - assets/images/noise_blur2.png
+    - assets/images/glass.png
+    - assets/images/glass2.png
     - assets/images/plastic_overlay.png
     - assets/images/plastic_overlay2.png
     - assets/images/plastic_overlay3.png
@@ -130,16 +133,14 @@ flutter:
   # see https://flutter.dev/custom-fonts/#from-packages
 
   fonts:
-    - family: Open-Sans  # Replace with your chosen font family name
+    - family: Open-Sans-300  # Replace with your chosen font family name
+      fonts:
+        - asset: fonts/OpenSans_Condensed-Light.ttf
+
+    - family: Open-Sans-3=400  # Replace with your chosen font family name
       fonts:
         - asset: fonts/OpenSans_SemiCondensed-Regular.ttf
-        - asset: fonts/OpenSans_Condensed-Light.ttf
-          weight: 300
-        - asset: fonts/OpenSans-ExtraBoldItalic.ttf
-          weight: 400
-        - asset: fonts/OpenSans-BoldItalic.ttf
-          weight: 500
-    - family: Open-Sans-400  # Replace with your chosen font family name
+    - family: Open-Sans-ExtraBoldItalic  # Replace with your chosen font family name
       fonts:
         - asset: fonts/OpenSans-ExtraBoldItalic.ttf
     - family: Ds-Digi
@@ -169,3 +170,8 @@ flutter:
     - family: Meow
       fonts:
         - asset: fonts/Meow.ttf
+    - family: Questrial
+      fonts:
+        - asset: fonts/Questrial-Regular.ttf
+
+

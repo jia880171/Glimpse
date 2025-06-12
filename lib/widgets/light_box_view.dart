@@ -1,40 +1,45 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'dart:ui';
 
 import 'package:exif/exif.dart';
 import 'package:flutter/src/services/message_codec.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:glimpse/common/utils/image_utils.dart';
-import 'package:glimpse/film_roll_view.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 
-import './config.dart' as config;
+import '../config.dart' as config;
+import '../rotatable_Glimpse_card_view.dart';
+import 'film/film_roll_view.dart';
 
 class LightBoxView extends StatefulWidget {
   final DateTime selectedDate;
   final Function setTargetAlbum;
   final Size widgetSize;
+  final int scrollOffset;
 
   const LightBoxView(
       {Key? key,
       required this.selectedDate,
       required this.setTargetAlbum,
-      required this.widgetSize})
+      required this.widgetSize,
+      required this.scrollOffset})
       : super(key: key);
 
   @override
   LightBoxViewState createState() => LightBoxViewState();
 }
 
-double filmWidthRatio = 0.4;
-
 class LightBoxViewState extends State<LightBoxView>
     with WidgetsBindingObserver {
+  bool isCardMode = false;
+  bool isLoading = false;
   bool lightOn = false;
   bool isNeg = false;
-  int thumbnailSize = 135;
+  int thumbnailSize = 100;
 
   int visibleImageCount = 0;
   String? selectedImageId;
@@ -45,11 +50,19 @@ class LightBoxViewState extends State<LightBoxView>
   final Map<String, ui.Image> _originalThumbnailCache = {};
   final Map<String, ui.Image> _thumbnailCache = {};
 
-  String? targetAlbumName;
+  String targetAlbumName = '';
 
   List<String> albumNames = [];
   List<AssetEntity> visibleImages = [];
   List<AssetPathEntity> _cachedAlbums = [];
+
+  // card mode
+  late int cardIndex;
+  late Uint8List processedImage;
+  late Map<String?, IfdTag> exifData;
+  late String imagePath;
+
+  int scrollOffset = 0;
 
   @override
   void initState() {
@@ -79,6 +92,7 @@ class LightBoxViewState extends State<LightBoxView>
     if (oldWidget.selectedDate != widget.selectedDate) {
       _loadImagesForSelectedDate();
     }
+    scrollOffset = widget.scrollOffset;
   }
 
   @override
@@ -89,6 +103,8 @@ class LightBoxViewState extends State<LightBoxView>
     Color dateColor = const Color(0xFFF9A825);
     double dateSectionHeight = 100;
 
+    print(
+        '====== [lightbox] builds widget.scrollOffset ${widget.scrollOffset}');
     return Scaffold(
         body: SingleChildScrollView(
       child: ConstrainedBox(
@@ -101,16 +117,21 @@ class LightBoxViewState extends State<LightBoxView>
                 // film
                 Center(
                   child: SizedBox(
-                    width: widgetSize.width * 0.8,
+                    // width: widgetSize.width * 0.8,
                     // height: widgetSize.height,
                     child: FilmRollView(
-                      viewSize: Size(widgetSize.width * 0.8, widgetSize.height),
+                      offset: scrollOffset,
+                      viewSize: Size(widgetSize.width, widgetSize.height),
                       images: visibleImages,
                       thumbnailCache: _thumbnailCache,
                       backLight: backLight,
                       noHeader: false,
                       isNeg: isNeg,
                       isContactSheet: false,
+                      targetAlbumName: targetAlbumName,
+                      selectedDate: widget.selectedDate,
+                      onTapPic: onTapPic,
+                      leaveCardMode: leaveCardMode,
                     ),
                   ),
                 ),
@@ -269,11 +290,67 @@ class LightBoxViewState extends State<LightBoxView>
                       setState(() {}); // 重新繪製畫面
                     },
                   ),
-                )
+                ),
+
+                if (isLoading || isCardMode)
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(5),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withOpacity(0.01),
+                                Colors.white.withOpacity(0.05),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                if (isCardMode)
+                  RotatableGlimpseCardView(
+                    index: cardIndex,
+                    image: processedImage,
+                    exifData: exifData,
+                    imagePath: imagePath,
+                    backLight: config.backLightB,
+                    isNeg: isNeg,
+                    cardSize:
+                        Size(widgetSize.width * 0.8, widgetSize.height * 0.8),
+                    leaveCardMode: leaveCardMode,
+                  ),
               ],
             ),
           )),
     ));
+  }
+
+  void leaveCardMode() {
+    setState(() {
+      isCardMode = false;
+    });
+  }
+
+  void onTapPic(AssetEntity image, int index, bool isNeg) async {
+    final imageBytes = await ImageUtils.getImageBytes(image);
+    exifData = (await readExifFromBytes(imageBytes!))!;
+    final file = await image.file;
+    imagePath = file!.path;
+    cardIndex = index;
+    processedImage =
+        isNeg ? ImageUtils.applyNegativeEffect(imageBytes) : imageBytes;
+
+    setState(() {
+      isCardMode = true;
+    });
   }
 
   void setIsNeg() {
@@ -340,11 +417,16 @@ class LightBoxViewState extends State<LightBoxView>
       return;
     }
 
+    setState(() {
+      isLoading = true;
+    });
+
     if (_cachedAlbums.isEmpty) {
       await _initAlbumsAndListen();
     }
 
     if (targetAlbumName == null) {
+      isLoading = false;
       return;
     }
 
@@ -361,6 +443,7 @@ class LightBoxViewState extends State<LightBoxView>
     setState(() {
       this.visibleImages = visibleImages;
       visibleImageCount = visibleImages.isEmpty ? 0 : visibleImages.length - 2;
+      isLoading = false;
     });
   }
 

@@ -2,26 +2,30 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'dart:ui';
 
 import 'package:exif/exif.dart';
 import 'package:flutter/src/services/message_codec.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
-import 'package:glimpse/film_roll_view.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 
-import './config.dart' as config;
-import 'common/utils/image_utils.dart';
+import '../common/utils/image_utils.dart';
+import '../config.dart' as config;
+import 'film/film_roll_view.dart';
 
 class ContactSheetView extends StatefulWidget {
   final DateTime selectedDate;
   final Function setTargetAlbum;
   final Size widgetSize;
+  final int scrollOffset;
 
-  const ContactSheetView({Key? key,
-    required this.selectedDate,
-    required this.setTargetAlbum,
-    required this.widgetSize})
+
+  const ContactSheetView(
+      {Key? key,
+      required this.selectedDate,
+      required this.setTargetAlbum,
+      required this.widgetSize, required this.scrollOffset})
       : super(key: key);
 
   @override
@@ -32,9 +36,10 @@ double filmWidthRatio = 0.4;
 
 class ContactSheetViewState extends State<ContactSheetView>
     with WidgetsBindingObserver {
+  bool isLoading = false;
   bool lightOn = false;
   bool isNeg = false;
-  int thumbnailSize = 135;
+  int thumbnailSize = 66;
 
   int visibleImageCount = 0;
   String? selectedImageId;
@@ -45,7 +50,7 @@ class ContactSheetViewState extends State<ContactSheetView>
   final Map<String, ui.Image> _originalThumbnailCache = {};
   final Map<String, ui.Image> _thumbnailCache = {};
 
-  String? targetAlbumName;
+  String targetAlbumName = '';
 
   List<String> albumNames = [];
   List<AssetEntity> visibleImages = [];
@@ -83,8 +88,6 @@ class ContactSheetViewState extends State<ContactSheetView>
 
   @override
   Widget build(BuildContext context) {
-    print('====== [contact Sheet] building...');
-
     double fontSizeForText = 20;
     Size widgetSize = widget.widgetSize;
 
@@ -92,9 +95,11 @@ class ContactSheetViewState extends State<ContactSheetView>
     double dateSectionHeight = 100;
 
     return Scaffold(
-      // backgroundColor: backLight,
+        // backgroundColor: backLight,
         body: SingleChildScrollView(
-          child: Container(
+      child: Stack(
+        children: [
+          Container(
               color: config.backLightB,
               // color: Colors.red,
               width: widgetSize.width,
@@ -288,7 +293,31 @@ class ContactSheetViewState extends State<ContactSheetView>
                   )
                 ],
               )),
-        ));
+          if (isLoading)
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(5),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.01),
+                          Colors.white.withOpacity(0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ));
   }
 
   List<Widget> buildRotatedFilmRollViews({
@@ -302,18 +331,22 @@ class ContactSheetViewState extends State<ContactSheetView>
     int boxCount = (images.length / imagesPerBox).ceil();
 
     return List.generate(boxCount, (i) {
+
+
       final start = i * imagesPerBox;
       final end = (start + imagesPerBox).clamp(0, images.length);
       final imageChunk = images.sublist(start, end);
 
       final visibleImages =
-      ImageUtils.insertBoundaryDummies(List.from(imageChunk));
+          ImageUtils.insertBoundaryDummies(List.from(imageChunk));
       final width = _calculateBoxWidth(widgetSize, boxCount);
+      print('====== list G, i ${i}, width: ${width},  widgetSize.width: ${ widgetSize.width}');
 
       return RotatedBox(
-        quarterTurns: 1,
+        quarterTurns: 3,
         child: Transform.rotate(
-            angle: (math.Random().nextInt(2) - 1) * math.pi / 180, // -3~3
+            // 0 1 => -0.5 0.5
+            angle: (math.Random().nextInt(2) - 0.5) * math.pi / 180,
             child: FilmRollView(
               viewSize: Size(width, widgetSize.width),
               images: visibleImages,
@@ -321,7 +354,12 @@ class ContactSheetViewState extends State<ContactSheetView>
               backLight: backLight,
               noHeader: i != 0,
               isNeg: isNeg,
-              isContactSheet: true, // 第一個有 header，其餘沒有
+              isContactSheet: true,
+              offset: widget.scrollOffset,
+              targetAlbumName: targetAlbumName,
+              selectedDate: widget.selectedDate,
+              onTapPic: (AssetEntity image, int index,
+                  bool isNeg) {}, leaveCardMode: ()=>{}, // if true add scratch
             )),
       );
     });
@@ -396,11 +434,16 @@ class ContactSheetViewState extends State<ContactSheetView>
       return;
     }
 
+    setState(() {
+      isLoading = true;
+    });
+
     if (_cachedAlbums.isEmpty) {
       await _initAlbumsAndListen();
     }
 
     if (targetAlbumName == null) {
+      isLoading = false;
       return;
     }
 
@@ -415,6 +458,7 @@ class ContactSheetViewState extends State<ContactSheetView>
     setState(() {
       this.visibleImages = visibleImages;
       visibleImageCount = visibleImages.isEmpty ? 0 : visibleImages.length;
+      isLoading = false;
     });
   }
 
@@ -425,7 +469,6 @@ class ContactSheetViewState extends State<ContactSheetView>
       print('====== backLight: ${backLight}');
     });
   }
-
 
   Future<void> generateAndCacheThumbnails(
       List<AssetEntity> visibleImages) async {

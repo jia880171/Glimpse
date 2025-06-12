@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:glimpse/common/utils/rotation_utils.dart';
 import 'package:vibration/vibration.dart';
 
-import '../RotarySelectorRing.dart';
+import 'rotary_selector_ring.dart';
 
 class RotarySelectorWithDragHandle extends StatefulWidget {
   final double itemRadius;
@@ -94,6 +95,23 @@ class _RotarySelectorWithDragHandleState
     });
   }
 
+  bool isVibrating = false;
+  Timer? vibrationTimer;
+
+  void vibrate(
+      {required int duration, required int amplitude, bool isMajor = false}) {
+    if (isVibrating && !isMajor) return; // ❗小震動若有主震動進行中，直接略過
+
+    isVibrating = true;
+    Vibration.vibrate(duration: duration, amplitude: amplitude);
+
+    // 用 Timer 控制震動狀態回復
+    vibrationTimer?.cancel();
+    vibrationTimer = Timer(Duration(milliseconds: duration + 10), () {
+      isVibrating = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(children: [
@@ -112,6 +130,7 @@ class _RotarySelectorWithDragHandleState
           dashColor: widget.dashColor,
           lightSource: widget.lightSource,
           sensitivity: sensitivity,
+          vibrate: vibrate,
         ),
       ),
 
@@ -167,7 +186,8 @@ class _RotarySelectorWithDragHandleState
 
                       // 震動判斷
                       if ((currentAngle * 180 / pi).ceil() % sensitivity == 0) {
-                        Vibration.vibrate(duration: 50, amplitude: 255);
+                        // Vibration.vibrate(duration: 50, amplitude: 255);
+                        vibrate(duration: 50, amplitude: 255, isMajor: true);
                       }
 
                       // 控制器位置計算

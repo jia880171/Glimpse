@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:glimpse/trash_view.dart';
+import 'package:glimpse/views/trash_view.dart';
 
 import 'create_glimpse.dart';
 import 'rotatable_Glimpse_card_view.dart';
@@ -19,7 +19,7 @@ class Routes {
     // prototype for test
     '/glimpsesPicker': (BuildContext context) => const FilmFinderView(),
 
-    '/trash': (BuildContext context) => TrashView(),
+    // '/trash': (BuildContext context) => TrashView(widgetSize: null,),
     // '/receipt': (BuildContext context) => RotatableGlimpseCardView(),
     // '/datePicker': (BuildContext context) => DatePickerView(),
   };

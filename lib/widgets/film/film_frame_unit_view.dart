@@ -3,16 +3,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
-
+import 'film_roll_left.dart';
 import 'film_roll_right_view.dart';
-import 'film_roll_view.dart';
 
 class FilmFrameUnit extends StatefulWidget {
   final int index;
   final double unitFrameWidth;
   final double unitFrameHeight;
-  final double photoHeight;
-  final double photoWidth;
   final double holeHeight;
   final double picRatio;
   final ui.Image? thumbnail;
@@ -30,8 +27,6 @@ class FilmFrameUnit extends StatefulWidget {
     required this.index,
     required this.unitFrameHeight,
     required this.unitFrameWidth,
-    required this.photoHeight,
-    required this.photoWidth,
     required this.holeHeight,
     required this.picRatio,
     this.thumbnail,
@@ -131,23 +126,23 @@ class _FilmFrameUnitState extends State<FilmFrameUnit> {
                   ),
                 ),
               ),
-              (widget.isContactSheet && randox == -1)
-                  ? Positioned.fill(
-                child: IgnorePointer(
-                  child: ClipRRect(
-                    child: Opacity(
-                      opacity: 0.9,
-                      child: Image.asset(
-                        noise[math.Random().nextInt(noise.length)],
-                        fit: BoxFit.cover,
-                        color: Colors.red.withOpacity(0.2),
-                        colorBlendMode: BlendMode.multiply,
-                      ),
-                    ),
-                  ),
-                ),
-              )
-                  : const SizedBox(),
+              // (widget.isContactSheet && randox == -1)
+              //     ? Positioned.fill(
+              //   child: IgnorePointer(
+              //     child: ClipRRect(
+              //       child: Opacity(
+              //         opacity: 0.9,
+              //         child: Image.asset(
+              //           noise[math.Random().nextInt(noise.length)],
+              //           fit: BoxFit.cover,
+              //           color: Colors.red.withOpacity(0.2),
+              //           colorBlendMode: BlendMode.multiply,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // )
+              //     : const SizedBox(),
             ],
           ),
           FilmRowRightSide(

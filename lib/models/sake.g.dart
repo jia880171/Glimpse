@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'food.dart';
+part of 'sake.dart';
 
 // **************************************************************************
 // IsarCollectionGenerator
@@ -9,43 +9,43 @@ part of 'food.dart';
 // coverage:ignore-file
 // ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
 
-extension GetFoodCollection on Isar {
-  IsarCollection<Food> get foods => this.collection();
+extension GetSakeCollection on Isar {
+  IsarCollection<Sake> get sakes => this.collection();
 }
 
-const FoodSchema = CollectionSchema(
-  name: r'Food',
-  id: -1224223000086120450,
+const SakeSchema = CollectionSchema(
+  name: r'Sake',
+  id: 4353577288400262808,
   properties: {},
-  estimateSize: _foodEstimateSize,
-  serialize: _foodSerialize,
-  deserialize: _foodDeserialize,
-  deserializeProp: _foodDeserializeProp,
+  estimateSize: _sakeEstimateSize,
+  serialize: _sakeSerialize,
+  deserialize: _sakeDeserialize,
+  deserializeProp: _sakeDeserializeProp,
   idName: r'id',
   indexes: {},
   links: {
     r'glimpses': LinkSchema(
-      id: 4640367644142376611,
+      id: 3452739023382877882,
       name: r'glimpses',
       target: r'Glimpse',
       single: false,
     ),
     r'receipts': LinkSchema(
-      id: 6730006903826263410,
+      id: 8107819638996915773,
       name: r'receipts',
       target: r'Receipt',
       single: false,
     )
   },
   embeddedSchemas: {},
-  getId: _foodGetId,
-  getLinks: _foodGetLinks,
-  attach: _foodAttach,
+  getId: _sakeGetId,
+  getLinks: _sakeGetLinks,
+  attach: _sakeAttach,
   version: '3.1.0+1',
 );
 
-int _foodEstimateSize(
-  Food object,
+int _sakeEstimateSize(
+  Sake object,
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
@@ -53,24 +53,24 @@ int _foodEstimateSize(
   return bytesCount;
 }
 
-void _foodSerialize(
-  Food object,
+void _sakeSerialize(
+  Sake object,
   IsarWriter writer,
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {}
-Food _foodDeserialize(
+Sake _sakeDeserialize(
   Id id,
   IsarReader reader,
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  final object = Food();
+  final object = Sake();
   object.id = id;
   return object;
 }
 
-P _foodDeserializeProp<P>(
+P _sakeDeserializeProp<P>(
   IsarReader reader,
   int propertyId,
   int offset,
@@ -82,30 +82,30 @@ P _foodDeserializeProp<P>(
   }
 }
 
-Id _foodGetId(Food object) {
+Id _sakeGetId(Sake object) {
   return object.id;
 }
 
-List<IsarLinkBase<dynamic>> _foodGetLinks(Food object) {
+List<IsarLinkBase<dynamic>> _sakeGetLinks(Sake object) {
   return [object.glimpses, object.receipts];
 }
 
-void _foodAttach(IsarCollection<dynamic> col, Id id, Food object) {
+void _sakeAttach(IsarCollection<dynamic> col, Id id, Sake object) {
   object.id = id;
   object.glimpses.attach(col, col.isar.collection<Glimpse>(), r'glimpses', id);
   object.receipts.attach(col, col.isar.collection<Receipt>(), r'receipts', id);
 }
 
-extension FoodQueryWhereSort on QueryBuilder<Food, Food, QWhere> {
-  QueryBuilder<Food, Food, QAfterWhere> anyId() {
+extension SakeQueryWhereSort on QueryBuilder<Sake, Sake, QWhere> {
+  QueryBuilder<Sake, Sake, QAfterWhere> anyId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
     });
   }
 }
 
-extension FoodQueryWhere on QueryBuilder<Food, Food, QWhereClause> {
-  QueryBuilder<Food, Food, QAfterWhereClause> idEqualTo(Id id) {
+extension SakeQueryWhere on QueryBuilder<Sake, Sake, QWhereClause> {
+  QueryBuilder<Sake, Sake, QAfterWhereClause> idEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IdWhereClause.between(
         lower: id,
@@ -114,7 +114,7 @@ extension FoodQueryWhere on QueryBuilder<Food, Food, QWhereClause> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterWhereClause> idNotEqualTo(Id id) {
+  QueryBuilder<Sake, Sake, QAfterWhereClause> idNotEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -136,7 +136,7 @@ extension FoodQueryWhere on QueryBuilder<Food, Food, QWhereClause> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterWhereClause> idGreaterThan(Id id,
+  QueryBuilder<Sake, Sake, QAfterWhereClause> idGreaterThan(Id id,
       {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
@@ -145,7 +145,7 @@ extension FoodQueryWhere on QueryBuilder<Food, Food, QWhereClause> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterWhereClause> idLessThan(Id id,
+  QueryBuilder<Sake, Sake, QAfterWhereClause> idLessThan(Id id,
       {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
@@ -154,7 +154,7 @@ extension FoodQueryWhere on QueryBuilder<Food, Food, QWhereClause> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterWhereClause> idBetween(
+  QueryBuilder<Sake, Sake, QAfterWhereClause> idBetween(
     Id lowerId,
     Id upperId, {
     bool includeLower = true,
@@ -171,8 +171,8 @@ extension FoodQueryWhere on QueryBuilder<Food, Food, QWhereClause> {
   }
 }
 
-extension FoodQueryFilter on QueryBuilder<Food, Food, QFilterCondition> {
-  QueryBuilder<Food, Food, QAfterFilterCondition> idEqualTo(Id value) {
+extension SakeQueryFilter on QueryBuilder<Sake, Sake, QFilterCondition> {
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'id',
@@ -181,7 +181,7 @@ extension FoodQueryFilter on QueryBuilder<Food, Food, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> idGreaterThan(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> idGreaterThan(
     Id value, {
     bool include = false,
   }) {
@@ -194,7 +194,7 @@ extension FoodQueryFilter on QueryBuilder<Food, Food, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> idLessThan(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> idLessThan(
     Id value, {
     bool include = false,
   }) {
@@ -207,7 +207,7 @@ extension FoodQueryFilter on QueryBuilder<Food, Food, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> idBetween(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> idBetween(
     Id lower,
     Id upper, {
     bool includeLower = true,
@@ -225,36 +225,36 @@ extension FoodQueryFilter on QueryBuilder<Food, Food, QFilterCondition> {
   }
 }
 
-extension FoodQueryObject on QueryBuilder<Food, Food, QFilterCondition> {}
+extension SakeQueryObject on QueryBuilder<Sake, Sake, QFilterCondition> {}
 
-extension FoodQueryLinks on QueryBuilder<Food, Food, QFilterCondition> {
-  QueryBuilder<Food, Food, QAfterFilterCondition> glimpses(
+extension SakeQueryLinks on QueryBuilder<Sake, Sake, QFilterCondition> {
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> glimpses(
       FilterQuery<Glimpse> q) {
     return QueryBuilder.apply(this, (query) {
       return query.link(q, r'glimpses');
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> glimpsesLengthEqualTo(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> glimpsesLengthEqualTo(
       int length) {
     return QueryBuilder.apply(this, (query) {
       return query.linkLength(r'glimpses', length, true, length, true);
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> glimpsesIsEmpty() {
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> glimpsesIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.linkLength(r'glimpses', 0, true, 0, true);
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> glimpsesIsNotEmpty() {
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> glimpsesIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.linkLength(r'glimpses', 0, false, 999999, true);
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> glimpsesLengthLessThan(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> glimpsesLengthLessThan(
     int length, {
     bool include = false,
   }) {
@@ -263,7 +263,7 @@ extension FoodQueryLinks on QueryBuilder<Food, Food, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> glimpsesLengthGreaterThan(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> glimpsesLengthGreaterThan(
     int length, {
     bool include = false,
   }) {
@@ -272,7 +272,7 @@ extension FoodQueryLinks on QueryBuilder<Food, Food, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> glimpsesLengthBetween(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> glimpsesLengthBetween(
     int lower,
     int upper, {
     bool includeLower = true,
@@ -284,33 +284,33 @@ extension FoodQueryLinks on QueryBuilder<Food, Food, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> receipts(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> receipts(
       FilterQuery<Receipt> q) {
     return QueryBuilder.apply(this, (query) {
       return query.link(q, r'receipts');
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> receiptsLengthEqualTo(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> receiptsLengthEqualTo(
       int length) {
     return QueryBuilder.apply(this, (query) {
       return query.linkLength(r'receipts', length, true, length, true);
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> receiptsIsEmpty() {
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> receiptsIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.linkLength(r'receipts', 0, true, 0, true);
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> receiptsIsNotEmpty() {
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> receiptsIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.linkLength(r'receipts', 0, false, 999999, true);
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> receiptsLengthLessThan(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> receiptsLengthLessThan(
     int length, {
     bool include = false,
   }) {
@@ -319,7 +319,7 @@ extension FoodQueryLinks on QueryBuilder<Food, Food, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> receiptsLengthGreaterThan(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> receiptsLengthGreaterThan(
     int length, {
     bool include = false,
   }) {
@@ -328,7 +328,7 @@ extension FoodQueryLinks on QueryBuilder<Food, Food, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Food, Food, QAfterFilterCondition> receiptsLengthBetween(
+  QueryBuilder<Sake, Sake, QAfterFilterCondition> receiptsLengthBetween(
     int lower,
     int upper, {
     bool includeLower = true,
@@ -341,26 +341,26 @@ extension FoodQueryLinks on QueryBuilder<Food, Food, QFilterCondition> {
   }
 }
 
-extension FoodQuerySortBy on QueryBuilder<Food, Food, QSortBy> {}
+extension SakeQuerySortBy on QueryBuilder<Sake, Sake, QSortBy> {}
 
-extension FoodQuerySortThenBy on QueryBuilder<Food, Food, QSortThenBy> {
-  QueryBuilder<Food, Food, QAfterSortBy> thenById() {
+extension SakeQuerySortThenBy on QueryBuilder<Sake, Sake, QSortThenBy> {
+  QueryBuilder<Sake, Sake, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
     });
   }
 
-  QueryBuilder<Food, Food, QAfterSortBy> thenByIdDesc() {
+  QueryBuilder<Sake, Sake, QAfterSortBy> thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
     });
   }
 }
 
-extension FoodQueryWhereDistinct on QueryBuilder<Food, Food, QDistinct> {}
+extension SakeQueryWhereDistinct on QueryBuilder<Sake, Sake, QDistinct> {}
 
-extension FoodQueryProperty on QueryBuilder<Food, Food, QQueryProperty> {
-  QueryBuilder<Food, int, QQueryOperations> idProperty() {
+extension SakeQueryProperty on QueryBuilder<Sake, Sake, QQueryProperty> {
+  QueryBuilder<Sake, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
     });

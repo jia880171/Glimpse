@@ -1,10 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
-import 'package:vibration/vibration.dart';
 
-import 'circle_date_picker_view.dart';
-import 'common/utils/rotation_utils.dart';
+import '../../circle_date_picker_view.dart';
+import '../../common/utils/rotation_utils.dart';
 
 class RotarySelectorRing extends StatefulWidget {
   final double outerRadius;
@@ -17,6 +16,10 @@ class RotarySelectorRing extends StatefulWidget {
   final Color dashColor;
   final LightSource lightSource;
   final double sensitivity;
+  final Function(
+      {required int duration,
+      required int amplitude,
+      required bool isMajor}) vibrate;
 
   const RotarySelectorRing({
     super.key,
@@ -30,6 +33,7 @@ class RotarySelectorRing extends StatefulWidget {
     this.dashColor = Colors.grey,
     this.lightSource = LightSource.topLeft,
     required this.sensitivity,
+    required this.vibrate,
   });
 
   @override
@@ -43,6 +47,9 @@ class RotarySelectorRingState extends State<RotarySelectorRing> {
   double _totalTurns = 0;
   double _accumulatedAngle = 0;
   late int _pointer;
+
+  double accumulatedDelta = 0.0; // 弧度
+  final double threshold = 10 * pi / 180;
 
   @override
   void initState() {
@@ -63,13 +70,13 @@ class RotarySelectorRingState extends State<RotarySelectorRing> {
       final oldPointer = _pointer;
 
       while (_accumulatedAngle.abs() >= itemAngle) {
-        Vibration.vibrate(duration: 50, amplitude: 255);
+        widget.vibrate(duration: 50, amplitude: 255, isMajor: true);
 
         if (_accumulatedAngle > 0) {
-          _pointer = (_pointer + 1) % widget.itemLength;
+          _pointer = (_pointer - 1) % widget.itemLength;
           _accumulatedAngle -= itemAngle;
         } else {
-          _pointer = (_pointer - 1 + widget.itemLength) % widget.itemLength;
+          _pointer = (_pointer + 1 + widget.itemLength) % widget.itemLength;
           _accumulatedAngle += itemAngle;
         }
 
@@ -118,6 +125,13 @@ class RotarySelectorRingState extends State<RotarySelectorRing> {
                 final delta =
                     RotationUtils.normalizeAngle(currentAngle - _lastAngle!);
                 rotateBy(delta);
+
+                accumulatedDelta += delta.abs();
+                if (accumulatedDelta >= threshold) {
+                  widget.vibrate(
+                      duration: 6, amplitude: 100, isMajor: false); // 微小震動
+                  accumulatedDelta = 0.0;
+                }
               }
 
               _lastAngle = currentAngle;

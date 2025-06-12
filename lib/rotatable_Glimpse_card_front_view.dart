@@ -4,11 +4,11 @@ import 'dart:ui' as ui;
 import 'package:exif/exif.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
+import 'package:glimpse/widgets/film/film_roll_left.dart';
+import 'package:glimpse/widgets/film/film_roll_right_view.dart';
 import 'package:image/image.dart' as img;
 
 import './config.dart' as config;
-import 'film_roll_right_view.dart';
-import 'film_roll_view.dart';
 
 class RotatableGlimpseCardFrontView extends StatefulWidget {
   final String? imagePath;
@@ -18,6 +18,7 @@ class RotatableGlimpseCardFrontView extends StatefulWidget {
   final Color backLight;
   final int index;
   final bool isNeg;
+  final Function leaveCardMode;
 
   const RotatableGlimpseCardFrontView({
     Key? key,
@@ -28,6 +29,7 @@ class RotatableGlimpseCardFrontView extends StatefulWidget {
     required this.backLight,
     required this.index,
     required this.isNeg,
+    required this.leaveCardMode,
   }) : super(key: key);
 
   @override
@@ -137,7 +139,7 @@ class RotatableGlimpseCardFrontViewState
 
       // final dateTime = data['EXIF DateTimeOriginal'];
 
-      print('📷 Camera Model: ${cameraModel}');
+      // print('📷 Camera Model: ${cameraModel}');
       // print('🕓 Date Time: ${dateTime?.printable}');
     } else {
       print('No EXIF data found.');
@@ -204,6 +206,7 @@ class RotatableGlimpseCardFrontViewState
                   ),
                 ],
               ),
+
               Center(
                 child: Column(
                   children: [
@@ -211,11 +214,13 @@ class RotatableGlimpseCardFrontViewState
                     Text(imageMake,
                         style: TextStyle(
                             fontFamily: 'Open-Sans',
-                            fontSize: widget.cardSize.width * 0.06)),
+                            fontSize: widget.cardSize.height * 0.3*0.1)),
                     const Spacer(),
                     Stack(
                       alignment: Alignment.center,
                       children: [
+
+                        // dent
                         Neumorphic(
                           style: NeumorphicStyle(
                             shape: NeumorphicShape.flat,
@@ -226,8 +231,8 @@ class RotatableGlimpseCardFrontViewState
                           child: Container(
                             // color: config.backGroundWhite,
                             color: config.hardCard,
-                            width: widget.cardSize.width * 0.8,
-                            height: widget.cardSize.height * 0.8,
+                            width: widget.cardSize.width * 0.7,
+                            height: widget.cardSize.height * 0.7,
                           ),
                         ),
                         Positioned.fill(
@@ -244,56 +249,56 @@ class RotatableGlimpseCardFrontViewState
                             ),
                           ),
                         ),
-                        SizedBox(
+
+                        Container(
                             // color: Colors.red,
-                            width: widget.cardSize.width * 0.8,
-                            height: widget.cardSize.height * 0.8,
+                            width: widget.cardSize.width * 0.69,
+                            height: widget.cardSize.height * 0.69,
                             child: Center(
-                              child:
-                              Transform.rotate(
-                                  angle: -1 * pi / 180,
-                                  child:Stack(
-                                    children: [
-                                      _buildFrameUnit(
-                                          widget.cardSize.width * 0.75,
-                                          widget.cardSize.height * 0.75,
-                                          widget.backLight),
-                                      !widget.isNeg
-                                          ? Positioned.fill(
-                                        child: IgnorePointer(
-                                          child: ClipRRect(
-                                            // borderRadius: BorderRadius.circular(11),
-                                            child: Opacity(
-                                              opacity: 0.2,
-                                              child: Image.asset(
-                                                'assets/images/noise.png',
-                                                fit: BoxFit.cover,
-                                                color: Colors.brown
-                                                    .withOpacity(0.3),
-                                                colorBlendMode:
-                                                BlendMode.multiply,
+                              child: Transform.rotate(
+                                angle: -1 * pi / 180,
+                                child: Stack(
+                                  children: [
+                                    _buildFrameUnit(
+                                        widget.cardSize.width * 0.66,
+                                        widget.cardSize.height * 0.66,
+                                        widget.backLight),
+                                    !widget.isNeg
+                                        ? Positioned.fill(
+                                            child: IgnorePointer(
+                                              child: ClipRRect(
+                                                // borderRadius: BorderRadius.circular(11),
+                                                child: Opacity(
+                                                  opacity: 0.2,
+                                                  child: Image.asset(
+                                                    'assets/images/noise.png',
+                                                    fit: BoxFit.cover,
+                                                    color: Colors.brown
+                                                        .withOpacity(0.3),
+                                                    colorBlendMode:
+                                                        BlendMode.multiply,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : Positioned.fill(
+                                            child: IgnorePointer(
+                                              child: Opacity(
+                                                opacity: 0.2,
+                                                child: Image.asset(
+                                                  'assets/images/noise.png',
+                                                  fit: BoxFit.cover,
+                                                  color: Colors.red
+                                                      .withOpacity(0.2),
+                                                  colorBlendMode:
+                                                      BlendMode.multiply,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      )
-                                          : Positioned.fill(
-                                        child: IgnorePointer(
-                                          child: Opacity(
-                                            opacity: 0.2,
-                                            child: Image.asset(
-                                              'assets/images/noise.png',
-                                              fit: BoxFit.cover,
-                                              color:
-                                              Colors.red.withOpacity(0.2),
-                                              colorBlendMode:
-                                              BlendMode.multiply,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                  ],
+                                ),
                               ),
                             )),
                       ],
@@ -335,6 +340,20 @@ class RotatableGlimpseCardFrontViewState
                                 fontFamily: 'Open-Sans',
                                 fontSize: widget.cardSize.width * 0.02)),
                       ],
+                    ),
+                  )),
+
+              // x
+              Positioned(
+                  top: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: () {
+                      widget.leaveCardMode();
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.all(5),
+                      child: Icon(Icons.highlight_off),
                     ),
                   )),
             ],

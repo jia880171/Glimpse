@@ -2,38 +2,31 @@
 
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:glimpse/circle_menu_picker_view.dart';
-import 'package:glimpse/light_box_view.dart';
-import 'package:glimpse/models/food.dart';
-import 'package:glimpse/models/place.dart';
-import 'package:glimpse/trash_view.dart';
-import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:glimpse/services/database_service.dart';
+import 'package:glimpse/views/trash_view.dart';
+import 'package:glimpse/widgets/horizontal_date_timeline.dart';
+import 'package:glimpse/widgets/light_box_view.dart';
+import 'package:glimpse/widgets/menu_picker_v2/menu_picker_widget_v2.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 import './config.dart' as config;
 import 'Routes.dart';
 import 'common/utils/rotation_utils.dart';
-import 'contact_sheet_view.dart';
 import 'database_sqlite/attraction.dart';
 import 'glimpse_row_in_main.dart';
-import 'models/glimpse.dart';
-
-late final Isar isar;
+import 'widgets/contact_sheet.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final dir = await getApplicationDocumentsDirectory();
-  isar = await Isar.open(
-    [GlimpseSchema, FoodSchema, PlaceSchema],
-    directory: dir.path,
-  );
+  // Initialize the Isar database once using DatabaseService
+  await DatabaseService.init();
 
   runApp(const MyApp());
 }
@@ -102,6 +95,7 @@ class _MyHomePageState extends State<MyHomePage> {
     '/printer'
   ];
 
+  double roundRadius = 5;
   int menuPointer = 0;
   final double _depthMax = 0.5;
   final double _depthMin = 0;
@@ -109,6 +103,7 @@ class _MyHomePageState extends State<MyHomePage> {
   List<double> depths = [];
   List<double> prevDepths = [];
   Timer? _timer;
+  int scrollOffset = 0;
 
   String? targetAlbum;
   int targetDatePointer = 0;
@@ -133,12 +128,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double stickerWidth = screenWidth * 0.56;
+    print('====== [main build] scroll offset ${scrollOffset}');
 
+    double screenWidth = MediaQuery.of(context).size.width;
+    double mainWidgetWidth = screenWidth * 0.96;
     double screenHeight = MediaQuery.of(context).size.height;
-    double paddingTopForMenuText = screenHeight * 0.035;
-    double paddingLeftForMenuText = screenWidth * 0.08;
+    Color radioGlassColor = Colors.white.withOpacity(0.9);
+    Color radioBackLightColor = Colors.orange;
+    double blur = 0.3;
 
     return PopScope(
         canPop: _canPop,
@@ -148,259 +145,473 @@ class _MyHomePageState extends State<MyHomePage> {
           }
         },
         child: AnnotatedRegion<SystemUiOverlayStyle>(
-          value: const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness:
-                Brightness.dark, // Dark status bar icons (like time, battery)
-          ),
-          child: Scaffold(
-            body: SingleChildScrollView(
-              child: SizedBox(
-                width: screenWidth,
-                height: screenHeight,
-                child: Stack(
-                  children: [
-                    Container(
-                      height: screenHeight,
-                      width: screenWidth,
-                      color: config.mainBackGroundWhite,
-                    ),
+            value: const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness:
+                  Brightness.dark, // Dark status bar icons (like time, battery)
+            ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(28), // 👈 底部圓角
+              ),
+              child: Scaffold(
+                body: SingleChildScrollView(
+                  child: SizedBox(
+                    width: screenWidth,
+                    height: screenHeight,
+                    child: Stack(
+                      children: [
+                        Container(
+                          height: screenHeight,
+                          width: screenWidth,
+                          color: config.mainBackGroundWhite,
+                        ),
 
-                    Positioned(
-                      top: screenHeight * 0.1,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        // alignment: Alignment.center,
-                        child: SizedBox(
-                            // color: Colors.red,
-                            width: screenWidth * 0.8,
-                            // height: screenHeight * 0.1,
-                            child: Column(
-                              children: [
-                                Text(
-                                  'Glimpses',
-                                  style: TextStyle(
-                                      fontFamily: 'Jura',
-                                      fontSize: screenWidth * 0.8 * 0.1,
-                                      color: Colors.black),
-                                ),
-                                SizedBox(
-                                  height: screenHeight * 0.05,
-                                ),
-                                Neumorphic(
-                                  style: NeumorphicStyle(
-                                      // lightSource: neumorphicLightSource,
-                                      color: config.mainBackGroundWhite,
-                                      shape: NeumorphicShape.convex,
-                                      boxShape: NeumorphicBoxShape.roundRect(
-                                          BorderRadius.circular(20)),
-                                      intensity: 1,
-                                      depth: -1),
-                                  child: Container(
-                                    // color: Colors.grey.withOpacity(0.3),
-                                    height: screenHeight * 0.5,
-                                    width: screenWidth * 0.8,
-                                    child: menuItems[menuPointer] == 'Trash'
-                                        ? TrashView()
-                                        : menuItems[menuPointer] == 'FILMS'
-                                            ? LightBoxView(
+                        // Main [Height] 0.6
+                        Positioned(
+                          top: screenHeight * 0.05,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            // alignment: Alignment.center,
+                            child: SizedBox(
+                                // color: Colors.red,
+                                width: screenWidth,
+                                child: Column(
+                                  children: [
+                                    SizedBox(
+                                      height: screenHeight * 0.05,
+                                      child: Column(
+                                        children: [
+                                          SizedBox(
+                                            height: screenHeight * 0.01,
+                                          ),
+                                          Text(
+                                            'Glimpses',
+                                            style: TextStyle(
+                                                fontFamily: 'Jura',
+                                                fontSize:
+                                                    screenHeight * 0.05 * 0.3,
+                                                color: Colors.black),
+                                          ),
+                                          SizedBox(
+                                            height: screenHeight * 0.01,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // Main [Height] 0.5
+                                    Neumorphic(
+                                      style: NeumorphicStyle(
+                                          // lightSource: neumorphicLightSource,
+                                          color: config.mainBackGroundWhite,
+                                          shape: NeumorphicShape.convex,
+                                          boxShape:
+                                              NeumorphicBoxShape.roundRect(
+                                                  BorderRadius.circular(
+                                                      roundRadius)),
+                                          intensity: 1,
+                                          depth: -1),
+                                      child: Container(
+                                        // color: Colors.grey.withOpacity(0.3),
+                                        height: screenHeight * 0.5,
+                                        width: mainWidgetWidth,
+                                        child: menuItems[menuPointer] == 'Trash'
+                                            ? TrashView(
                                                 widgetSize: Size(
-                                                  screenWidth * 0.8,
-                                                  screenHeight * 0.5,
-                                                ),
-                                                selectedDate: selectedDate,
-                                                setTargetAlbum: setTargetAlbum,
+                                                    mainWidgetWidth,
+                                                    screenHeight * 0.5),
                                               )
-                                            : menuItems[menuPointer] ==
-                                                    'CONTACT SHEET'
-                                                ? ContactSheetView(
+                                            : menuItems[menuPointer] == 'FILMS'
+                                                ? LightBoxView(
+                                                    scrollOffset: scrollOffset,
                                                     widgetSize: Size(
-                                                      screenWidth * 0.8,
+                                                      mainWidgetWidth,
                                                       screenHeight * 0.5,
                                                     ),
                                                     selectedDate: selectedDate,
                                                     setTargetAlbum:
                                                         setTargetAlbum,
                                                   )
-                                                : SingleChildScrollView(
-                                                    child: Column(
-                                                      children: List.generate(
-                                                        66,
-                                                        (i) {
-                                                          return GlimpseRowCard(
-                                                            date: DateTime.now()
-                                                                .subtract(
-                                                              Duration(
-                                                                  days: math
-                                                                          .Random()
-                                                                      .nextInt(
-                                                                          90)),
-                                                            ),
-                                                            rowWidth:
-                                                                screenWidth *
-                                                                    0.8,
-                                                            dayOfTheWeekList:
-                                                                dayOfTheWeekList,
-                                                          );
-                                                        },
+                                                : menuItems[menuPointer] ==
+                                                        'CONTACT SHEET'
+                                                    ? ContactSheetView(
+                                                        widgetSize: Size(
+                                                          mainWidgetWidth,
+                                                          screenHeight * 0.5,
+                                                        ),
+                                                        selectedDate:
+                                                            selectedDate,
+                                                        setTargetAlbum:
+                                                            setTargetAlbum,
+                                                        scrollOffset:
+                                                            scrollOffset,
+                                                      )
+                                                    : SingleChildScrollView(
+                                                        child: Column(
+                                                          children:
+                                                              List.generate(
+                                                            66,
+                                                            (i) {
+                                                              return GlimpseRowCard(
+                                                                date: DateTime
+                                                                        .now()
+                                                                    .subtract(
+                                                                  Duration(
+                                                                      days: math
+                                                                              .Random()
+                                                                          .nextInt(
+                                                                              90)),
+                                                                ),
+                                                                rowWidth:
+                                                                    screenWidth *
+                                                                        0.8,
+                                                                dayOfTheWeekList:
+                                                                    dayOfTheWeekList,
+                                                              );
+                                                            },
+                                                          ),
+                                                        ),
                                                       ),
-                                                    ),
-                                                  ),
-                                  ),
-                                )
-                              ],
-                            )),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: screenHeight * 0.01,
+                                    ),
+                                    Neumorphic(
+                                      style: NeumorphicStyle(
+                                          color: config.mainBackGroundWhite,
+                                          shape: NeumorphicShape.convex,
+                                          boxShape:
+                                              NeumorphicBoxShape.roundRect(
+                                                  BorderRadius.circular(
+                                                      roundRadius)),
+                                          intensity: 1,
+                                          depth: -1.5),
+                                      child: Padding(
+                                        padding: EdgeInsets.all(
+                                            mainWidgetWidth * 0.005),
+                                        child: timelineUnderGlassPanel(
+                                            mainWidgetWidth * 0.99,
+                                            screenHeight,
+                                            blur,
+                                            radioBackLightColor,
+                                            radioGlassColor),
+                                      ),
+                                    )
+                                  ],
+                                )),
+                          ),
+                        ),
+
+                        SizedBox(
+                          height: screenHeight,
+                          width: screenWidth,
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                  bottom: 0,
+                                  child: MenuPickerV2(
+                                    widgetSize: Size(
+                                      screenWidth,
+                                      screenHeight * 0.25,
+                                    ),
+                                    items: menuItems,
+                                    onItemSelected: onItemSelected,
+                                    datesOfSelectedAlbum: datesOfSelectedAlbum,
+                                    setTargetDatePointer: setTargetDatePointer,
+                                    setScrollOffset: setScrollOffset,
+                                  ))
+                            ],
+                          ),
+                        )
+
+                        // Menu Picker [Height] 0.26
+                        // SizedBox(
+                        //   height: screenHeight,
+                        //   width: screenWidth,
+                        //   child: Stack(
+                        //     alignment: Alignment.center,
+                        //     children: [
+                        //       Positioned(
+                        //           bottom: 0,
+                        //           child: ClipRect(
+                        //             child: Container(
+                        //               decoration: BoxDecoration(
+                        //                 // color: Colors.white.withOpacity(0.2),
+                        //                 gradient: LinearGradient(
+                        //                   colors: [
+                        //                     Colors.white.withOpacity(.3),
+                        //                     Colors.white.withOpacity(.5),
+                        //                   ],
+                        //                   begin: Alignment.topCenter,
+                        //                   end: Alignment.bottomCenter,
+                        //                 ),
+                        //               ),
+                        //               // color: Colors.white.withOpacity(.6),
+                        //
+                        //               width: screenWidth,
+                        //               height: screenWidth * 0.55,
+                        //               child: OverflowBox(
+                        //                 maxHeight: double.infinity,
+                        //                 maxWidth: double.infinity,
+                        //                 alignment: Alignment.topCenter,
+                        //                 child: Align(
+                        //                   alignment: Alignment.topCenter,
+                        //                   child: SizedBox(
+                        //                       width: screenWidth,
+                        //                       height: screenWidth,
+                        //                       child: Transform.translate(
+                        //                         offset: Offset(0, -0),
+                        //                         child: CircleMenuPicker(
+                        //                           datesLength:
+                        //                           datesOfSelectedAlbum.length,
+                        //                           setTargetDatePointer:
+                        //                           setTargetDatePointer,
+                        //                           onItemSelected: onItemSelected,
+                        //                           items: menuItems,
+                        //                           radius: screenWidth * 0.5 * 0.9,
+                        //                           menuItemsPath: menuItemsPath,
+                        //                           widgetSize: Size(screenWidth,
+                        //                               screenWidth * 0.5 * 0.9),
+                        //                         ),
+                        //                       )),
+                        //                 ),
+                        //               ),
+                        //             ),
+                        //           ))
+                        //     ],
+                        //   ),
+                        // ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )));
+  }
+
+  void setScrollOffset(int offset) {
+    print('======[main], setting offset, ${offset}');
+    setState(() {
+      scrollOffset = offset;
+      print('======[main], setting scrollOffset, ${scrollOffset}');
+    });
+  }
+
+  Widget timelineUnderGlassPanel(double glassPanelWidth, double screenHeight,
+      double blur, Color radioBackLightColor, Color radioGlassColor) {
+    return Stack(
+      children: [
+        timelineSection(glassPanelWidth, screenHeight),
+
+        // glass with orange light
+        Positioned.fill(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+                child: Stack(
+                  children: [
+                    // inner light
+                    Container(
+                      decoration: BoxDecoration(
+                        color: radioBackLightColor.withOpacity(0.1),
+                        gradient: LinearGradient(
+                          colors: [
+                            // Colors.white.withOpacity(0.5),
+                            Colors.white.withOpacity(0.1),
+                            Colors.white.withOpacity(0.2),
+                            Colors.white.withOpacity(0.3)
+                          ],
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                        ),
                       ),
                     ),
 
-                    // sticker
-                    // Positioned(
-                    //     left: 0,
-                    //     // right: 0,
-                    //     bottom: screenHeight * 0.25,
-                    //     child: Center(
-                    //       child: Transform.rotate(
-                    //         angle: -12 * pi / 180,
-                    //         child: Card(
-                    //           shape: RoundedRectangleBorder(
-                    //             borderRadius: BorderRadius.circular(11),
-                    //           ),
-                    //           color: config.sticker,
-                    //           elevation: 0.3,
-                    //           child: SizedBox(
-                    //               width: stickerWidth,
-                    //               child: Column(
-                    //                 children: [
-                    //                   SizedBox(
-                    //                     height: screenHeight * 0.05,
-                    //                   ),
-                    //                   Row(
-                    //                     children: [
-                    //                       const Spacer(),
-                    //
-                    //                       // index
-                    //                       Column(
-                    //                         children: List.generate(6, (i) {
-                    //                           return AnimatedNeumorphicText(
-                    //                             text: '$i',
-                    //                             prevDepth: prevDepths[i],
-                    //                             depth: depths[i],
-                    //                             onTap: () {
-                    //                               Navigator.pushNamed(context,
-                    //                                   menuItemsPath[i]);
-                    //                             },
-                    //                             fontSize: stickerWidth * 0.123,
-                    //                             color: config.sticker,
-                    //                             depthInDuration:
-                    //                                 depthInDuration,
-                    //                             depthOutDuration:
-                    //                                 depthOutDuration,
-                    //                           );
-                    //                         }),
-                    //                       ),
-                    //
-                    //                       SizedBox(
-                    //                         width: screenWidth * 0.05,
-                    //                       ),
-                    //
-                    //                       // items
-                    //                       Column(
-                    //                         children: List.generate(6, (i) {
-                    //                           return AnimatedNeumorphicText(
-                    //                             text: menuItems[i],
-                    //                             prevDepth: prevDepths[i],
-                    //                             depth: depths[i],
-                    //                             onTap: () {
-                    //                               Navigator.pushNamed(context,
-                    //                                   menuItemsPath[i]);
-                    //                             },
-                    //                             fontSize: stickerWidth * 0.123,
-                    //                             color: config.sticker,
-                    //                             depthInDuration:
-                    //                                 depthInDuration,
-                    //                             depthOutDuration:
-                    //                                 depthOutDuration,
-                    //                           );
-                    //                         }),
-                    //                       ),
-                    //                       const Spacer(),
-                    //                     ],
-                    //                   ),
-                    //                   SizedBox(
-                    //                     height: screenHeight * 0.05,
-                    //                   ),
-                    //                 ],
-                    //               )),
-                    //         ),
-                    //       ),
-                    //     )),
+                    // subtle orange
+                    ShaderMask(
+                      shaderCallback: (bounds) {
+                        return RadialGradient(
+                          center: const Alignment(0, 1),
+                          radius: 2,
+                          colors: [
+                            radioBackLightColor.withOpacity(0.3),
+                            radioBackLightColor.withOpacity(0.15),
+                            radioBackLightColor.withOpacity(0.05),
+                          ],
+                        ).createShader(bounds);
+                      },
+                      blendMode: BlendMode.softLight,
+                      child: Container(
+                        color: Colors.white.withOpacity(0.05), // 光感混合用 base 色
+                      ),
+                    ),
 
-                    SizedBox(
-                      height: screenHeight,
-                      width: screenWidth,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Positioned(
-                              bottom: 0,
-                              child: ClipRect(
-                                child: Container(
-                                  color: Colors.white,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      // color: Colors.white.withOpacity(0.2),
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.white.withOpacity(.3),
-                                          Colors.white.withOpacity(.5),
-                                        ],
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                      ),
-                                    ),
-                                    // color: Colors.white.withOpacity(.6),
+                    // red light
+                    ShaderMask(
+                      shaderCallback: (bounds) {
+                        return RadialGradient(
+                          center: const Alignment(0, -1),
+                          radius: 2,
+                          colors: [
+                            Colors.red.withOpacity(0.08),
+                            Colors.red.withOpacity(0.02),
+                          ],
+                        ).createShader(bounds);
+                      },
+                      blendMode: BlendMode.softLight,
+                      child: Container(
+                        color: Colors.white.withOpacity(0.05), // 光感混合用 base 色
+                      ),
+                    ),
 
-                                    width: screenWidth,
-                                    height: screenHeight * 0.26,
-                                    child: OverflowBox(
-                                      maxHeight: double.infinity,
-                                      maxWidth: double.infinity,
-                                      alignment: Alignment.topCenter,
-                                      child: Align(
-                                        alignment: Alignment.topCenter,
-                                        child: SizedBox(
-                                          width: screenWidth,
-                                          height: screenWidth,
-                                          child: Center(
-                                            child: CircleMenuPickerView(
-                                              datesLength:
-                                                  datesOfSelectedAlbum.length,
-                                              setTargetDatePointer:
-                                                  setTargetDatePointer,
-                                              onItemSelected: onItemSelected,
-                                              items: menuItems,
-                                              radius: screenWidth * 0.45,
-                                              menuItemsPath: menuItemsPath,
-                                              widgetSize: Size(screenWidth,
-                                                  screenHeight * 0.26),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ))
-                        ],
+                    // white light
+                    ShaderMask(
+                      shaderCallback: (bounds) {
+                        return RadialGradient(
+                          center: const Alignment(0, 1),
+                          radius: 3,
+                          colors: [
+                            Colors.white.withOpacity(0.1),
+                            Colors.white.withOpacity(0.05),
+                            Colors.white.withOpacity(0.01),
+                          ],
+                        ).createShader(bounds);
+                      },
+                      blendMode: BlendMode.softLight,
+                      child: Container(
+                        color: Colors.white.withOpacity(0.05), // 光感混合用 base 色
+                      ),
+                    ),
+
+                    // black shadow
+                    ShaderMask(
+                      shaderCallback: (bounds) {
+                        return RadialGradient(
+                            center: const Alignment(0, 0),
+                            radius: 1.68,
+                            colors: [
+                              Colors.black.withOpacity(0.0),
+                              Colors.black.withOpacity(0.068),
+                              Colors.black.withOpacity(0.268),
+                            ],
+                            stops: const [
+                              0,
+                              0.5,
+                              0.9
+                            ]).createShader(bounds);
+                      },
+                      blendMode: BlendMode.softLight,
+                      child: Container(
+                        color: Colors.white.withOpacity(0.05), // 光感混合用 base 色
+                      ),
+                    ),
+
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(5),
+                        child: Opacity(
+                          opacity: 0.068,
+                          child: Image.asset(
+                            'assets/images/glass2.png',
+                            fit: BoxFit.cover,
+                            colorBlendMode: BlendMode.screen,
+                            color: Colors.white.withOpacity(0),
+                          ),
+                        ),
                       ),
                     ),
                   ],
+                )),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget timelineSection(double widgetWidth, double screenHeight) {
+    double paddingW = widgetWidth * 0.0168;
+    return Neumorphic(
+      style: NeumorphicStyle(
+          // lightSource: neumorphicLightSource,
+          color: config.mainBackGroundWhite,
+          shape: NeumorphicShape.convex,
+          boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(6)),
+          intensity: 1,
+          depth: -1),
+      child: Padding(
+          padding: EdgeInsets.all(paddingW),
+          child: Column(
+            children: [
+              Neumorphic(
+                style: NeumorphicStyle(
+                    // lightSource: neumorphicLightSource,
+                    color: config.mainBackGroundWhite,
+                    shape: NeumorphicShape.convex,
+                    boxShape:
+                        NeumorphicBoxShape.roundRect(BorderRadius.circular(2)),
+                    intensity: 1,
+                    depth: -2.68),
+                child: HorizontalDateTimeline(
+                  size: Size(
+                    widgetWidth - paddingW * 2,
+                    screenHeight * 0.05,
+                  ),
+                  selectedDate: selectedDate,
+                  photosCountPerDay: photosCountPerDay,
+                  modeType: modeDate,
                 ),
               ),
-            ),
-          ),
-        ));
+              SizedBox(
+                height: screenHeight * 0.01,
+              ),
+              Neumorphic(
+                style: NeumorphicStyle(
+                    // lightSource: neumorphicLightSource,
+                    color: config.mainBackGroundWhite,
+                    shape: NeumorphicShape.convex,
+                    boxShape:
+                        NeumorphicBoxShape.roundRect(BorderRadius.circular(2)),
+                    intensity: 1,
+                    depth: -2.68),
+                child: HorizontalDateTimeline(
+                  size: Size(
+                    widgetWidth - paddingW * 2,
+                    screenHeight * 0.025,
+                  ),
+                  selectedDate: selectedDate,
+                  photosCountPerDay: photosCountPerDay,
+                  modeType: modeMonth,
+                ),
+              ),
+              SizedBox(
+                height: screenHeight * 0.01,
+              ),
+              Neumorphic(
+                style: NeumorphicStyle(
+                    // lightSource: neumorphicLightSource,
+                    color: config.mainBackGroundWhite,
+                    shape: NeumorphicShape.convex,
+                    boxShape:
+                        NeumorphicBoxShape.roundRect(BorderRadius.circular(2)),
+                    intensity: 1,
+                    depth: -2.68),
+                child: HorizontalDateTimeline(
+                  size: Size(
+                    widgetWidth - paddingW * 2,
+                    screenHeight * 0.025,
+                  ),
+                  selectedDate: selectedDate,
+                  photosCountPerDay: photosCountPerDay,
+                  modeType: modeYear,
+                ),
+              ),
+            ],
+          )),
+    );
   }
 
   Future<void> setTargetAlbum(String targetAlbum) async {
@@ -408,6 +619,7 @@ class _MyHomePageState extends State<MyHomePage> {
     await setDatesOfSelectedAlbum();
     setState(() {
       selectedDate = datesOfSelectedAlbum[0];
+      scrollOffset = 0;
     });
   }
 
@@ -430,6 +642,8 @@ class _MyHomePageState extends State<MyHomePage> {
     // 3. 取得所有照片（不分頁）
     final count = await album.assetCountAsync;
 
+    print('======setDatesOfSelectedAlbum: count: ${count}');
+
     // 4. 一次取得全部照片
     final assets = await album.getAssetListPaged(page: 0, size: count);
 
@@ -449,6 +663,7 @@ class _MyHomePageState extends State<MyHomePage> {
     datesOfSelectedAlbum.sort((a, b) => b.compareTo(a));
 
     print('====== sorted? : $datesOfSelectedAlbum');
+    print('====== photosCountPerDay? : $photosCountPerDay');
   }
 
   void setTargetDatePointer(int x) {
@@ -463,10 +678,12 @@ class _MyHomePageState extends State<MyHomePage> {
             : targetDatePointer + x;
     setState(() {
       selectedDate = datesOfSelectedAlbum[targetDatePointer];
+      scrollOffset = 0;
     });
   }
 
   void onItemSelected(int newIndex) {
+    print('====== newIndex $newIndex');
     if (newIndex == menuPointer) return;
 
     // 👉 取消先前設定的延遲動畫，避免動畫疊加。
@@ -501,7 +718,6 @@ class _MyHomePageState extends State<MyHomePage> {
         depths[oldIndex] = _depthNormal;
         depths[newIndex] = _depthMax;
         menuPointer = newIndex;
-        print('====== itme: ${menuItems[menuPointer]}');
       });
 
       // Timer(Duration(milliseconds: 500), () { // 👉 再設定下一段延遲動畫（1000ms），做最後一段動畫。
@@ -731,11 +947,13 @@ class _ChasingViewState extends State<ChasingView> {
     // display subsequent two items.
     for (int i = 0; i < bottles.length; i++) {
       double leftX = centerX +
-          RotationUtils.radiusProjector(bottles[i].bearingAngle + _currentHeading,
+          RotationUtils.radiusProjector(
+                  bottles[i].bearingAngle + _currentHeading,
                   targetRadiusToCenter)
               .dx;
       double topY = centerY -
-          RotationUtils.radiusProjector(bottles[i].bearingAngle + _currentHeading,
+          RotationUtils.radiusProjector(
+                  bottles[i].bearingAngle + _currentHeading,
                   targetRadiusToCenter)
               .dy;
       targets.add(Positioned(

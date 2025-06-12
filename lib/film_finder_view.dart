@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:glimpse/circle_date_picker_view.dart';
 
-import 'light_box_view.dart';
+import 'widgets/light_box_view.dart';
 
 class FilmFinderView extends StatefulWidget {
   const FilmFinderView({super.key});
@@ -58,7 +58,7 @@ class _FilmFinderViewState extends State<FilmFinderView> {
                       child: LightBoxView(
                         selectedDate: selectedDate,
                         setTargetAlbum: setGlimpseCount,
-                        widgetSize: widgetSize,
+                        widgetSize: widgetSize, scrollOffset: 0,
                       ),
                     )),
 
