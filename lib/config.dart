@@ -27,6 +27,8 @@ const Color timelinePointerRed = Color(0xffdd2222);
 
 const Color filmColorBrown = Color(0xFF8B4513);
 
+const Color nikonRadioBackLight = Colors.orange;
+
 
 // const Color filmColor = Color(0xFF171313);
 const Color filmColor = Colors.black;

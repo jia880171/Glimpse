@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:glimpse/views/trash_view.dart';
+import 'package:glimpse/widgets/trash.dart';
 
 import 'create_glimpse.dart';
-import 'rotatable_Glimpse_card_view.dart';
+import 'widgets/rotatable_card/rotatable_Glimpse_card_view.dart';
 import 'film_finder_view.dart';
 import 'main.dart';
 

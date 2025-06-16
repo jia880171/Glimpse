@@ -6,12 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:glimpse/cirvular_text.dart';
 import 'package:glimpse/models/glimpse.dart';
-import 'package:glimpse/rotatable_Glimpse_card_view.dart';
+import 'package:glimpse/widgets/rotatable_card/rotatable_Glimpse_card_view.dart';
 import 'package:glimpse/views/glimpse_creation_view.dart';
 import 'package:glimpse/widgets/clickable_neumorphicIcon.dart';
 import 'package:glimpse/widgets/exif_card.dart';
 
-import './config.dart' as config;
+import '../../config.dart' as config;
 
 class RotatableGlimpseCardBackView extends StatefulWidget {
   final String imagePath;

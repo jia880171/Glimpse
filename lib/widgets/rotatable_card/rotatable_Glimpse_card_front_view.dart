@@ -4,11 +4,12 @@ import 'dart:ui' as ui;
 import 'package:exif/exif.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
+import 'package:glimpse/common/utils/image_utils.dart';
 import 'package:glimpse/widgets/film/film_roll_left.dart';
 import 'package:glimpse/widgets/film/film_roll_right_view.dart';
 import 'package:image/image.dart' as img;
 
-import './config.dart' as config;
+import '../../config.dart' as config;
 
 class RotatableGlimpseCardFrontView extends StatefulWidget {
   final String? imagePath;
@@ -19,6 +20,7 @@ class RotatableGlimpseCardFrontView extends StatefulWidget {
   final int index;
   final bool isNeg;
   final Function leaveCardMode;
+  final ui.Image? processedImage;
 
   const RotatableGlimpseCardFrontView({
     Key? key,
@@ -30,6 +32,7 @@ class RotatableGlimpseCardFrontView extends StatefulWidget {
     required this.index,
     required this.isNeg,
     required this.leaveCardMode,
+    this.processedImage,
   }) : super(key: key);
 
   @override
@@ -41,7 +44,6 @@ class RotatableGlimpseCardFrontViewState
     extends State<RotatableGlimpseCardFrontView> {
   LightSource _neumorphicLightSource = LightSource.topLeft;
   late Uint8List image;
-  ui.Image? _processedImage;
 
   String imageMake = '';
   String cameraModel = '';
@@ -64,75 +66,26 @@ class RotatableGlimpseCardFrontViewState
     );
   }
 
-  String formatAperture(String rawValue) {
-    try {
-      double av;
-
-      if (rawValue.contains('/')) {
-        final parts = rawValue.split('/');
-        final num = double.parse(parts[0]);
-        final denom = double.parse(parts[1]);
-        av = num / denom;
-      } else {
-        av = double.parse(rawValue);
-      }
-
-      final fNumber = pow(2, av / 2);
-      return 'f/${fNumber.toStringAsFixed(1)}';
-    } catch (e) {
-      print('====== Aperture Parse Error: $e');
-      return '未知光圈';
-    }
-  }
-
-  String formatShutterSpeed(String rawValue) {
-    try {
-      double log2Value;
-
-      if (rawValue.contains('/')) {
-        final parts = rawValue.split('/');
-        final num = double.parse(parts[0]);
-        final denom = double.parse(parts[1]);
-        log2Value = num / denom;
-      } else {
-        log2Value = double.parse(rawValue);
-      }
-
-      final shutterTime = pow(2, -log2Value).toDouble();
-
-      if (shutterTime >= 1.0) {
-        return '${shutterTime.toStringAsFixed(1)}s';
-      } else {
-        final reciprocal = (1 / shutterTime).round();
-        return '1/$reciprocal';
-      }
-    } catch (e) {
-      print('====== Shutter Parse Error: $e');
-      return '未知快門';
-    }
-  }
-
   void setImgInformation() {
     final data = widget.exifData;
     // print('======data ${data} ');
     if (data.isNotEmpty) {
-      print('====== setting setImgInformation [Exif data]');
+      print(
+          '======[front] setting setImgInformation [Exif data], ID ${data['Image DateTime']?.printable}');
       // for (var entry in data.entries) {
       //   print('${entry.key}: ${entry.value}');
       // }
-
-      // final cameraModel = data['Image Model'];
-
       setState(() {
         imageMake = data['Image Make']?.printable ?? '未知品牌';
         cameraModel = data['Image Model']?.printable ?? '未知機型';
         lensModel = data['EXIF LensModel']?.printable ?? '未知鏡頭';
         shutterSpeed = data['EXIF ShutterSpeedValue']?.printable != null
-            ? formatShutterSpeed(data['EXIF ShutterSpeedValue']!.printable!)
+            ? ImageUtils.formatShutterSpeed(
+                data['EXIF ShutterSpeedValue']!.printable!)
             : '未知快門';
         aperture = data['EXIF ApertureValue']?.printable != null
-            ? formatAperture(data['EXIF ApertureValue']!.printable!)
-            : '未知快門';
+            ? ImageUtils.formatAperture(data['EXIF ApertureValue']!.printable!)
+            : '未知光圈';
         dateOFPic = data['Image DateTime']?.printable ?? '未知日期';
         iso = data['EXIF ISOSpeedRatings']?.printable ?? '未知';
       });
@@ -151,15 +104,15 @@ class RotatableGlimpseCardFrontViewState
     super.initState();
     setImgInformation(); // 僅跑一次
     setImage();
-    _processImage();
+    // _processImage();
   }
 
-  Future<void> _processImage() async {
-    final rawImage = await decodeAndRotateIfNeeded(image);
-    setState(() {
-      _processedImage = rawImage;
-    });
-  }
+  // Future<void> _processImage() async {
+  //   final rawImage = await decodeAndRotateIfNeeded(image);
+  //   setState(() {
+  //     processedImage = rawImage;
+  //   });
+  // }
 
   void setImage() {
     image = widget.image;
@@ -214,12 +167,11 @@ class RotatableGlimpseCardFrontViewState
                     Text(imageMake,
                         style: TextStyle(
                             fontFamily: 'Open-Sans',
-                            fontSize: widget.cardSize.height * 0.3*0.1)),
+                            fontSize: widget.cardSize.height * 0.3 * 0.1)),
                     const Spacer(),
                     Stack(
                       alignment: Alignment.center,
                       children: [
-
                         // dent
                         Neumorphic(
                           style: NeumorphicStyle(
@@ -259,10 +211,13 @@ class RotatableGlimpseCardFrontViewState
                                 angle: -1 * pi / 180,
                                 child: Stack(
                                   children: [
-                                    _buildFrameUnit(
-                                        widget.cardSize.width * 0.66,
-                                        widget.cardSize.height * 0.66,
-                                        widget.backLight),
+                                    widget.processedImage == null
+                                        ? const CircularProgressIndicator()
+                                        : _buildFrameUnit(
+                                            widget.cardSize.width * 0.66,
+                                            widget.cardSize.height * 0.66,
+                                            widget.backLight,
+                                          ),
                                     !widget.isNeg
                                         ? Positioned.fill(
                                             child: IgnorePointer(
@@ -364,7 +319,23 @@ class RotatableGlimpseCardFrontViewState
   Widget _buildFrameUnit(
       double frameWidth, double frameHeight, Color backLight) {
     final double photoFrameHeight = frameHeight * 0.7;
+    final double photoFrameWidth = frameWidth * 0.7;
     final holeHeight = frameHeight * 0.06;
+
+    final double photoMaxHeight = photoFrameHeight;
+    final double photoMaxWidth = photoFrameWidth;
+
+    if(widget.processedImage == null){
+      return SizedBox();
+    }
+
+    final double imageWidth = widget.processedImage!.width.toDouble();
+    final double imageHeight =  widget.processedImage!.height.toDouble();
+
+    final double estimatedWidth = photoMaxHeight * imageWidth / imageHeight;
+
+    final BoxFit fitMode =
+        estimatedWidth > photoMaxWidth ? BoxFit.fitWidth : BoxFit.fitHeight;
 
     return Container(
       width: frameWidth,
@@ -381,13 +352,13 @@ class RotatableGlimpseCardFrontViewState
               index: widget.index,
             ),
             SizedBox(
-              height: photoFrameHeight,
-              width: frameWidth * 0.7,
+              height: frameHeight,
+              width: photoFrameWidth,
               child: FittedBox(
-                  fit: BoxFit.fitWidth,
+                  fit: fitMode,
                   alignment: Alignment.center,
                   child: RawImage(
-                    image: _processedImage,
+                    image: widget.processedImage,
                     fit: BoxFit.contain,
                   )),
             ),
@@ -405,30 +376,30 @@ class RotatableGlimpseCardFrontViewState
     );
   }
 
-  Future<ui.Image> decodeAndRotateIfNeeded(Uint8List data) async {
-    final codec = await ui.instantiateImageCodec(data);
-    final frame = await codec.getNextFrame();
-    final image = frame.image;
-
-    if (image.width > image.height) {
-      // 橫圖 → 旋轉 90 度
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-
-      final rotatedWidth = image.height.toDouble();
-      final rotatedHeight = image.width.toDouble();
-
-      canvas.translate(rotatedWidth, 0);
-      canvas.rotate(90 * 3.1415927 / 180);
-
-      canvas.drawImage(image, Offset.zero, Paint());
-
-      final picture = recorder.endRecording();
-      return await picture.toImage(rotatedWidth.toInt(), rotatedHeight.toInt());
-    }
-
-    return image; // 直圖，不旋轉
-  }
+  // Future<ui.Image> decodeAndRotateIfNeeded(Uint8List data) async {
+  //   final codec = await ui.instantiateImageCodec(data);
+  //   final frame = await codec.getNextFrame();
+  //   final image = frame.image;
+  //
+  //   if (image.width > image.height) {
+  //     // 橫圖 → 旋轉 90 度
+  //     final recorder = ui.PictureRecorder();
+  //     final canvas = Canvas(recorder);
+  //
+  //     final rotatedWidth = image.height.toDouble();
+  //     final rotatedHeight = image.width.toDouble();
+  //
+  //     canvas.translate(rotatedWidth, 0);
+  //     canvas.rotate(90 * 3.1415927 / 180);
+  //
+  //     canvas.drawImage(image, Offset.zero, Paint());
+  //
+  //     final picture = recorder.endRecording();
+  //     return await picture.toImage(rotatedWidth.toInt(), rotatedHeight.toInt());
+  //   }
+  //
+  //   return image; // 直圖，不旋轉
+  // }
 
   Uint8List applyNegativeEffect(Uint8List imageData) {
     // 解碼圖片

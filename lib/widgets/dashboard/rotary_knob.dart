@@ -60,7 +60,7 @@ class _RotaryKnobState extends State<RotaryKnob> {
   late bool isNoItem = widget.itemsLength == 0;
 
   late double dentRadius =
-      math.min(widget.widgetWidth, widget.widgetHeight) * 0.5 * 0.8;
+      math.min(widget.widgetWidth, widget.widgetHeight) * 0.3;
   late double radius = dentRadius * 0.98;
   late double innerRadius = radius * 0.6;
   late double dashWidth = (dentRadius - innerRadius);

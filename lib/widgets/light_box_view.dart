@@ -12,21 +12,27 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 import '../config.dart' as config;
-import '../rotatable_Glimpse_card_view.dart';
 import 'film/film_roll_view.dart';
+import 'rotatable_card/rotatable_Glimpse_card_view.dart';
 
 class LightBoxView extends StatefulWidget {
   final DateTime selectedDate;
   final Function setTargetAlbum;
   final Size widgetSize;
-  final int scrollOffset;
+  final int imagePointerFromParent;
+  final Function(int currentIndex) setImagesPointer;
+  final Function(int imagesLength) setImagesWithDummiesLength;
+  final Function(Map<String?, IfdTag>) setEXIFOfPointedImg;
 
   const LightBoxView(
       {Key? key,
       required this.selectedDate,
       required this.setTargetAlbum,
       required this.widgetSize,
-      required this.scrollOffset})
+      required this.imagePointerFromParent,
+      required this.setImagesPointer,
+      required this.setImagesWithDummiesLength,
+      required this.setEXIFOfPointedImg})
       : super(key: key);
 
   @override
@@ -53,7 +59,7 @@ class LightBoxViewState extends State<LightBoxView>
   String targetAlbumName = '';
 
   List<String> albumNames = [];
-  List<AssetEntity> visibleImages = [];
+  List<AssetEntity> imagesWithDummies = [];
   List<AssetPathEntity> _cachedAlbums = [];
 
   // card mode
@@ -92,7 +98,7 @@ class LightBoxViewState extends State<LightBoxView>
     if (oldWidget.selectedDate != widget.selectedDate) {
       _loadImagesForSelectedDate();
     }
-    scrollOffset = widget.scrollOffset;
+    // scrollOffset = widget.scrollOffset;
   }
 
   @override
@@ -103,8 +109,8 @@ class LightBoxViewState extends State<LightBoxView>
     Color dateColor = const Color(0xFFF9A825);
     double dateSectionHeight = 100;
 
-    print(
-        '====== [lightbox] builds widget.scrollOffset ${widget.scrollOffset}');
+    // print(
+    // '====== [lightbox] builds widget.scrollOffset ${widget.scrollOffset}');
     return Scaffold(
         body: SingleChildScrollView(
       child: ConstrainedBox(
@@ -114,31 +120,33 @@ class LightBoxViewState extends State<LightBoxView>
           child: IntrinsicHeight(
             child: Stack(
               children: [
+
                 // film
-                Center(
+                RotatedBox(
+                    quarterTurns: 1,
                   child: SizedBox(
-                    // width: widgetSize.width * 0.8,
-                    // height: widgetSize.height,
+                    width: widgetSize.height,
+                    height: widgetSize.width,
                     child: FilmRollView(
-                      offset: scrollOffset,
-                      viewSize: Size(widgetSize.width, widgetSize.height),
-                      images: visibleImages,
-                      thumbnailCache: _thumbnailCache,
-                      backLight: backLight,
-                      noHeader: false,
-                      isNeg: isNeg,
-                      isContactSheet: false,
-                      targetAlbumName: targetAlbumName,
-                      selectedDate: widget.selectedDate,
-                      onTapPic: onTapPic,
-                      leaveCardMode: leaveCardMode,
-                    ),
+                        viewSize: Size(widgetSize.width, widgetSize.width),
+                        imagesWithDummies: imagesWithDummies,
+                        thumbnailCache: _thumbnailCache,
+                        backLight: backLight,
+                        noHeader: false,
+                        isNeg: isNeg,
+                        isContactSheet: false,
+                        targetAlbumName: targetAlbumName,
+                        selectedDate: widget.selectedDate,
+                        onTapPic: onTapPic,
+                        setImagesPointer: widget.setImagesPointer,
+                        imagePointerFromParent: widget.imagePointerFromParent,
+                        setEXIFOfPointedImg: widget.setEXIFOfPointedImg),
                   ),
                 ),
 
                 // menu
                 Positioned(
-                    top: (widgetSize.width - (dateSectionHeight / 2)) / 2,
+                    top: widgetSize.height*0.1,
                     left: widgetSize.width * 0.02,
                     child: Transform.rotate(
                       angle: 90 * pi / 180,
@@ -270,7 +278,7 @@ class LightBoxViewState extends State<LightBoxView>
 
                 // light switch
                 Positioned(
-                  top: widgetSize.height * .6,
+                  top: widgetSize.height * .5,
                   left: widgetSize.width * 0.02,
                   child: Switch(
                     value: lightOn,
@@ -441,8 +449,9 @@ class LightBoxViewState extends State<LightBoxView>
     await generateAndCacheThumbnails(visibleImages);
 
     setState(() {
-      this.visibleImages = visibleImages;
+      imagesWithDummies = visibleImages;
       visibleImageCount = visibleImages.isEmpty ? 0 : visibleImages.length - 2;
+      widget.setImagesWithDummiesLength(imagesWithDummies.length);
       isLoading = false;
     });
   }

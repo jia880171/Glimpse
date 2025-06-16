@@ -4,19 +4,21 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:exif/exif.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:glimpse/services/database_service.dart';
-import 'package:glimpse/views/trash_view.dart';
+import 'package:glimpse/widgets/dashboard/dashboard.dart';
 import 'package:glimpse/widgets/horizontal_date_timeline.dart';
 import 'package:glimpse/widgets/light_box_view.dart';
-import 'package:glimpse/widgets/menu_picker_v2/menu_picker_widget_v2.dart';
+import 'package:glimpse/widgets/trash.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 import './config.dart' as config;
 import 'Routes.dart';
+import 'common/utils/image_utils.dart';
 import 'common/utils/rotation_utils.dart';
 import 'database_sqlite/attraction.dart';
 import 'glimpse_row_in_main.dart';
@@ -64,6 +66,7 @@ enum Modes {
   displayAttractions,
 }
 
+
 class _MyHomePageState extends State<MyHomePage> {
   bool _canPop = false;
 
@@ -95,7 +98,6 @@ class _MyHomePageState extends State<MyHomePage> {
     '/printer'
   ];
 
-  double roundRadius = 5;
   int menuPointer = 0;
   final double _depthMax = 0.5;
   final double _depthMin = 0;
@@ -103,10 +105,16 @@ class _MyHomePageState extends State<MyHomePage> {
   List<double> depths = [];
   List<double> prevDepths = [];
   Timer? _timer;
-  int scrollOffset = 0;
+
+  String shutterSpeed = '0';
+  String aperture = '0';
+  String iso = '0';
 
   String? targetAlbum;
   int targetDatePointer = 0;
+  int imagePointer = 1;
+  int imagesWithDummiesLength = 0;
+
   List<DateTime> datesOfSelectedAlbum = [];
   Map<DateTime, int> photosCountPerDay = {};
   DateTime selectedDate = DateTime.now();
@@ -128,14 +136,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    print('====== [main build] scroll offset ${scrollOffset}');
-
     double screenWidth = MediaQuery.of(context).size.width;
+    double radiusOfMainView = screenWidth* 0.05;
+
     double mainWidgetWidth = screenWidth * 0.96;
     double screenHeight = MediaQuery.of(context).size.height;
+    double mainWidgetHeight = screenHeight * 0.4;
+    double mainWidgetHeightFilm = screenHeight * 0.36;
+
+    double dashboardHeight = screenHeight * 0.35;
     Color radioGlassColor = Colors.white.withOpacity(0.9);
     Color radioBackLightColor = Colors.orange;
     double blur = 0.3;
+
+    double roundRadiusOfMainWidget = screenWidth*0.0168;
 
     return PopScope(
         canPop: _canPop,
@@ -151,8 +165,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   Brightness.dark, // Dark status bar icons (like time, battery)
             ),
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(28), // 👈 底部圓角
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(roundRadiusOfMainWidget), // 👈 底部圓角
               ),
               child: Scaffold(
                 body: SingleChildScrollView(
@@ -167,7 +181,6 @@ class _MyHomePageState extends State<MyHomePage> {
                           color: config.mainBackGroundWhite,
                         ),
 
-                        // Main [Height] 0.6
                         Positioned(
                           top: screenHeight * 0.05,
                           left: 0,
@@ -179,6 +192,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                 width: screenWidth,
                                 child: Column(
                                   children: [
+
                                     SizedBox(
                                       height: screenHeight * 0.05,
                                       child: Column(
@@ -201,84 +215,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                       ),
                                     ),
 
-                                    // Main [Height] 0.5
-                                    Neumorphic(
-                                      style: NeumorphicStyle(
-                                          // lightSource: neumorphicLightSource,
-                                          color: config.mainBackGroundWhite,
-                                          shape: NeumorphicShape.convex,
-                                          boxShape:
-                                              NeumorphicBoxShape.roundRect(
-                                                  BorderRadius.circular(
-                                                      roundRadius)),
-                                          intensity: 1,
-                                          depth: -1),
-                                      child: Container(
-                                        // color: Colors.grey.withOpacity(0.3),
-                                        height: screenHeight * 0.5,
-                                        width: mainWidgetWidth,
-                                        child: menuItems[menuPointer] == 'Trash'
-                                            ? TrashView(
-                                                widgetSize: Size(
-                                                    mainWidgetWidth,
-                                                    screenHeight * 0.5),
-                                              )
-                                            : menuItems[menuPointer] == 'FILMS'
-                                                ? LightBoxView(
-                                                    scrollOffset: scrollOffset,
-                                                    widgetSize: Size(
-                                                      mainWidgetWidth,
-                                                      screenHeight * 0.5,
-                                                    ),
-                                                    selectedDate: selectedDate,
-                                                    setTargetAlbum:
-                                                        setTargetAlbum,
-                                                  )
-                                                : menuItems[menuPointer] ==
-                                                        'CONTACT SHEET'
-                                                    ? ContactSheetView(
-                                                        widgetSize: Size(
-                                                          mainWidgetWidth,
-                                                          screenHeight * 0.5,
-                                                        ),
-                                                        selectedDate:
-                                                            selectedDate,
-                                                        setTargetAlbum:
-                                                            setTargetAlbum,
-                                                        scrollOffset:
-                                                            scrollOffset,
-                                                      )
-                                                    : SingleChildScrollView(
-                                                        child: Column(
-                                                          children:
-                                                              List.generate(
-                                                            66,
-                                                            (i) {
-                                                              return GlimpseRowCard(
-                                                                date: DateTime
-                                                                        .now()
-                                                                    .subtract(
-                                                                  Duration(
-                                                                      days: math
-                                                                              .Random()
-                                                                          .nextInt(
-                                                                              90)),
-                                                                ),
-                                                                rowWidth:
-                                                                    screenWidth *
-                                                                        0.8,
-                                                                dayOfTheWeekList:
-                                                                    dayOfTheWeekList,
-                                                              );
-                                                            },
-                                                          ),
-                                                        ),
-                                                      ),
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      height: screenHeight * 0.01,
-                                    ),
+                                    // timeline
                                     Neumorphic(
                                       style: NeumorphicStyle(
                                           color: config.mainBackGroundWhite,
@@ -286,7 +223,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                           boxShape:
                                               NeumorphicBoxShape.roundRect(
                                                   BorderRadius.circular(
-                                                      roundRadius)),
+                                                      roundRadiusOfMainWidget)),
                                           intensity: 1,
                                           depth: -1.5),
                                       child: Padding(
@@ -299,7 +236,112 @@ class _MyHomePageState extends State<MyHomePage> {
                                             radioBackLightColor,
                                             radioGlassColor),
                                       ),
-                                    )
+                                    ),
+
+                                    SizedBox(
+                                      height: screenHeight * 0.01,
+                                    ),
+                                    // Main [Height] 0.5
+
+                                    if (menuItems[menuPointer] == 'FILMS')
+                                      Neumorphic(
+                                          style: NeumorphicStyle(
+                                              color: config.mainBackGroundWhite,
+                                              shape: NeumorphicShape.convex,
+                                              boxShape:
+                                                  NeumorphicBoxShape.roundRect(
+                                                      BorderRadius.circular(
+                                                          roundRadiusOfMainWidget)),
+                                              intensity: 1,
+                                              depth: -1),
+                                          child: Container(
+                                            height: mainWidgetHeightFilm,
+                                            width: mainWidgetWidth,
+                                            child: LightBoxView(
+                                              widgetSize: Size(
+                                                mainWidgetWidth,
+                                                mainWidgetHeightFilm,
+                                              ),
+                                              selectedDate: selectedDate,
+                                              setTargetAlbum: setTargetAlbum,
+                                              setImagesPointer:
+                                                  setImagesPointer,
+                                              setImagesWithDummiesLength:
+                                                  setImagesWithDummiesLength,
+                                              imagePointerFromParent:
+                                                  imagePointer,
+                                              setEXIFOfPointedImg:
+                                                  setEXIFOfPointedImg,
+                                            ),
+                                          )),
+
+                                    if (menuItems[menuPointer] == 'Trash' ||
+                                        menuItems[menuPointer] ==
+                                            'CONTACT SHEET')
+                                      Neumorphic(
+                                        style: NeumorphicStyle(
+                                            // lightSource: neumorphicLightSource,
+                                            color: config.mainBackGroundWhite,
+                                            shape: NeumorphicShape.convex,
+                                            boxShape:
+                                                NeumorphicBoxShape.roundRect(
+                                                    BorderRadius.circular(
+                                                        roundRadiusOfMainWidget)),
+                                            intensity: 1,
+                                            depth: -0.8),
+                                        child: Container(
+                                          // color: Colors.grey.withOpacity(0.3),
+                                          height: mainWidgetHeight,
+                                          width: mainWidgetWidth,
+                                          child:
+                                              menuItems[menuPointer] == 'Trash'
+                                                  ? TrashView(
+                                                      widgetSize: Size(
+                                                          mainWidgetWidth,
+                                                          mainWidgetHeight),
+                                                    )
+                                                  : menuItems[menuPointer] ==
+                                                          'CONTACT SHEET'
+                                                      ? ContactSheetView(
+                                                          widgetSize: Size(
+                                                            mainWidgetWidth,
+                                                            mainWidgetHeight,
+                                                          ),
+                                                          selectedDate:
+                                                              selectedDate,
+                                                          setTargetAlbum:
+                                                              setTargetAlbum,
+                                                          // scrollOffset:
+                                                          //     scrollOffset,
+                                                          setImagesPointer:
+                                                              setImagesPointer,
+                                                        )
+                                                      : SingleChildScrollView(
+                                                          child: Column(
+                                                            children:
+                                                                List.generate(
+                                                              66,
+                                                              (i) {
+                                                                return GlimpseRowCard(
+                                                                  date: DateTime
+                                                                          .now()
+                                                                      .subtract(
+                                                                    Duration(
+                                                                        days: math.Random()
+                                                                            .nextInt(90)),
+                                                                  ),
+                                                                  rowWidth:
+                                                                      screenWidth *
+                                                                          0.8,
+                                                                  dayOfTheWeekList:
+                                                                      dayOfTheWeekList,
+                                                                );
+                                                              },
+                                                            ),
+                                                          ),
+                                                        ),
+                                        ),
+                                      ),
                                   ],
                                 )),
                           ),
@@ -312,16 +354,23 @@ class _MyHomePageState extends State<MyHomePage> {
                             children: [
                               Positioned(
                                   bottom: 0,
-                                  child: MenuPickerV2(
+                                  child: Dashboard(
                                     widgetSize: Size(
                                       screenWidth,
-                                      screenHeight * 0.25,
+                                      dashboardHeight,
                                     ),
                                     items: menuItems,
-                                    onItemSelected: onItemSelected,
+                                    onItemSelected: onMenuItemSelected,
                                     datesOfSelectedAlbum: datesOfSelectedAlbum,
                                     setTargetDatePointer: setTargetDatePointer,
-                                    setScrollOffset: setScrollOffset,
+                                    // setScrollOffset: setScrollOffset,
+                                    imageWithDummiesPointer: imagePointer,
+                                    setImagesPointer: setImagesPointer,
+                                    imagesWithDummiesLength:
+                                        imagesWithDummiesLength,
+                                    shutterSpeed: shutterSpeed,
+                                    aperture: aperture,
+                                    iso: iso,
                                   ))
                             ],
                           ),
@@ -392,13 +441,12 @@ class _MyHomePageState extends State<MyHomePage> {
             )));
   }
 
-  void setScrollOffset(int offset) {
-    print('======[main], setting offset, ${offset}');
-    setState(() {
-      scrollOffset = offset;
-      print('======[main], setting scrollOffset, ${scrollOffset}');
-    });
-  }
+  // void setScrollOffset(int offset) {
+  //   setState(() {
+  //     scrollOffset = offset;
+  //     print('======[main], setting scrollOffset, ${scrollOffset}');
+  //   });
+  // }
 
   Widget timelineUnderGlassPanel(double glassPanelWidth, double screenHeight,
       double blur, Color radioBackLightColor, Color radioGlassColor) {
@@ -619,7 +667,7 @@ class _MyHomePageState extends State<MyHomePage> {
     await setDatesOfSelectedAlbum();
     setState(() {
       selectedDate = datesOfSelectedAlbum[0];
-      scrollOffset = 0;
+      // scrollOffset = 0;
     });
   }
 
@@ -678,11 +726,36 @@ class _MyHomePageState extends State<MyHomePage> {
             : targetDatePointer + x;
     setState(() {
       selectedDate = datesOfSelectedAlbum[targetDatePointer];
-      scrollOffset = 0;
+      // scrollOffset = 0;
     });
   }
 
-  void onItemSelected(int newIndex) {
+  void setImagesPointer(int indexWithDummies) {
+    setState(() {
+      imagePointer = indexWithDummies;
+    });
+  }
+
+  void setImagesWithDummiesLength(int imagesWithDummiesLength) {
+    setState(() {
+      this.imagesWithDummiesLength = imagesWithDummiesLength;
+    });
+  }
+
+  void setEXIFOfPointedImg(Map<String?, IfdTag> data) {
+    setState(() {
+      shutterSpeed = data['EXIF ShutterSpeedValue']?.printable != null
+          ? ImageUtils.formatShutterSpeed(
+              data['EXIF ShutterSpeedValue']!.printable!)
+          : '0';
+      aperture = data['EXIF ApertureValue']?.printable != null
+          ? ImageUtils.formatAperture(data['EXIF ApertureValue']!.printable!)
+          : '0';
+      iso = data['EXIF ISOSpeedRatings']?.printable ?? '未知';
+    });
+  }
+
+  void onMenuItemSelected(int newIndex) {
     print('====== newIndex $newIndex');
     if (newIndex == menuPointer) return;
 

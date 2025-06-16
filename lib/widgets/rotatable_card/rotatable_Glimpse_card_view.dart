@@ -1,12 +1,13 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:exif/exif.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:glimpse/models/glimpse.dart';
-import 'package:glimpse/rotatable_Glimpse_card_back_view.dart';
-import 'package:glimpse/rotatable_Glimpse_card_front_view.dart';
 import 'package:glimpse/services/database_service.dart';
+import 'package:glimpse/widgets/rotatable_card/rotatable_Glimpse_card_back_view.dart';
+import 'package:glimpse/widgets/rotatable_card/rotatable_Glimpse_card_front_view.dart';
 import 'package:isar/isar.dart';
 
 class RotatableGlimpseCardView extends StatefulWidget {
@@ -40,6 +41,8 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
     with SingleTickerProviderStateMixin {
   Glimpse? _glimpse;
 
+  ui.Image? processedImage;
+
   double _rotationY = 0.0; // 當前旋轉角度
   late AnimationController _controller;
   late Animation<double> _animation;
@@ -71,6 +74,8 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
     });
 
     loadGlimpse();
+
+    _processImage();
   }
 
   @override
@@ -116,15 +121,15 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
       // width: _cardSize.width,
       // height: _cardSize.height,
       child: RotatableGlimpseCardFrontView(
-        index: widget.index,
-        cardSize: widget.cardSize,
-        image: widget.image,
-        imagePath: widget.imagePath,
-        exifData: widget.exifData,
-        backLight: widget.backLight,
-        isNeg: widget.isNeg,
-        leaveCardMode: widget.leaveCardMode,
-      ),
+          index: widget.index,
+          cardSize: widget.cardSize,
+          image: widget.image,
+          imagePath: widget.imagePath,
+          exifData: widget.exifData,
+          backLight: widget.backLight,
+          isNeg: widget.isNeg,
+          leaveCardMode: widget.leaveCardMode,
+          processedImage: processedImage),
     );
   }
 
@@ -184,5 +189,37 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
         ),
       ),
     );
+  }
+
+  Future<void> _processImage() async {
+    final rawImage = await decodeAndRotateIfNeeded(widget.image);
+    setState(() {
+      processedImage = rawImage;
+    });
+  }
+
+  Future<ui.Image> decodeAndRotateIfNeeded(Uint8List data) async {
+    final codec = await ui.instantiateImageCodec(data);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+
+    if (image.width > image.height) {
+      // 橫圖 → 旋轉 90 度
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      final rotatedWidth = image.height.toDouble();
+      final rotatedHeight = image.width.toDouble();
+
+      canvas.translate(rotatedWidth, 0);
+      canvas.rotate(90 * 3.1415927 / 180);
+
+      canvas.drawImage(image, Offset.zero, Paint());
+
+      final picture = recorder.endRecording();
+      return await picture.toImage(rotatedWidth.toInt(), rotatedHeight.toInt());
+    }
+
+    return image; // 直圖，不旋轉
   }
 }

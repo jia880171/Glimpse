@@ -1,13 +1,8 @@
-import 'dart:math';
 
-import 'package:exif/exif.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:glimpse/common/utils/image_utils.dart';
-import 'package:glimpse/rotatable_Glimpse_card_view.dart';
 import 'package:photo_manager/photo_manager.dart';
 import './config.dart' as config;
-import 'widgets/light_box_view.dart';
 
 class FilmViewerView extends StatefulWidget {
   final Size viewSize;

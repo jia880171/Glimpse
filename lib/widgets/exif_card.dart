@@ -5,7 +5,7 @@ import 'package:glimpse/models/glimpse.dart';
 
 import '../../config.dart' as config;
 import '../cirvular_text.dart';
-import '../rotatable_Glimpse_card_back_view.dart';
+import 'rotatable_card/rotatable_Glimpse_card_back_view.dart';
 
 class ExifCard extends StatelessWidget {
   final Glimpse glimpse;

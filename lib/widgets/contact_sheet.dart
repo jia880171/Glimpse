@@ -18,14 +18,16 @@ class ContactSheetView extends StatefulWidget {
   final DateTime selectedDate;
   final Function setTargetAlbum;
   final Size widgetSize;
-  final int scrollOffset;
 
+  // final int scrollOffset;
+  final Function(int currentIndex) setImagesPointer;
 
-  const ContactSheetView(
-      {Key? key,
-      required this.selectedDate,
-      required this.setTargetAlbum,
-      required this.widgetSize, required this.scrollOffset})
+  const ContactSheetView({Key? key,
+    required this.selectedDate,
+    required this.setTargetAlbum,
+    required this.widgetSize,
+    // required this.scrollOffset,
+    required this.setImagesPointer})
       : super(key: key);
 
   @override
@@ -95,229 +97,229 @@ class ContactSheetViewState extends State<ContactSheetView>
     double dateSectionHeight = 100;
 
     return Scaffold(
-        // backgroundColor: backLight,
+      // backgroundColor: backLight,
         body: SingleChildScrollView(
-      child: Stack(
-        children: [
-          Container(
-              color: config.backLightB,
-              // color: Colors.red,
-              width: widgetSize.width,
-              height: widgetSize.height,
-              child: Stack(
-                children: [
-                  Stack(
+          child: Stack(
+            children: [
+              Container(
+                  color: config.backLightB,
+                  // color: Colors.red,
+                  width: widgetSize.width,
+                  height: widgetSize.height,
+                  child: Stack(
                     children: [
-                      Column(
-                        children: buildRotatedFilmRollViews(
-                          images: visibleImages,
-                          widgetSize: widgetSize,
-                          thumbnailCache: _thumbnailCache,
-                          backLight: config.backLightB,
-                          imagesPerBox: 10,
-                          isNeg: backLight == config.backLightB,
-                        ),
-                      ),
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: ClipRRect(
-                            // borderRadius: BorderRadius.circular(11),
-                            child: Opacity(
-                              opacity: 0.0,
-                              child: Image.asset(
-                                'assets/images/noise.png',
-                                fit: BoxFit.cover,
-                                color: Colors.red.withOpacity(0.15),
-                                colorBlendMode: BlendMode.multiply,
+                      Stack(
+                        children: [
+                          Column(
+                            children: buildRotatedFilmRollViews(
+                              images: visibleImages,
+                              widgetSize: widgetSize,
+                              thumbnailCache: _thumbnailCache,
+                              backLight: config.backLightB,
+                              imagesPerBox: 10,
+                              isNeg: backLight == config.backLightB,
+                            ),
+                          ),
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: ClipRRect(
+                                // borderRadius: BorderRadius.circular(11),
+                                child: Opacity(
+                                  opacity: 0.0,
+                                  child: Image.asset(
+                                    'assets/images/noise.png',
+                                    fit: BoxFit.cover,
+                                    color: Colors.red.withOpacity(0.15),
+                                    colorBlendMode: BlendMode.multiply,
+                                  ),
+                                ),
                               ),
+                            ),
+                          )
+                        ],
+                      ),
+
+                      // pop-up album list
+                      Positioned(
+                          top: (widgetSize.width - (dateSectionHeight / 2)) / 2,
+                          left: widgetSize.width * 0.02,
+                          child: Transform.rotate(
+                            angle: 90 * pi / 180,
+                            child: PopupMenu(
+                              items: albumNames,
+                              onSelected: (value) {
+                                setState(() {
+                                  targetAlbumName = value;
+                                  _loadImagesForSelectedDate();
+                                  widget.setTargetAlbum(value);
+                                });
+                              },
+                            ),
+                          )),
+
+                      // date section
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: RotatedBox(
+                          quarterTurns: 1,
+                          child: SizedBox(
+                            width: widgetSize.width,
+                            height: dateSectionHeight,
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    // year
+                                    SizedBox(
+                                      width: fontSizeForText * 4,
+                                      child: Text(
+                                        widget.selectedDate.year.toString(),
+                                        overflow: TextOverflow.clip,
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: dateColor,
+                                          fontSize: fontSizeForText,
+                                          fontWeight: FontWeight.w500,
+                                          fontFamily: 'Ds-Digi',
+                                        ),
+                                      ),
+                                    ),
+
+                                    // /
+                                    Text(
+                                      '/',
+                                      overflow: TextOverflow.clip,
+                                      maxLines: 1,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: dateColor,
+                                        fontSize: fontSizeForText,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'Ds-Digi',
+                                      ),
+                                    ),
+
+                                    // month
+                                    SizedBox(
+                                      width: fontSizeForText * 2,
+                                      child: Text(
+                                        widget.selectedDate.month
+                                            .toString()
+                                            .padLeft(2, '0'),
+                                        overflow: TextOverflow.clip,
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: dateColor,
+                                          fontSize: fontSizeForText,
+                                          fontWeight: FontWeight.w500,
+                                          fontFamily: 'Ds-Digi',
+                                        ),
+                                      ),
+                                    ),
+
+                                    // /
+                                    Text(
+                                      '/',
+                                      overflow: TextOverflow.clip,
+                                      maxLines: 1,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: dateColor,
+                                        fontSize: fontSizeForText,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'Ds-Digi',
+                                      ),
+                                    ),
+
+                                    // day
+                                    SizedBox(
+                                      width: fontSizeForText * 2,
+                                      child: Text(
+                                        widget.selectedDate.day
+                                            .toString()
+                                            .padLeft(2, '0'),
+                                        overflow: TextOverflow.clip,
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: dateColor,
+                                          fontSize: fontSizeForText,
+                                          fontWeight: FontWeight.w500,
+                                          fontFamily: 'Ds-Digi',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    SizedBox(
+                                      width: widgetSize.width * 0.1,
+                                    ),
+                                    Text(
+                                      'counts: $visibleImageCount',
+                                      style: TextStyle(color: dateColor),
+                                    ),
+                                  ],
+                                )
+                              ],
                             ),
                           ),
                         ),
-                      )
-                    ],
-                  ),
+                      ),
 
-                  // pop-up album list
-                  Positioned(
-                      top: (widgetSize.width - (dateSectionHeight / 2)) / 2,
-                      left: widgetSize.width * 0.02,
-                      child: Transform.rotate(
-                        angle: 90 * pi / 180,
-                        child: PopupMenu(
-                          items: albumNames,
-                          onSelected: (value) {
+                      // light switch
+                      Positioned(
+                        top: widgetSize.height * .6,
+                        left: widgetSize.width * 0.02,
+                        child: Switch(
+                          value: lightOn,
+                          activeColor: Colors.red,
+                          onChanged: (bool value) async {
                             setState(() {
-                              targetAlbumName = value;
-                              _loadImagesForSelectedDate();
-                              widget.setTargetAlbum(value);
+                              lightOn = value;
+                              setBackLight(lightOn);
+                              setIsNeg();
                             });
+
+                            await ImageUtils.updateThumbnailsWithLightEffect(
+                                originalCache: _originalThumbnailCache,
+                                targetCache: _thumbnailCache,
+                                lightOn: lightOn);
+                            setState(() {}); // 重新繪製畫面
                           },
                         ),
-                      )),
-
-                  // date section
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: RotatedBox(
-                      quarterTurns: 1,
-                      child: SizedBox(
-                        width: widgetSize.width,
-                        height: dateSectionHeight,
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                // year
-                                SizedBox(
-                                  width: fontSizeForText * 4,
-                                  child: Text(
-                                    widget.selectedDate.year.toString(),
-                                    overflow: TextOverflow.clip,
-                                    maxLines: 1,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: dateColor,
-                                      fontSize: fontSizeForText,
-                                      fontWeight: FontWeight.w500,
-                                      fontFamily: 'Ds-Digi',
-                                    ),
-                                  ),
-                                ),
-
-                                // /
-                                Text(
-                                  '/',
-                                  overflow: TextOverflow.clip,
-                                  maxLines: 1,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: dateColor,
-                                    fontSize: fontSizeForText,
-                                    fontWeight: FontWeight.w500,
-                                    fontFamily: 'Ds-Digi',
-                                  ),
-                                ),
-
-                                // month
-                                SizedBox(
-                                  width: fontSizeForText * 2,
-                                  child: Text(
-                                    widget.selectedDate.month
-                                        .toString()
-                                        .padLeft(2, '0'),
-                                    overflow: TextOverflow.clip,
-                                    maxLines: 1,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: dateColor,
-                                      fontSize: fontSizeForText,
-                                      fontWeight: FontWeight.w500,
-                                      fontFamily: 'Ds-Digi',
-                                    ),
-                                  ),
-                                ),
-
-                                // /
-                                Text(
-                                  '/',
-                                  overflow: TextOverflow.clip,
-                                  maxLines: 1,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: dateColor,
-                                    fontSize: fontSizeForText,
-                                    fontWeight: FontWeight.w500,
-                                    fontFamily: 'Ds-Digi',
-                                  ),
-                                ),
-
-                                // day
-                                SizedBox(
-                                  width: fontSizeForText * 2,
-                                  child: Text(
-                                    widget.selectedDate.day
-                                        .toString()
-                                        .padLeft(2, '0'),
-                                    overflow: TextOverflow.clip,
-                                    maxLines: 1,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: dateColor,
-                                      fontSize: fontSizeForText,
-                                      fontWeight: FontWeight.w500,
-                                      fontFamily: 'Ds-Digi',
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                SizedBox(
-                                  width: widgetSize.width * 0.1,
-                                ),
-                                Text(
-                                  'counts: $visibleImageCount',
-                                  style: TextStyle(color: dateColor),
-                                ),
-                              ],
-                            )
-                          ],
+                      )
+                    ],
+                  )),
+              if (isLoading)
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(5),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.01),
+                              Colors.white.withOpacity(0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-
-                  // light switch
-                  Positioned(
-                    top: widgetSize.height * .6,
-                    left: widgetSize.width * 0.02,
-                    child: Switch(
-                      value: lightOn,
-                      activeColor: Colors.red,
-                      onChanged: (bool value) async {
-                        setState(() {
-                          lightOn = value;
-                          setBackLight(lightOn);
-                          setIsNeg();
-                        });
-
-                        await ImageUtils.updateThumbnailsWithLightEffect(
-                            originalCache: _originalThumbnailCache,
-                            targetCache: _thumbnailCache,
-                            lightOn: lightOn);
-                        setState(() {}); // 重新繪製畫面
-                      },
-                    ),
-                  )
-                ],
-              )),
-          if (isLoading)
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(5),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.01),
-                          Colors.white.withOpacity(0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-        ],
-      ),
-    ));
+            ],
+          ),
+        ));
   }
 
   List<Widget> buildRotatedFilmRollViews({
@@ -331,35 +333,39 @@ class ContactSheetViewState extends State<ContactSheetView>
     int boxCount = (images.length / imagesPerBox).ceil();
 
     return List.generate(boxCount, (i) {
-
-
       final start = i * imagesPerBox;
       final end = (start + imagesPerBox).clamp(0, images.length);
       final imageChunk = images.sublist(start, end);
 
       final visibleImages =
-          ImageUtils.insertBoundaryDummies(List.from(imageChunk));
+      ImageUtils.insertBoundaryDummies(List.from(imageChunk));
       final width = _calculateBoxWidth(widgetSize, boxCount);
-      print('====== list G, i ${i}, width: ${width},  widgetSize.width: ${ widgetSize.width}');
+      print(
+          '====== list G, i ${i}, width: ${width},  widgetSize.width: ${widgetSize
+              .width}');
 
       return RotatedBox(
         quarterTurns: 3,
         child: Transform.rotate(
-            // 0 1 => -0.5 0.5
+          // 0 1 => -0.5 0.5
             angle: (math.Random().nextInt(2) - 0.5) * math.pi / 180,
             child: FilmRollView(
               viewSize: Size(width, widgetSize.width),
-              images: visibleImages,
+              imagesWithDummies: visibleImages,
               thumbnailCache: thumbnailCache,
               backLight: backLight,
               noHeader: i != 0,
               isNeg: isNeg,
               isContactSheet: true,
-              offset: widget.scrollOffset,
+              // offset: widget.scrollOffset,
               targetAlbumName: targetAlbumName,
               selectedDate: widget.selectedDate,
-              onTapPic: (AssetEntity image, int index,
-                  bool isNeg) {}, leaveCardMode: ()=>{}, // if true add scratch
+              onTapPic: (AssetEntity image, int index, bool isNeg) {},
+              setImagesPointer: (int currentIndex) {},
+              imagePointerFromParent: 0,
+              setEXIFOfPointedImg: (Map<String?, IfdTag>? map) {
+                // 處理 EXIF 資料
+              },
             )),
       );
     });

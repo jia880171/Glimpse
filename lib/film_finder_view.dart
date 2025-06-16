@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:exif/exif.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:glimpse/circle_date_picker_view.dart';
@@ -37,8 +38,14 @@ class _FilmFinderViewState extends State<FilmFinderView> {
   @override
   Widget build(BuildContext context) {
     print('====== film roll building');
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
+    double screenHeight = MediaQuery
+        .of(context)
+        .size
+        .height;
     Size widgetSize = Size(screenWidth, screenHeight);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -58,7 +65,14 @@ class _FilmFinderViewState extends State<FilmFinderView> {
                       child: LightBoxView(
                         selectedDate: selectedDate,
                         setTargetAlbum: setGlimpseCount,
-                        widgetSize: widgetSize, scrollOffset: 0,
+                        widgetSize: widgetSize,
+                        // scrollOffset: 0,
+                        setImagesPointer: (int currentIndex) {},
+                        setImagesWithDummiesLength: (int imagesLength) {},
+                        imagePointerFromParent: 0,
+                        setEXIFOfPointedImg: (Map<String?, IfdTag>? map) {
+                          // 處理 EXIF 資料
+                        },
                       ),
                     )),
 

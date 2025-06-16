@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+
 import 'package:async/async.dart';
 import 'package:exif/exif.dart';
 import 'package:flutter/material.dart';
@@ -14,30 +15,32 @@ class FilmRollView extends StatefulWidget {
   final Size viewSize;
   final String targetAlbumName;
   final DateTime selectedDate;
-  final List<AssetEntity> images;
+  final List<AssetEntity> imagesWithDummies;
   final Map<String, ui.Image> thumbnailCache;
   final Color backLight;
   final bool noHeader;
   final bool isNeg;
   final bool isContactSheet;
-  final int offset;
+  final int imagePointerFromParent;
   final Function(AssetEntity image, int index, bool isNeg) onTapPic;
-  final Function leaveCardMode;
+  final Function(int currentIndex) setImagesPointer;
+  final Function(Map<String?, IfdTag>) setEXIFOfPointedImg;
 
   const FilmRollView(
       {super.key,
       required this.viewSize,
-      required this.images,
+      required this.imagesWithDummies,
       required this.thumbnailCache,
       required this.backLight,
       required this.noHeader,
       required this.isNeg,
       required this.isContactSheet,
-      required this.offset,
       required this.targetAlbumName,
       required this.selectedDate,
       required this.onTapPic,
-      required this.leaveCardMode});
+      required this.setImagesPointer,
+      required this.imagePointerFromParent,
+      required this.setEXIFOfPointedImg});
 
   @override
   State<StatefulWidget> createState() {
@@ -46,18 +49,18 @@ class FilmRollView extends StatefulWidget {
 }
 
 class _FilmRollViewState extends State<FilmRollView> {
-
   CancelableOperation<void>? _scrollOperation;
 
-  int currentIndex = 0;
+  int currentIndex = 1; // with dummies
   String filmMaker = '';
   String filmDate = '';
   final ScrollController _scrollController = ScrollController();
   double picRatio = 2 / 3;
   late double photoHeight = widget.viewSize.height * 0.35;
   late double photoFrameWidth = photoHeight * picRatio;
-  late double unitFrameWidth =
-      widget.isContactSheet ? widget.viewSize.width : widget.viewSize.width * 0.5;
+  late double unitFrameWidth = widget.isContactSheet
+      ? widget.viewSize.width
+      : widget.viewSize.width * 0.5;
   late double headerHeight = photoHeight * 1.75;
   late double holeHeight = photoHeight * 0.078;
   late double unitFrameHeight = photoHeight * 1.1;
@@ -68,8 +71,11 @@ class _FilmRollViewState extends State<FilmRollView> {
   @override
   void initState() {
     super.initState();
-    calculateCurrentIndex();
-    jumpToCurrentIndex();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      jumpToTargetIndex(0);
+    });
+
     _scrollController.addListener(_onScroll);
   }
 
@@ -83,22 +89,31 @@ class _FilmRollViewState extends State<FilmRollView> {
   @override
   void didUpdateWidget(FilmRollView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.images != oldWidget.images) {
+    if (widget.imagesWithDummies != oldWidget.imagesWithDummies) {
       _initExifData();
     }
 
-    // clear currentIndex when targetAlbumName and selectedDate have changed
-    if (widget.targetAlbumName != oldWidget.targetAlbumName ||
-        widget.selectedDate != oldWidget.selectedDate) {
-      currentIndex = 0;
-      jumpToCurrentIndex();
-    } else {
-      int previousIndex = currentIndex;
-      calculateCurrentIndex();
-      if (currentIndex != previousIndex) {
-        jumpToCurrentIndex();
+    print(
+        '===== [film_roll] widget.imagePointerFromParent ${widget.imagePointerFromParent}'
+        ',  oldWidget.imagePointerFromParent ${oldWidget.imagePointerFromParent}, length: ${widget.imagesWithDummies.length}'
+        ',currentIndex ${currentIndex}');
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // clear currentIndex when targetAlbumName and selectedDate have changed
+      if (widget.targetAlbumName != oldWidget.targetAlbumName ||
+          widget.selectedDate != oldWidget.selectedDate) {
+        print('==== in if');
+        jumpToTargetIndex(0);
+      } else if (widget.imagePointerFromParent !=
+              oldWidget.imagePointerFromParent &&
+          widget.imagePointerFromParent != currentIndex) {
+        print('==== in else if');
+
+        jumpToTargetIndex(widget.imagePointerFromParent);
+      } else{
+        print('==== in else');
       }
-    }
+    });
   }
 
   @override
@@ -106,75 +121,91 @@ class _FilmRollViewState extends State<FilmRollView> {
     return filmRoll();
   }
 
-  void _onScroll() {
+  Future<void> _onScroll() async {
     if (isAutoScrolling) return;
 
     double offset = _scrollController.offset;
 
     // 拿掉 header 高度差
     double contentOffset = offset - (unitFrameHeight - headerHeight);
+
     if (contentOffset < 0) contentOffset = 0;
 
-    int newIndex = (contentOffset / unitFrameHeight).floor() + 1;
-    print('====== [film_roll] [_onScroll]Scroll updating currentIndex: $currentIndex, new: ${newIndex}, isAutoScrolling: ${isAutoScrolling}');
+    int newIndex = (contentOffset / unitFrameHeight).floor() + 1;//???
+
 
     if (newIndex != currentIndex &&
-        newIndex >= 0 &&
-        newIndex < widget.images.length) {
+        newIndex >= 1 &&
+        newIndex < widget.imagesWithDummies.length-1) {
+      currentIndex = newIndex;
+      final exif = await getEXIFOf(currentIndex);
       setState(() {
-        currentIndex = newIndex;
-        print('====== [film_roll]Scroll updated currentIndex: $currentIndex');
+        print('====== [filmROll] setImagesPointer, currentIndex:  ${currentIndex}');
+        widget.setImagesPointer(currentIndex);
+        widget.setEXIFOfPointedImg(exif);
       });
     }
   }
 
-  void jumpToCurrentIndex() {
-    print('===== [film_roll][jumpToCurrentIndex], current: ${currentIndex}');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        double scrollOffset = calculateScrollOffset(currentIndex);
+  Future<Map<String?, IfdTag>> getEXIFOf(int index) async {
+    final imageBytes = await ImageUtils.getImageBytes(widget.imagesWithDummies[index]);
+    final exifData = await readExifFromBytes(imageBytes!);
 
-        // 取消之前尚未完成的動畫
-        _scrollOperation?.cancel();
-        isAutoScrolling = true;
+    return exifData!;
+  }
 
-        _scrollOperation = CancelableOperation.fromFuture(
-          _scrollController.animateTo(
-            scrollOffset,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutBack,
-          ),
-          // onCancel: () {
-          //   print('Scroll animation cancelled');
-          // },
-        );
+  Future<void> jumpToTargetIndex(int targetIndex) async {
+    print('====== [film_roll] jump to targetIndex: $targetIndex');
 
-        _scrollOperation!.value.whenComplete(() {
-          isAutoScrolling = false;
-        });
-      }
-    });
+    if (_scrollController.hasClients) {
+      double scrollOffset = calculateScrollOffset(targetIndex);
+
+      final exif = await getEXIFOf(targetIndex);
+
+      //test
+      final shutterSpeed = exif['EXIF ShutterSpeedValue']?.printable != null
+          ? ImageUtils.formatShutterSpeed(
+              exif['EXIF ShutterSpeedValue']!.printable!)
+          : '未知快門';
+
+      final aperture = exif['EXIF ApertureValue']?.printable != null
+          ? ImageUtils.formatAperture(exif['EXIF ApertureValue']!.printable!)
+          : '未知光圈';
+      print(
+          '====== [film_roll] jumpTo ${targetIndex}, shutterSpeed: $shutterSpeed, aperture $aperture');
+
+      //end of test
+
+      widget.setEXIFOfPointedImg(exif);
+
+      // 取消之前尚未完成的動畫
+      _scrollOperation?.cancel();
+      isAutoScrolling = true;
+
+      _scrollOperation = CancelableOperation.fromFuture(
+        _scrollController.animateTo(
+          scrollOffset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutBack,
+        ),
+      );
+
+      _scrollOperation!.value.whenComplete(() {
+        isAutoScrolling = false;
+      });
+
+      currentIndex = targetIndex;
+    }
   }
 
   double calculateScrollOffset(int index) {
     double scrollOffset = 0;
-    if (index > 0) {
+    if (index >= 0) {
       scrollOffset += headerHeight;
       scrollOffset += unitFrameHeight * (index - 1);
     }
 
     return scrollOffset;
-  }
-
-  void calculateCurrentIndex() {
-    print(
-        '====== calculating current Index: c: ${currentIndex}, offset: ${widget.offset}');
-    currentIndex += widget.offset;
-    if (currentIndex >= widget.images.length - 3) {
-      currentIndex = widget.images.length - 3;
-    } else if (currentIndex < 0) {
-      currentIndex = 0;
-    }
   }
 
   void setFilmMaker(String filmMaker) {
@@ -190,11 +221,11 @@ class _FilmRollViewState extends State<FilmRollView> {
   }
 
   Future<void> _initExifData() async {
-    if (widget.images.isEmpty) {
+    if (widget.imagesWithDummies.isEmpty) {
       return;
     }
 
-    final imageBytes = await ImageUtils.getImageBytes(widget.images[0]);
+    final imageBytes = await ImageUtils.getImageBytes(widget.imagesWithDummies[0]);
     final exifData = await readExifFromBytes(imageBytes!);
 
     setState(() {
@@ -209,20 +240,20 @@ class _FilmRollViewState extends State<FilmRollView> {
         height: widget.viewSize.height,
         width: widget.viewSize.width,
         child: FittedBox(
-          fit: BoxFit.fitWidth,
+          fit: BoxFit.fitHeight,
           child: SizedBox(
               height: widget.viewSize.height,
-              width:widget. viewSize.width,
+              width: widget.viewSize.width,
               child: Center(
-                  child: (widget.images.isEmpty && !widget.noHeader)
+                  child: (widget.imagesWithDummies.isEmpty && !widget.noHeader)
                       ? const Center(
                           child: Text("No images found for this date"))
                       : ListView.builder(
                           controller: _scrollController,
                           padding: EdgeInsets.zero,
-                          itemCount: widget.images.length,
+                          itemCount: widget.imagesWithDummies.length,
                           itemBuilder: (context, index) {
-                            final image = widget.images[index];
+                            final image = widget.imagesWithDummies[index];
                             final thumbnail = widget.thumbnailCache[image.id];
 
                             return Align(
@@ -233,7 +264,7 @@ class _FilmRollViewState extends State<FilmRollView> {
                                 child: FilmFrameOrHeader(
                                   image: image,
                                   index: index,
-                                  imagesLength: widget.images.length,
+                                  imagesLength: widget.imagesWithDummies.length,
                                   thumbnail: thumbnail,
                                   unitFrameWidth: unitFrameWidth,
                                   headerHeight: headerHeight,

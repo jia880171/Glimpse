@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:ui';
@@ -123,6 +124,56 @@ class ImageUtils {
     return sortByCreationTimeAsc(filtered);
   }
 
+
+  static String formatShutterSpeed(String rawValue) {
+    try {
+      double log2Value;
+
+      if (rawValue.contains('/')) {
+        final parts = rawValue.split('/');
+        final num = double.parse(parts[0]);
+        final denom = double.parse(parts[1]);
+        log2Value = num / denom;
+      } else {
+        log2Value = double.parse(rawValue);
+      }
+
+      final shutterTime = pow(2, -log2Value).toDouble();
+
+      if (shutterTime >= 1.0) {
+        return '${shutterTime.toStringAsFixed(1)}s';
+      } else {
+        final reciprocal = (1 / shutterTime).round();
+        return '1/$reciprocal';
+      }
+    } catch (e) {
+      print('====== Shutter Parse Error: $e');
+      return '未知快門';
+    }
+  }
+
+
+  static  String formatAperture(String rawValue) {
+    try {
+      double av;
+
+      if (rawValue.contains('/')) {
+        final parts = rawValue.split('/');
+        final num = double.parse(parts[0]);
+        final denom = double.parse(parts[1]);
+        av = num / denom;
+      } else {
+        av = double.parse(rawValue);
+      }
+
+      final fNumber = pow(2, av / 2);
+      return 'f/${fNumber.toStringAsFixed(1)}';
+    } catch (e) {
+      print('====== Aperture Parse Error: $e');
+      return '未知光圈';
+    }
+  }
+
   static Future<void> generateThumbnails({
     required List<AssetEntity> images,
     required Map<String, ui.Image> cache,
@@ -154,8 +205,11 @@ class ImageUtils {
     final rotatedWidth = rawImage.height;
     final rotatedHeight = rawImage.width;
 
-    canvas.translate(rotatedWidth.toDouble(), 0);
-    canvas.rotate(90 * math.pi / 180);
+    // 🔄 逆時針旋轉前，將畫布向下平移
+    canvas.translate(0, rotatedHeight.toDouble());
+
+    // ⬅️ 逆時針旋轉 -90 度
+    canvas.rotate(-90 * math.pi / 180);
     canvas.drawImage(rawImage, Offset.zero, Paint());
 
     final picture = recorder.endRecording();
