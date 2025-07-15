@@ -16,18 +16,18 @@ import 'film/film_roll_view.dart';
 
 class ContactSheetView extends StatefulWidget {
   final DateTime selectedDate;
-  final Function setTargetAlbum;
+  final Function setTargetAlbumNames;
   final Size widgetSize;
 
   // final int scrollOffset;
-  final Function(int currentIndex) setImagesPointer;
+  final Function(int currentIndex) setImagesWithDummiesPointer;
 
   const ContactSheetView({Key? key,
     required this.selectedDate,
-    required this.setTargetAlbum,
+    required this.setTargetAlbumNames,
     required this.widgetSize,
     // required this.scrollOffset,
-    required this.setImagesPointer})
+    required this.setImagesWithDummiesPointer})
       : super(key: key);
 
   @override
@@ -52,7 +52,9 @@ class ContactSheetViewState extends State<ContactSheetView>
   final Map<String, ui.Image> _originalThumbnailCache = {};
   final Map<String, ui.Image> _thumbnailCache = {};
 
-  String targetAlbumName = '';
+  // String targetAlbumName = '';
+  List<String> targetAlbumNames = [];
+
 
   List<String> albumNames = [];
   List<AssetEntity> visibleImages = [];
@@ -149,9 +151,9 @@ class ContactSheetViewState extends State<ContactSheetView>
                               items: albumNames,
                               onSelected: (value) {
                                 setState(() {
-                                  targetAlbumName = value;
+                                  targetAlbumNames = [value];
                                   _loadImagesForSelectedDate();
-                                  widget.setTargetAlbum(value);
+                                  widget.setTargetAlbumNames(value);
                                 });
                               },
                             ),
@@ -358,10 +360,10 @@ class ContactSheetViewState extends State<ContactSheetView>
               isNeg: isNeg,
               isContactSheet: true,
               // offset: widget.scrollOffset,
-              targetAlbumName: targetAlbumName,
+              targetAlbumNames: targetAlbumNames,
               selectedDate: widget.selectedDate,
               onTapPic: (AssetEntity image, int index, bool isNeg) {},
-              setImagesPointer: (int currentIndex) {},
+              setImagesWithDummiesPointer: (int currentIndex) {},
               imagePointerFromParent: 0,
               setEXIFOfPointedImg: (Map<String?, IfdTag>? map) {
                 // 處理 EXIF 資料
@@ -448,16 +450,19 @@ class ContactSheetViewState extends State<ContactSheetView>
       await _initAlbumsAndListen();
     }
 
-    if (targetAlbumName == null) {
+    if (targetAlbumNames.isEmpty) {
       isLoading = false;
       return;
     }
 
-    List<AssetEntity> visibleImages = await ImageUtils.getVisibleImagesForDate(
+    List<List<AssetEntity>> visibleImagesGroups = await ImageUtils.getVisibleImagesForDate(
       cachedAlbums: _cachedAlbums,
-      targetAlbumName: targetAlbumName!,
+      targetAlbumNames: targetAlbumNames,
       selectedDate: widget.selectedDate,
     );
+
+    List<AssetEntity> visibleImages = ImageUtils.insertBoundaryDummies(visibleImagesGroups[0]);
+
 
     await generateAndCacheThumbnails(visibleImages);
 
@@ -494,7 +499,7 @@ class PopupMenu extends StatelessWidget {
   final List<String> items;
   final ValueChanged<String> onSelected;
 
-  PopupMenu({required this.items, required this.onSelected});
+  const PopupMenu({required this.items, required this.onSelected});
 
   @override
   Widget build(BuildContext context) {

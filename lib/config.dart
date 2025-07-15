@@ -9,13 +9,34 @@ const Color target = Color.fromRGBO(225, 225, 225, 1.0);
 
 const Color border = Color(0x00000000);
 
-// const Color backGroundWhite = Color(0xfff6f6f1);
-// const Color backGroundWhite = Color(0xffdddddd);
+
+
 const Color backGroundWhite = Color(0xffd7d3d0);
+
+const Color dashBoardW = Color.fromRGBO(255, 253, 244, 1.0);
+
+
+const Color backGroundMainTheme = Colors.white;
+const Color dashboardBackGroundMainTheme = Color(0xffaaaea4);
+const Color knobJagged= Color(0xffd6d6d6);
+const Color knobPointer= Color(0xff75755f);
+
+
+// const Color backGroundMainTheme = Colors.white;
+// const Color knobJagged= Color(0xffe1e1e1);
+// const Color knobPointer= Color(0xff75755f);
+
+
+
+
+// const Color knob = Color(0xffefeeee);
+
+
+
+
 const Color mainBackGroundWhite = Color(0xffffffff);
 const Color mainBackGroundWhiteDarker = Color(0xffefeeee);
 const Color mainBackGroundWhiteDarker2 = Color(0xffdcdcdc);
-
 const Color backGroundWhiteDark = Color(0xffcac9c9);
 
 
@@ -25,9 +46,12 @@ const Color datePickerWhite = Color(0xffe1e0e0);
 const Color trashPointerRed = Color(0xff951919);
 const Color timelinePointerRed = Color(0xffdd2222);
 
+
 const Color filmColorBrown = Color(0xFF8B4513);
 
 const Color nikonRadioBackLight = Colors.orange;
+const Color nikonCircleWhite = Color(0xfff4f3f1);
+
 
 
 // const Color filmColor = Color(0xFF171313);
@@ -38,8 +62,8 @@ const Color sticker = Color(0xffc7c4c2);
 
 const Color ticketWhite = Color.fromARGB(255, 255, 255, 255);
 
-// const Color hardCard = Color(0xffe1e1e1);
 const Color hardCard = Color(0xffffffff);
+
 
 const Color hardCardYellowLight = Color(0xffddd1ae);
 const Color hardCardYellow = Color(0xffdecd9e);

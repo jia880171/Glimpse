@@ -6,15 +6,20 @@ import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import '../../common/utils/rotation_utils.dart';
 import '../../config.dart' as config;
 import '../jagged_circle.dart';
+import 'circle_ticks_painter.dart';
+import 'quarter_arc_painter.dart';
 
 class RotaryKnob extends StatefulWidget {
+  final bool isMenu;
+  final bool isDrawArc;
+  final List<String>? items;
   final String knobTitle;
   final double widgetHeight;
   final double widgetWidth;
   final double dashWidth;
   final GlobalKey knobKey;
-  final Color backgroundColor;
-  final Color innerColor;
+  final Color knobColor;
+  final Color gapColor;
   final Color dashColor;
   final int itemsLength;
   final Function(int oldIndex, int newIndex) onItemSelected;
@@ -28,8 +33,8 @@ class RotaryKnob extends StatefulWidget {
     super.key,
     required this.dashWidth,
     required this.knobKey,
-    required this.backgroundColor,
-    required this.innerColor,
+    required this.knobColor,
+    required this.gapColor,
     required this.dashColor,
     required this.dashCount,
     required this.itemsLength,
@@ -38,6 +43,9 @@ class RotaryKnob extends StatefulWidget {
     required this.widgetHeight,
     required this.knobTitle,
     required this.widgetWidth,
+    required this.isDrawArc,
+    this.items,
+    required this.isMenu,
   });
 
   @override
@@ -48,7 +56,6 @@ class _RotaryKnobState extends State<RotaryKnob> {
   late int _pointer;
   bool isVibrating = false;
   late double sensitivity;
-  late double itemAngle;
   late Offset _center;
   double _totalTurns = 0;
   double? _lastAngle;
@@ -59,10 +66,10 @@ class _RotaryKnobState extends State<RotaryKnob> {
 
   late bool isNoItem = widget.itemsLength == 0;
 
-  late double dentRadius =
-      math.min(widget.widgetWidth, widget.widgetHeight) * 0.3;
+  late double arcRadius = widget.widgetHeight * 0.34;
+  late double dentRadius = widget.widgetHeight * 0.26;
   late double radius = dentRadius * 0.98;
-  late double innerRadius = radius * 0.6;
+  late double innerRadius = radius * 0.75;
   late double dashWidth = (dentRadius - innerRadius);
   final int toothCount = 66;
 
@@ -70,107 +77,96 @@ class _RotaryKnobState extends State<RotaryKnob> {
   void initState() {
     super.initState();
     sensitivity = calculateSensitivity(widget.itemsLength);
-    itemAngle = sensitivity;
-    print('====== itemAngle $itemAngle');
     _pointer = 0;
   }
 
   @override
+  void didUpdateWidget(RotaryKnob oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.itemsLength != oldWidget.itemsLength) {
+      sensitivity = calculateSensitivity(widget.itemsLength);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-        // color: Colors.yellow,
-        height: widget.widgetHeight,
-        width: widget.widgetWidth,
-        child: Column(
-          children: [
-            SizedBox(
-              height: widget.widgetHeight * 0.8,
-              width: widget.widgetWidth,
-              child: Column(
-                children: [
-                  const Spacer(),
-                  SizedBox(
-                    width: dentRadius * 2,
-                    height: dentRadius * 2,
-                    child: Stack(
-                      children: [
-                        // Outer dent circle
-                        Center(
-                          child: Neumorphic(
-                            style: const NeumorphicStyle(
-                              lightSource: LightSource.topRight,
-                              shape: NeumorphicShape.convex,
-                              boxShape: NeumorphicBoxShape.circle(),
-                              intensity: 1,
-                              depth: -1,
+    return GestureDetector(
+      onPanStart: (details) {
+        final box =
+            widget.knobKey.currentContext!.findRenderObject() as RenderBox;
+        _center = box.size.center(Offset.zero);
+        final localPos = box.globalToLocal(details.globalPosition);
+        _lastAngle = RotationUtils.getAngleFromOffset(_center, localPos);
+      },
+      onPanUpdate: (details) {
+        if (widget.isMenu) {
+          onMenuPanUpdate(details);
+        } else {
+          onNormalPanUpdate(details);
+        }
+      },
+      onPanEnd: (details) {
+        if (widget.isMenu) {
+          onMenuPanEnd();
+        }
+      },
+      child: Container(
+          // color: Colors.yellow,
+          height: widget.widgetHeight,
+          width: widget.widgetWidth,
+          child: Column(
+            children: [
+              SizedBox(
+                height: widget.widgetHeight * 0.8,
+                width: widget.widgetWidth,
+                child: Column(
+                  children: [
+                    const Spacer(),
+                    SizedBox(
+                      width: dentRadius * 2,
+                      height: dentRadius * 2,
+                      child: Stack(
+                        children: [
+                          if (widget.isDrawArc)
+                            Center(
+                              child: CustomPaint(
+                                size: Size(arcRadius * 2, arcRadius * 2),
+                                painter: QuarterArcPainter(
+                                    radius: arcRadius,
+                                    strokeWidth: arcRadius * 0.02,
+                                    color: Colors.black.withOpacity(0.2),
+                                    startAngleDeg: 20,
+                                    sweepAngleDeg: 40),
+                              ),
                             ),
-                            child: Container(
-                              width: dentRadius * 2,
-                              height: dentRadius * 2,
-                              color: widget.innerColor,
+
+                          if (widget.items != null)
+                            Center(
+                              child: CustomPaint(
+                                size: Size(arcRadius * 2, arcRadius * 2),
+                                painter: CircleTicksPainter(
+                                    items: widget.items!,
+                                    arcRadius: dentRadius * 1.1,
+                                    labelColor: Colors.black.withOpacity(0.3)),
+                              ),
                             ),
-                          ),
-                        ),
 
-                        // Main rotary area
-                        Center(
-                          child: GestureDetector(
-                            onPanStart: (details) {
-                              final box = widget.knobKey.currentContext!
-                                  .findRenderObject() as RenderBox;
-                              _center = box.size.center(Offset.zero);
-                              final localPos =
-                                  box.globalToLocal(details.globalPosition);
-                              _lastAngle = RotationUtils.getAngleFromOffset(
-                                  _center, localPos);
-                            },
-                            onPanUpdate: (details) {
-                              final box = widget.knobKey.currentContext!
-                                  .findRenderObject() as RenderBox;
-                              final localPos =
-                                  box.globalToLocal(details.globalPosition);
-                              final currentAngle =
-                                  RotationUtils.getAngleFromOffset(
-                                      _center, localPos);
-
-                              if (_lastAngle != null) {
-                                final delta = RotationUtils.normalizeAngle(
-                                    currentAngle - _lastAngle!);
-                                rotateBy(delta);
-
-                                accumulatedDeltaForWeakVibration += delta.abs();
-                                if (accumulatedDeltaForWeakVibration >=
-                                        weakVibrationThreshold &&
-                                    widget.itemsLength != 0) {
-                                  widget.vibrate(
-                                      duration: 30,
-                                      amplitude: 66,
-                                      isMajor: false);
-                                  accumulatedDeltaForWeakVibration = 0.0;
-                                }
-                              }
-                              _lastAngle = currentAngle;
-                            },
-                            onPanEnd: (_) {
-                              _lastAngle = null;
-                              if (isNoItem) {
-                                widget.onItemSelected(0, 0);
-                              }
-                            },
+                          // Main rotary area
+                          Center(
                             child: SizedBox(
                               key: widget.knobKey,
                               child: Neumorphic(
                                 style: const NeumorphicStyle(
                                   lightSource: LightSource.topRight,
-                                  shape: NeumorphicShape.convex,
+                                  shape: NeumorphicShape.concave,
                                   boxShape: NeumorphicBoxShape.circle(),
-                                  intensity: 1,
-                                  depth: 1,
+                                  intensity: 0.8,
+                                  depth: -0.6,
                                 ),
                                 child: Container(
                                   width: radius * 2,
                                   height: radius * 2,
-                                  color: widget.backgroundColor,
+                                  color: widget.knobColor,
                                   child: AnimatedRotation(
                                     turns: _totalTurns,
                                     duration: const Duration(milliseconds: 200),
@@ -192,7 +188,6 @@ class _RotaryKnobState extends State<RotaryKnob> {
                                         ),
                                         jaggedSpinner(
                                           radius: innerRadius,
-                                          color: widget.dashColor,
                                         )
                                       ],
                                     ),
@@ -201,27 +196,113 @@ class _RotaryKnobState extends State<RotaryKnob> {
                               ),
                             ),
                           ),
-                        )
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                ],
+                    const Spacer(),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(
-                height: widget.widgetHeight * 0.2,
-                child: Center(
-                  child: Text(
-                    widget.knobTitle,
-                    style: TextStyle(
-                      fontSize: dentRadius * 0.2,
-                      fontFamily: 'Questrial',
+
+              // title
+              SizedBox(
+                  height: widget.widgetHeight * 0.2,
+                  child: Center(
+                    child: Text(
+                      widget.knobTitle,
+                      style: TextStyle(
+                        fontSize: dentRadius * 0.2,
+                        fontFamily: 'Questrial',
+                      ),
                     ),
-                  ),
-                ))
-          ],
-        ));
+                  ))
+            ],
+          )),
+    );
+  }
+
+  void onMenuPanUpdate(DragUpdateDetails details) {
+    final box = widget.knobKey.currentContext!.findRenderObject() as RenderBox;
+    final localPos = box.globalToLocal(details.globalPosition);
+    final currentAngle = RotationUtils.getAngleFromOffset(_center, localPos);
+
+    if (_lastAngle != null && widget.items != null) {
+      final delta = RotationUtils.normalizeAngle(currentAngle - _lastAngle!);
+      vibrateForMenu(delta);
+
+      setState(() {
+        _totalTurns += delta / (2 * math.pi); // 自行累積旋轉量
+      });
+    }
+
+    _lastAngle = currentAngle;
+  }
+
+  void vibrateForMenu(delta) {
+    _accumulatedAngle += delta;
+
+    while (_accumulatedAngle.abs() >= sensitivity) {
+      widget.vibrate(duration: 50, amplitude: 168, isMajor: true);
+      if (_accumulatedAngle > 0) {
+        _accumulatedAngle -= sensitivity;
+      } else {
+        _accumulatedAngle += sensitivity;
+      }
+    }
+  }
+
+  void onMenuPanEnd() {
+    // 角度轉為項目 index
+    final anglePerItem = 2 * math.pi / widget.items!.length;
+    final currentTotalAngle = (_totalTurns * 2 * math.pi);
+    int nearestIndex =
+        (currentTotalAngle / anglePerItem).round() % widget.items!.length;
+
+    print('======nearestIndex: ${nearestIndex}, _pointer: ${_pointer}');
+
+    final oldPointer = _pointer;
+    final oldTurns = _totalTurns;
+    final targetTurns = nearestIndex / widget.items!.length;
+
+    // 要在onpanupdate記錄一個假的targetTurn這樣在連續轉動時 才不會有問題
+
+    // 找出最短距離
+    double diff = targetTurns - oldTurns;
+
+    // 調整 diff 進入 [-0.5, 0.5] 區間，表示最短旋轉路徑
+    if (diff > 0.5) {
+      diff -= 1;
+    } else if (diff < -0.5) {
+      diff += 1;
+    }
+
+    setState(() {
+      _pointer = nearestIndex;
+      _totalTurns = oldTurns + diff; // 用最短距離達成目標
+      print('====== _totalTurns: ${_totalTurns}');
+    });
+
+    widget.vibrate(duration: 50, amplitude: 128, isMajor: true);
+    widget.onItemSelected(oldPointer, _pointer);
+  }
+
+  void onNormalPanUpdate(DragUpdateDetails details) {
+    final box = widget.knobKey.currentContext!.findRenderObject() as RenderBox;
+    final localPos = box.globalToLocal(details.globalPosition);
+    final currentAngle = RotationUtils.getAngleFromOffset(_center, localPos);
+
+    if (_lastAngle != null) {
+      final delta = RotationUtils.normalizeAngle(currentAngle - _lastAngle!);
+      rotateBy(delta);
+
+      accumulatedDeltaForWeakVibration += delta.abs();
+      if (accumulatedDeltaForWeakVibration >= weakVibrationThreshold &&
+          widget.itemsLength != 0) {
+        widget.vibrate(duration: 30, amplitude: 66, isMajor: false);
+        accumulatedDeltaForWeakVibration = 0.0;
+      }
+    }
+    _lastAngle = currentAngle;
   }
 
   void rotateBy(double angleInRadians) {
@@ -230,23 +311,25 @@ class _RotaryKnobState extends State<RotaryKnob> {
       _accumulatedAngle += angleInRadians;
       final oldPointer = _pointer;
       if (widget.itemsLength > 0) {
+        // for date
         rotateWithItems(oldPointer);
       } else {
+        // for film scroll
         rotateWithoutItems(oldPointer);
       }
     });
   }
 
   void rotateWithItems(int oldPointer) {
-    while (_accumulatedAngle.abs() >= itemAngle) {
+    while (_accumulatedAngle.abs() >= sensitivity) {
       widget.vibrate(duration: 50, amplitude: 168, isMajor: true);
 
       if (_accumulatedAngle > 0) {
         _pointer = (_pointer - 1 + widget.itemsLength) % widget.itemsLength;
-        _accumulatedAngle -= itemAngle;
+        _accumulatedAngle -= sensitivity;
       } else {
         _pointer = (_pointer + 1) % widget.itemsLength;
-        _accumulatedAngle += itemAngle;
+        _accumulatedAngle += sensitivity;
       }
 
       widget.onItemSelected(oldPointer, _pointer);
@@ -271,21 +354,29 @@ class _RotaryKnobState extends State<RotaryKnob> {
   }
 
   double calculateSensitivity(int itemLength) {
+    if (widget.isMenu) {
+      return 2 * pi / itemLength;
+    }
+
+    const minAngle = pi / 180 * 80; // 80 度
+    const maxAngle = pi; // 180 度
+
     if (itemLength == 0) {
-      return pi / 3; // 預設為最小值 60 度
+      return pi / 180 * 80; // 預設為最小值 80 度
     }
 
     final anglePerItem = pi / itemLength;
-    const minAngle = pi / 3; // 60 度
-    const maxAngle = pi / 2; // 90 度
 
+    double sensitivity;
     if (anglePerItem > maxAngle) {
-      return maxAngle;
+      sensitivity = maxAngle;
     } else if (anglePerItem < minAngle) {
-      return minAngle;
+      sensitivity = minAngle;
     } else {
-      return anglePerItem;
+      sensitivity = anglePerItem;
     }
+
+    return sensitivity;
   }
 
   Widget buildCircularDashes(
@@ -309,8 +400,8 @@ class _RotaryKnobState extends State<RotaryKnob> {
                 alignment: Alignment.topCenter,
                 child: Neumorphic(
                   style: NeumorphicStyle(
-                    depth: 10, // 凸起
-                    intensity: 1,
+                    depth: 1, // 凸起
+                    intensity: 0.6,
                     lightSource: LightSource.topLeft,
                     color: color,
                   ),
@@ -350,9 +441,13 @@ class _RotaryKnobState extends State<RotaryKnob> {
     );
   }
 
-  Widget jaggedSpinner({required double radius, required Color color}) {
+  Widget jaggedSpinner({
+    required double radius,
+  }) {
     double smallRadius = radius * 0.1;
     double innerRadius = radius * 0.96;
+    double horizontalLineWidth = innerRadius * 0.5;
+    double horizontalLineEnd = innerRadius * 0.96 * 2 - innerRadius * 0.1;
 
     return Center(
         child: Stack(
@@ -361,9 +456,11 @@ class _RotaryKnobState extends State<RotaryKnob> {
         JaggedCircle(
           radius: radius,
           innerRadius: innerRadius,
-          color: color,
+          color: config.knobJagged,
           toothCount: toothCount, // 越多鋸齒越細
         ),
+
+        // for menu
         if (widget.dashCount != 0)
           Neumorphic(
             style: const NeumorphicStyle(
@@ -372,8 +469,7 @@ class _RotaryKnobState extends State<RotaryKnob> {
                 depth: 0.6,
                 intensity: 0.8,
                 lightSource: LightSource.topLeft,
-                // color: const Color(0xFF444444).withOpacity(0.9), // 深灰背景
-                color: config.mainBackGroundWhite),
+                color: config.backGroundMainTheme),
             child: SizedBox(
               width: innerRadius * 0.96 * 2,
               height: innerRadius * 0.96 * 2,
@@ -381,14 +477,15 @@ class _RotaryKnobState extends State<RotaryKnob> {
                 children: [
                   _buildHole(Offset(0, -radius * 0.6), smallRadius,
                       config.mainBackGroundWhite),
-                  _buildHole(Offset(-radius * 0.5, radius * 0.4), smallRadius,
-                      config.mainBackGroundWhite),
-                  _buildHole(Offset(radius * 0.5, radius * 0.4), smallRadius,
-                      config.mainBackGroundWhite),
+                  // _buildHole(Offset(-radius * 0.5, radius * 0.4), smallRadius,
+                  //     config.mainBackGroundWhite),
+                  // _buildHole(Offset(radius * 0.5, radius * 0.4), smallRadius,
+                  //     config.mainBackGroundWhite),
                 ],
               ),
             ),
           ),
+
         if (widget.dashCount == 0)
           Neumorphic(
             style: const NeumorphicStyle(
@@ -397,7 +494,7 @@ class _RotaryKnobState extends State<RotaryKnob> {
               depth: 0.6,
               intensity: 0.8,
               lightSource: LightSource.topLeft,
-              color: config.mainBackGroundWhite,
+              color: config.backGroundMainTheme,
             ),
             child: Container(
               // color: Colors.red,
@@ -412,9 +509,9 @@ class _RotaryKnobState extends State<RotaryKnob> {
                     height: innerRadius * 0.96 * 2,
                     child: CustomPaint(
                       painter: _HorizontalLinePainter(
-                        start: innerRadius * 0.96 + innerRadius * 0.5,
-                        end: innerRadius * 0.96 * 2 - innerRadius * 0.1,
-                        lineColor: config.timelinePointerRed,
+                        start: horizontalLineEnd - horizontalLineWidth,
+                        end: horizontalLineEnd,
+                        lineColor: config.knobPointer,
                         strokeWidth: radius * 0.068,
                       ),
                     ),

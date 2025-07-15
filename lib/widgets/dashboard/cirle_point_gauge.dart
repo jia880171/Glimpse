@@ -2,11 +2,15 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../config.dart' as config;
+
 class CirclePointerGauge extends StatefulWidget {
   final Color backgroundColor;
   final int currentIndex;
   final int itemLength;
   final double radius;
+  final bool isReset;
+  final VoidCallback onResetEnd;
 
   const CirclePointerGauge({
     super.key,
@@ -14,6 +18,8 @@ class CirclePointerGauge extends StatefulWidget {
     required this.itemLength,
     required this.radius,
     required this.backgroundColor,
+    required this.isReset,
+    required this.onResetEnd,
   });
 
   @override
@@ -36,8 +42,14 @@ class _CirclePointerGaugeState extends State<CirclePointerGauge>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 200),
     );
+
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed && widget.isReset) {
+        widget.onResetEnd.call(); // 👈 動畫完成後觸發回呼
+      }
+    });
 
     _animation = Tween<double>(
       begin: _animatedIndex,
@@ -50,21 +62,25 @@ class _CirclePointerGaugeState extends State<CirclePointerGauge>
   @override
   void didUpdateWidget(covariant CirclePointerGauge oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.currentIndex != oldWidget.currentIndex) {
-      final newIndex = widget.currentIndex.toDouble();
-      _animation = Tween<double>(
-        begin: _animatedIndex,
-        end: newIndex,
-      ).animate(
-        CurvedAnimation(parent: _controller, curve: strongVersionEaseOutBack),
-      )..addListener(() {
-          setState(() {
-            _animatedIndex = _animation.value;
-          });
-        });
 
-      _controller.forward(from: 0);
-    }
+    final newIndex = widget.isReset ? 0.0 : widget.currentIndex.toDouble();
+    final duration = widget.isReset
+        ? const Duration(milliseconds: 800)
+        : const Duration(milliseconds: 100);
+
+    _animation = Tween<double>(
+      begin: _animatedIndex,
+      end: newIndex,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: strongVersionEaseOutBack),
+    )..addListener(() {
+        setState(() {
+          _animatedIndex = _animation.value;
+        });
+      });
+
+    _controller.duration = duration;
+    _controller.forward(from: 0);
   }
 
   @override
@@ -75,15 +91,18 @@ class _CirclePointerGaugeState extends State<CirclePointerGauge>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      // color: Colors.green,
-      width: widget.radius * 2,
-      height: widget.radius * 2,
-      child: CustomPaint(
-        painter: _FullCirclePainter(
-          animatedIndex: _animatedIndex,
-          itemLength: widget.itemLength,
-          backgroundColor: widget.backgroundColor,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(widget.radius * 0.28),
+      child: Container(
+        color: config.nikonCircleWhite.withOpacity(0.6),
+        width: widget.radius * 2,
+        height: widget.radius * 2,
+        child: CustomPaint(
+          painter: _FullCirclePainter(
+            animatedIndex: _animatedIndex,
+            itemLength: widget.itemLength,
+            backgroundColor: widget.backgroundColor,
+          ),
         ),
       ),
     );
@@ -118,7 +137,7 @@ class _FullCirclePainter extends CustomPainter {
     _drawTicks(canvas, center, arcRadius, innerArcRadius, tickLength,
         radius * 0.02, backgroundColor);
 
-    _drawNeedle(canvas, center, arcRadius * 0.6);
+    _drawNeedle(canvas, center, arcRadius * 1.68);
   }
 
   void _drawArc(Canvas canvas, Offset center, double radius, Color color,
@@ -151,7 +170,8 @@ class _FullCirclePainter extends CustomPainter {
       final innerX = center.dx + (innerArcRadius) * math.cos(angle);
       final innerY = center.dy + (innerArcRadius) * math.sin(angle);
 
-      final double currentTickWidth = ((i+1) % 5 == 0) ? tickWidth * 2.5 : tickWidth;
+      final double currentTickWidth =
+          ((i + 1) % 5 == 0) ? tickWidth * 2.5 : tickWidth;
 
       final Paint tickPaint = Paint()
         ..color = Colors.black
@@ -168,7 +188,11 @@ class _FullCirclePainter extends CustomPainter {
       final labelOffset = Offset(labelX, labelY);
 
       final textSpan = TextSpan(
-        text: (i + 1) % 2 != 0 ? (i + 1).toString() : '',
+        text: i == 0
+            ? '1'
+            : (i + 1) % 5 == 0
+                ? (i + 1).toString()
+                : '',
         style: TextStyle(
           color: Colors.black,
           fontSize: fontSize,
@@ -190,8 +214,12 @@ class _FullCirclePainter extends CustomPainter {
 
   void _drawNeedle(Canvas canvas, Offset center, double radius) {
     if (itemLength < 1) return; // 👈 沒有必要畫針
-    final clampedIndex = animatedIndex.clamp(0, itemLength - 1);
-    final angle = 2 * math.pi * clampedIndex / itemLength;
+    // Clamp the animatedIndex to ensure it stays within a valid range.
+    // The lower bound is set to -5 to allow overshoot effect required by the easeOutBack animation curve.
+    // The upper bound is itemLength - 1, corresponding to the last valid item index.
+    // final clampedIndex = animatedIndex.clamp(-5, itemLength - 1);
+
+    final angle = 2 * math.pi * animatedIndex / itemLength;
     final double frontLength = radius * 0.6;
     final double backLength = radius * 0.2;
 
@@ -203,7 +231,7 @@ class _FullCirclePainter extends CustomPainter {
 
     final needlePaint = Paint()
       ..color = Colors.black
-      ..strokeWidth = radius * 0.06;
+      ..strokeWidth = radius * 0.03;
 
     canvas.drawLine(backTip, frontTip, needlePaint);
 

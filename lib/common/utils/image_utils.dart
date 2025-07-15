@@ -59,26 +59,33 @@ class ImageUtils {
   // 還是「一天內的資產，再排序」？
   //
   // 這會讓人不確定 Sorted 是針對哪個子集合來的：是全域？還是 InOneDay 之後的結果？
-  static Future<List<AssetEntity>> fetchImagesFromAlbum({
+  static Future<List<AssetEntity>> fetchImagesFromAlbums({
     required List<AssetPathEntity> cachedAlbums,
-    required String targetAlbumName,
+    required List<String> targetAlbumNames,
   }) async {
-    final targetAlbum = cachedAlbums.firstWhereOrNull(
-      (album) => album.name == targetAlbumName,
-    );
 
-    if (targetAlbum == null) {
-      print("====== 目標相簿不存在");
-      return [];
+    final List<AssetEntity> imageAssets = [];
+
+    for (final name in targetAlbumNames) {
+      final targetAlbum = cachedAlbums.firstWhereOrNull(
+            (album) => album.name == name,
+      );
+
+      if (targetAlbum == null) {
+        print("⚠️ 相簿 '$name' 不存在於系統中，可能已被刪除");
+        continue;
+      }
+
+      final int assetCount = await targetAlbum.assetCountAsync;
+
+      final List<AssetEntity> assets =
+      await targetAlbum.getAssetListRange(start: 0, end: assetCount);
+
+      final List<AssetEntity> filtered =
+      assets.where((asset) => asset.type == AssetType.image).toList();
+
+      imageAssets.addAll(filtered);
     }
-
-    final int assetCount = await targetAlbum.assetCountAsync;
-
-    final List<AssetEntity> allAssets =
-    await targetAlbum.getAssetListRange(start: 0, end: assetCount);
-
-    final List<AssetEntity> imageAssets =
-        allAssets.where((asset) => asset.type == AssetType.image).toList();
 
     return imageAssets;
   }
@@ -89,6 +96,30 @@ class ImageUtils {
     return images;
   }
 
+  static List<List<AssetEntity>> groupImagesByRoll(
+      List<AssetEntity> images, Duration maxGap) {
+    if (images.isEmpty) return [];
+
+    final List<List<AssetEntity>> grouped = [];
+    List<AssetEntity> currentRoll = [images.first];
+
+    for (int i = 1; i < images.length; i++) {
+      final previous = images[i - 1];
+      final current = images[i];
+      final gap = current.createDateTime.difference(previous.createDateTime);
+
+      if (gap > maxGap) {
+        grouped.add(currentRoll);
+        currentRoll = [current];
+      } else {
+        currentRoll.add(current);
+      }
+    }
+
+    grouped.add(currentRoll); // 加入最後一組
+    return grouped;
+  }
+
   static List<AssetEntity> filterImagesByExactDay(
       List<AssetEntity> images, DateTime selectedDate) {
     final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
@@ -96,33 +127,40 @@ class ImageUtils {
     return images.where((image) {
       final createDate = image.createDateTime;
       final createDateOnly = DateTime(createDate.year, createDate.month, createDate.day);
-
       return createDateOnly == selectedDateOnly;
     }).toList();
   }
 
   static List<AssetEntity> insertBoundaryDummies(List<AssetEntity> images) {
-    if (images.isNotEmpty) {
-      images.insert(0, images[0]);
-      images.insert(images.length, images[0]);
-    }
-    return images;
+    if (images.isEmpty) return [];
+
+    final dummyStart = images[0];
+    final dummyEnd = images[0];
+
+    return [dummyStart, ...images, dummyEnd];
   }
 
-  static Future<List<AssetEntity>> getVisibleImagesForDate({
+  static Future<List<List<AssetEntity>>> getVisibleImagesForDate({
     required List<AssetPathEntity> cachedAlbums,
-    required String targetAlbumName,
+    required List<String> targetAlbumNames,
     required DateTime selectedDate,
   }) async {
-    final images = await fetchImagesFromAlbum(
+    final images = await fetchImagesFromAlbums(
       cachedAlbums: cachedAlbums,
-      targetAlbumName: targetAlbumName,
+      targetAlbumNames: targetAlbumNames,
     );
 
     final filtered = filterImagesByExactDay(images, selectedDate);
+    final sorted = sortByCreationTimeAsc(filtered);
 
-    return sortByCreationTimeAsc(filtered);
+    for (final image in sorted) {
+      print('Image date: ${image.createDateTime}');
+    }
+
+    return groupImagesByRoll(sorted, const Duration(seconds: 90));
   }
+
+
 
 
   static String formatShutterSpeed(String rawValue) {

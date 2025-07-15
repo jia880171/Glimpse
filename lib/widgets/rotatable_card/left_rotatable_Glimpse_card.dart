@@ -10,7 +10,7 @@ import 'package:glimpse/widgets/rotatable_card/rotatable_Glimpse_card_back_view.
 import 'package:glimpse/widgets/rotatable_card/rotatable_Glimpse_card_front_view.dart';
 import 'package:isar/isar.dart';
 
-class RotatableGlimpseCardView extends StatefulWidget {
+class LeftRotatableGlimpseCard extends StatefulWidget {
   final Alignment rotationAlignment;
   final Uint8List image;
   final Map<String?, IfdTag> exifData;
@@ -24,7 +24,7 @@ class RotatableGlimpseCardView extends StatefulWidget {
   final double? rotationOverride;
   final bool interactive;
 
-  const RotatableGlimpseCardView({
+  const LeftRotatableGlimpseCard({
     Key? key,
     required this.image,
     required this.exifData,
@@ -41,11 +41,11 @@ class RotatableGlimpseCardView extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  RotatableGlimpseCardViewState createState() =>
-      RotatableGlimpseCardViewState();
+  LeftRotatableGlimpseCardState createState() =>
+      LeftRotatableGlimpseCardState();
 }
 
-class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
+class LeftRotatableGlimpseCardState extends State<LeftRotatableGlimpseCard>
     with SingleTickerProviderStateMixin {
   Glimpse? _glimpse;
 
@@ -203,7 +203,7 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
         widget.rotationAlignment == Alignment.centerLeft && !isFront;
 
     final Alignment dynamicAlignment =
-        isFlipped ? Alignment.centerRight : widget.rotationAlignment;
+    isFlipped ? Alignment.centerRight : widget.rotationAlignment;
 
     final double rotationAngle = isFront ? _rotationY : _rotationY + pi;
 

@@ -106,8 +106,6 @@ class _SemiCirclePointerGaugeState extends State<SemiCirclePointerGauge>
   }
 
   int findClosestIndex(List<String> items, String value) {
-    print('====== [findClosestIndex] items: ${items}');
-    print('====== [findClosestIndex] value: ${value}');
 
     double? parse(String val) {
       val = val.replaceAll('"', '').trim();
@@ -140,8 +138,6 @@ class _SemiCirclePointerGaugeState extends State<SemiCirclePointerGauge>
         closestIndex = i;
       }
     }
-
-    print('====== closet: ${items[closestIndex]}');
 
     return closestIndex;
   }

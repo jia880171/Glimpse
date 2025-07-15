@@ -1,12 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:glimpse/widgets/timeline_group/timeline_group.dart';
 
-import './../config.dart' as config;
+import '../../config.dart' as config;
 
-const modeYear = 0;
-const modeMonth = 1;
-const modeDate = 2;
+
 
 class HorizontalDateTimeline extends StatefulWidget {
   final int modeType;

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:glimpse/circle_date_picker_view.dart';
 
-import 'widgets/light_box_view.dart';
+import 'widgets/light_box/light_box_view.dart';
 
 class FilmFinderView extends StatefulWidget {
   const FilmFinderView({super.key});
@@ -38,14 +38,8 @@ class _FilmFinderViewState extends State<FilmFinderView> {
   @override
   Widget build(BuildContext context) {
     print('====== film roll building');
-    double screenWidth = MediaQuery
-        .of(context)
-        .size
-        .width;
-    double screenHeight = MediaQuery
-        .of(context)
-        .size
-        .height;
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
     Size widgetSize = Size(screenWidth, screenHeight);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -64,15 +58,20 @@ class _FilmFinderViewState extends State<FilmFinderView> {
                       height: screenHeight,
                       child: LightBoxView(
                         selectedDate: selectedDate,
-                        setTargetAlbum: setGlimpseCount,
+                        setTargetAlbumNames: setGlimpseCount,
                         widgetSize: widgetSize,
                         // scrollOffset: 0,
-                        setImagesPointer: (int currentIndex) {},
+                        setImagesWithDummiesPointer: (int currentIndex) {},
                         setImagesWithDummiesLength: (int imagesLength) {},
                         imagePointerFromParent: 0,
                         setEXIFOfPointedImg: (Map<String?, IfdTag>? map) {
                           // 處理 EXIF 資料
                         },
+                        shutterSpeed: '',
+                        aperture: '',
+                        iso: '',
+                        onImagesResetEnd: () {},
+                        isImagesReset: false, targetAlbumNames: [],
                       ),
                     )),
 

@@ -3,25 +3,27 @@ import 'dart:math' as math;
 import 'dart:math';
 
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
-import 'package:glimpse/widgets/dashboard/nikon28_like_dashboard.dart';
 import 'package:glimpse/widgets/dashboard/rotary_knob.dart';
+import 'package:glimpse/widgets/timeline_group/timeline_group.dart';
 import 'package:vibration/vibration.dart';
 
 import '../../config.dart' as config;
-import '../orange_light_glass.dart';
 
 class Dashboard extends StatefulWidget {
   final Size widgetSize;
   final List<String> items;
   final List<DateTime> datesOfSelectedAlbum;
   final Function(int index) onItemSelected;
-  final Function setTargetDatePointer;
-  final Function(int currentIndex) setImagesPointer;
+  final Function setSelectedDateByOffset;
+  final Function(int currentIndex) setImagesWithDummiesPointer;
   final int imageWithDummiesPointer;
   final int imagesWithDummiesLength;
   final String shutterSpeed;
   final String aperture;
   final String iso;
+  final DateTime selectedDate;
+  final Map<DateTime, int> photosCountPerDay;
+  final Function onImagesReset;
 
   const Dashboard(
       {super.key,
@@ -29,13 +31,16 @@ class Dashboard extends StatefulWidget {
       required this.onItemSelected,
       required this.items,
       required this.datesOfSelectedAlbum,
-      required this.setTargetDatePointer,
+      required this.setSelectedDateByOffset,
       required this.imageWithDummiesPointer,
-      required this.setImagesPointer,
+      required this.setImagesWithDummiesPointer,
       required this.imagesWithDummiesLength,
       required this.shutterSpeed,
       required this.aperture,
-      required this.iso});
+      required this.iso,
+      required this.selectedDate,
+      required this.photosCountPerDay,
+      required this.onImagesReset});
 
   @override
   State<StatefulWidget> createState() => DashboardState();
@@ -55,6 +60,9 @@ class DashboardState extends State<Dashboard> {
 
   int _menuPointer = 0;
   int _datePointer = 0;
+  double blur = 0.3;
+  Color radioGlassColor = Colors.white.withOpacity(0.9);
+  Color radioBackLightColor = Colors.orange;
 
   @override
   void initState() {
@@ -73,205 +81,98 @@ class DashboardState extends State<Dashboard> {
     double innerRadius = radius * 0.6;
     double dashWidth = (dentRadius - innerRadius);
 
-    double borderWidth = widget.widgetSize.width * 0.95;
+    double dentPanelWidth = widget.widgetSize.width * 0.96;
     double borderHeight = widget.widgetSize.height * 0.95;
 
-    double widgetInnerWidth = widget.widgetSize.width * 0.9;
-    double widgetInnerHeight = widget.widgetSize.height * 0.9;
+    double widgetWidth = widget.widgetSize.width;
+    double widgetHeight = widget.widgetSize.height;
 
-    double nikonHeight = widgetInnerHeight * 0.6;
-    double lowerSectionHeight = widgetInnerHeight * 0.4;
+    double nikonHeight = widgetHeight * 0.4;
+
+    double radioSectionHeight = widgetHeight * 0.39;
+    double radioHeight = radioSectionHeight * 0.8;
+    double lowerSectionHeight = widgetHeight * 0.5;
 
     double pillHeight = widget.widgetSize.height * 0.1;
     double roundRadiusOfMainWidget = widget.widgetSize.width * 0.0168;
 
+    double nikonDialWidth = widgetWidth * 0.68;
+
+    double minorMonitorWidth = widgetWidth * 0.11;
+    double minorMonitorHeight = nikonHeight * 0.123;
+
+    double minorMonitorFontSize = minorMonitorWidth * 0.2;
+
     return Container(
-      // color: Colors.cyan,
+      decoration: BoxDecoration(
+          color: config.dashboardBackGroundMainTheme,
+          borderRadius: BorderRadius.circular(roundRadiusOfMainWidget)),
       width: widget.widgetSize.width,
       height: widget.widgetSize.height,
       child: Center(
-        child:
-        Neumorphic(
-          style: NeumorphicStyle(
-              color: config.mainBackGroundWhite,
-              shape: NeumorphicShape.convex,
-              boxShape:
-              NeumorphicBoxShape.roundRect(
-                  BorderRadius.circular(
-                      roundRadiusOfMainWidget)),
-              intensity: 1,
-              depth: -0.8),
-          child: Container(
-            width: borderWidth,
-            height: borderHeight,
-            child: Column(
-              children: [
-                // nikon
-                Container(
-                  // color: Colors.green,
-                    width: widgetInnerWidth,
-                    height: nikonHeight,
-                    child: Row(
-                      children: [
-                        const Spacer(),
-                        Nikon28TiDashboard(
-                          widgetSize: Size(
-                              widget.widgetSize.width * 0.8, nikonHeight * 0.8),
-                          imagesWithDummiesPointer:
-                          widget.imageWithDummiesPointer,
-                          imagesLength: widget.imagesWithDummiesLength,
-                          backgroundColor: config.mainBackGroundWhite,
-                          shutterSpeed: widget.shutterSpeed,
-                          aperture: widget.aperture,
-                          iso: widget.iso,
-                        ),
-                        const Spacer(),
-                      ],
-                    )),
+        child: Column(
+          children: [
+            const Spacer(),
 
-                SizedBox(
-                  width: widgetInnerWidth,
-                  height: lowerSectionHeight,
-                  child: Row(
-                    children: [
-                      // const Spacer(),
-                      // mainMenuDashboard(dashWidth, pillHeight,
-                      //     Size(widgetInnerWidth * 0.3, lowerSectionHeight)),
-                      const Spacer(),
-                      lowerSection(dashWidth,
-                          Size(widgetInnerWidth, lowerSectionHeight)),
-                      const Spacer(),
-                    ],
-                  ),
-                )
-              ],
+            // radio section
+            TimelineGroup(
+              widgetWidth: widgetWidth,
+              widgetHeight: radioHeight,
+              blur: blur,
+              radioBackLightColor: radioBackLightColor,
+              radioGlassColor: radioGlassColor,
+              selectedDate: widget.selectedDate,
+              photosCountPerDay: widget.photosCountPerDay,
             ),
-          ),
-        )
-        ,
+
+            const Spacer(),
+
+            // lower section
+            Container(
+              width: widgetWidth,
+              height: lowerSectionHeight,
+              // color: Colors.yellow,
+              child: Row(
+                children: [
+                  lowerSection(
+                      dashWidth, Size(widgetWidth, lowerSectionHeight)),
+                ],
+              ),
+            ),
+
+            const Spacer(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget mainMenuDashboard(
-      double dashWidth, double pillHeight, Size widgetSize) {
-    return SizedBox(
-        width: widgetSize.width,
-        height: widgetSize.height,
-        child: Column(
-          children: [
-            const Spacer(),
-            Stack(
-              children: [
-                Neumorphic(
-                  style: NeumorphicStyle(
-                    lightSource: LightSource.topRight,
-                    shape: NeumorphicShape.convex,
-                    boxShape: NeumorphicBoxShape.roundRect(
-                        BorderRadius.circular(1.68)),
-                    intensity: 1,
-                    depth: -1,
-                  ),
-                  child: Container(
-                    width: widgetSize.width * 0.8,
-                    height: widgetSize.height * 0.1,
-                    color: config.mainBackGroundWhite,
-                    child: Center(
-                      child: Text(
-                        widget.items[_menuPointer],
-                        style: TextStyle(
-                            fontSize: pillHeight * 0.3, fontFamily: 'Ds-Digi'),
-                      ),
-                    ),
-                  ),
-                ),
-                const OrangeGlass(
-                  lightRadius: 8,
-                  blur: 0.23,
-                  borderRadiusCircular: 1.68,
-                )
-              ],
-            ),
-            const Spacer(),
-            RotaryKnob(
-              widgetHeight: widgetSize.height * 0.8,
-              widgetWidth: widgetSize.width,
-              dashWidth: dashWidth,
-              knobKey: _keyForMenu,
-              backgroundColor: config.mainBackGroundWhite,
-              innerColor: config.mainBackGroundWhiteDarker,
-              dashColor: config.mainBackGroundWhiteDarker2,
-              dashCount: widget.items.length,
-              itemsLength: widget.items.length,
-              onItemSelected: (int oldIndex, int newIndex) {
-                widget.onItemSelected(newIndex);
-                updateMenuPointer(newIndex);
-              },
-              vibrate: vibrate,
-              knobTitle: 'menu',
-            ),
-            const Spacer(),
-          ],
-        ));
-  }
-
   Widget lowerSection(double dashWidth, Size widgetSize) {
+    double rotaryKnobWidgetHeight = widgetSize.height;
     return Container(
       // color: Colors.black,
       width: widgetSize.width,
       height: widget.widgetSize.height,
       child: Column(
         children: [
-          const Spacer(),
           Container(
             // color: Colors.green,
             // width: widgetSize.width,
             // height: widgetSize.height * 0.6,
             child: Row(
               children: [
-
-                Stack(
-                  children: [
-                    Neumorphic(
-                      style: NeumorphicStyle(
-                        lightSource: LightSource.topRight,
-                        shape: NeumorphicShape.convex,
-                        boxShape: NeumorphicBoxShape.roundRect(
-                            BorderRadius.circular(1.68)),
-                        intensity: 1,
-                        depth: -1,
-                      ),
-                      child: Container(
-                        width: widgetSize.width * 0.1,
-                        height: widgetSize.height * 0.1,
-                        color: config.mainBackGroundWhite,
-                        child: Center(
-                          child: Text(
-                            widget.items[_menuPointer],
-                            style: TextStyle(
-                                fontSize: widgetSize.width * 0.01, fontFamily: 'Ds-Digi'),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const OrangeGlass(
-                      lightRadius: 8,
-                      blur: 0.23,
-                      borderRadiusCircular: 1.68,
-                    )
-                  ],
-                ),
                 const Spacer(),
 
                 RotaryKnob(
+                  items: widget.items,
                   widgetWidth: widgetSize.width * 0.3,
-                  widgetHeight: widgetSize.height * 0.8,
+                  widgetHeight: rotaryKnobWidgetHeight,
                   dashWidth: dashWidth,
                   knobKey: _keyForMenu,
-                  backgroundColor: config.mainBackGroundWhite,
-                  innerColor: config.mainBackGroundWhiteDarker,
-                  dashColor: config.mainBackGroundWhiteDarker2,
-                  dashCount: widget.items.length,
+                  knobColor: config.backGroundMainTheme,
+                  gapColor: config.backGroundWhite,
+                  dashColor: config.backGroundMainTheme,
+                  dashCount: 3,
                   itemsLength: widget.items.length,
                   onItemSelected: (int oldIndex, int newIndex) {
                     widget.onItemSelected(newIndex);
@@ -279,6 +180,8 @@ class DashboardState extends State<Dashboard> {
                   },
                   vibrate: vibrate,
                   knobTitle: 'menu',
+                  isDrawArc: false,
+                  isMenu: true,
                 ),
 
                 const Spacer(),
@@ -286,19 +189,23 @@ class DashboardState extends State<Dashboard> {
                 // date
                 RotaryKnob(
                   widgetWidth: widgetSize.width * 0.3,
-                  widgetHeight: widgetSize.height * 0.8,
+                  widgetHeight: rotaryKnobWidgetHeight,
                   dashWidth: dashWidth,
                   knobKey: _keyForDate,
-                  backgroundColor: config.mainBackGroundWhite,
-                  innerColor: config.mainBackGroundWhiteDarker,
+                  knobColor: config.backGroundMainTheme,
+                  gapColor: config.backGroundWhite,
                   dashColor: config.mainBackGroundWhiteDarker2,
                   dashCount: 0,
                   itemsLength: widget.datesOfSelectedAlbum.length,
                   onItemSelected: (int oldIndex, int newIndex) {
-                    widget.setTargetDatePointer(newIndex - oldIndex);
+                    widget.setSelectedDateByOffset(newIndex - oldIndex);
+                    widget.setImagesWithDummiesPointer(1);
+                    widget.onImagesReset();
                   },
                   vibrate: vibrate,
                   knobTitle: 'date',
+                  isDrawArc: false,
+                  isMenu: false,
                 ),
 
                 const Spacer(),
@@ -306,11 +213,12 @@ class DashboardState extends State<Dashboard> {
                 // film roller
                 RotaryKnob(
                   widgetWidth: widgetSize.width * 0.3,
-                  widgetHeight: widgetSize.height * 0.8,
+                  widgetHeight: rotaryKnobWidgetHeight,
                   dashWidth: dashWidth,
                   knobKey: _keyForFilmRoller,
-                  backgroundColor: config.mainBackGroundWhite,
-                  innerColor: config.mainBackGroundWhiteDarker,
+                  knobColor: config.backGroundMainTheme,
+                  // knobColor: config.knob,
+                  gapColor: config.backGroundWhite,
                   dashColor: config.mainBackGroundWhiteDarker2,
                   dashCount: 0,
                   itemsLength: 0,
@@ -318,8 +226,6 @@ class DashboardState extends State<Dashboard> {
                     setState(() {
                       int currentIndex =
                           widget.imageWithDummiesPointer + newIndex;
-                      print(
-                          '====== [dash] [rotating], currentIndex:  ${currentIndex}, widget.imageLength ${widget.imagesWithDummiesLength}');
 
                       if (currentIndex >= widget.imagesWithDummiesLength - 2) {
                         currentIndex = widget.imagesWithDummiesLength - 2;
@@ -327,19 +233,18 @@ class DashboardState extends State<Dashboard> {
                         currentIndex = 1;
                       }
 
-                      print(
-                          '====== [dash] setImagesPointer, currentIndex:  ${currentIndex}, widget.imagesWithDummiesLength** ${widget.imagesWithDummiesLength}');
-                      widget.setImagesPointer(currentIndex);
+                      widget.setImagesWithDummiesPointer(currentIndex);
                     });
                   },
                   vibrate: vibrate,
                   knobTitle: 'scroll',
+                  isDrawArc: true,
+                  isMenu: false,
                 ),
                 const Spacer(),
               ],
             ),
           ),
-          const Spacer(),
         ],
       ),
     );

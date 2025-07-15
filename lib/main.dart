@@ -1,9 +1,9 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:collection/collection.dart';
 import 'package:exif/exif.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
@@ -11,8 +11,10 @@ import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:glimpse/services/database_service.dart';
 import 'package:glimpse/widgets/dashboard/dashboard.dart';
-import 'package:glimpse/widgets/horizontal_date_timeline.dart';
-import 'package:glimpse/widgets/light_box_view.dart';
+import 'package:glimpse/widgets/glimpses/glimpses_book.dart';
+import 'package:glimpse/widgets/light_box/light_box_view.dart';
+import 'package:glimpse/widgets/timeline_group/horizontal_date_timeline.dart';
+import 'package:glimpse/widgets/timeline_group/timeline_group.dart';
 import 'package:glimpse/widgets/trash.dart';
 import 'package:photo_manager/photo_manager.dart';
 
@@ -21,7 +23,6 @@ import 'Routes.dart';
 import 'common/utils/image_utils.dart';
 import 'common/utils/rotation_utils.dart';
 import 'database_sqlite/attraction.dart';
-import 'glimpse_row_in_main.dart';
 import 'widgets/contact_sheet.dart';
 
 Future<void> main() async {
@@ -66,9 +67,11 @@ enum Modes {
   displayAttractions,
 }
 
-
 class _MyHomePageState extends State<MyHomePage> {
   bool _canPop = false;
+  bool isImagesReset = false;
+
+  List<String> targetAlbumNames = [];
 
   final List<String> dayOfTheWeekList = [
     "月曜日",
@@ -86,7 +89,6 @@ class _MyHomePageState extends State<MyHomePage> {
     'Glimpses',
     'Trash',
     'Receipt',
-    'Printer'
   ];
 
   final List<String> menuItemsPath = [
@@ -95,7 +97,6 @@ class _MyHomePageState extends State<MyHomePage> {
     '/glimpses',
     '/trash',
     '/receipt',
-    '/printer'
   ];
 
   int menuPointer = 0;
@@ -110,9 +111,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String aperture = '0';
   String iso = '0';
 
-  String? targetAlbum;
   int targetDatePointer = 0;
-  int imagePointer = 1;
+  int imageWithDummiesPointer = 1;
   int imagesWithDummiesLength = 0;
 
   List<DateTime> datesOfSelectedAlbum = [];
@@ -129,27 +129,27 @@ class _MyHomePageState extends State<MyHomePage> {
     prevDepths = List<double>.filled(menuItems.length, _depthNormal);
 
     depths[menuPointer] = _depthMax;
-    if (targetAlbum != null) {
-      setTargetAlbum(targetAlbum!);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
-    double radiusOfMainView = screenWidth* 0.05;
+    double radiusOfMainView = screenWidth * 0.05;
 
     double mainWidgetWidth = screenWidth * 0.96;
     double screenHeight = MediaQuery.of(context).size.height;
-    double mainWidgetHeight = screenHeight * 0.4;
-    double mainWidgetHeightFilm = screenHeight * 0.36;
 
-    double dashboardHeight = screenHeight * 0.35;
+    // header title: screenHeight * 0.1
+    double mainWidgetHeight = screenHeight * 0.55;
+    double mainWidgetHeightFilm = screenHeight * 0.55;
+
+    double dashboardHeight = screenHeight * 0.3;
+
     Color radioGlassColor = Colors.white.withOpacity(0.9);
     Color radioBackLightColor = Colors.orange;
     double blur = 0.3;
 
-    double roundRadiusOfMainWidget = screenWidth*0.0168;
+    double roundRadiusOfMainWidget = screenWidth * 0.0168;
 
     return PopScope(
         canPop: _canPop,
@@ -178,175 +178,46 @@ class _MyHomePageState extends State<MyHomePage> {
                         Container(
                           height: screenHeight,
                           width: screenWidth,
-                          color: config.mainBackGroundWhite,
+                          color: config.backGroundMainTheme,
                         ),
-
                         Positioned(
                           top: screenHeight * 0.05,
                           left: 0,
                           right: 0,
                           child: Center(
                             // alignment: Alignment.center,
-                            child: SizedBox(
-                                // color: Colors.red,
+                            child: Container(
+                                color: config.backGroundMainTheme,
                                 width: screenWidth,
                                 child: Column(
                                   children: [
-
                                     SizedBox(
                                       height: screenHeight * 0.05,
                                       child: Column(
                                         children: [
-                                          SizedBox(
-                                            height: screenHeight * 0.01,
-                                          ),
+                                          const Spacer(),
                                           Text(
-                                            'Glimpses',
+                                            menuItems[menuPointer],
                                             style: TextStyle(
                                                 fontFamily: 'Jura',
                                                 fontSize:
                                                     screenHeight * 0.05 * 0.3,
                                                 color: Colors.black),
                                           ),
-                                          SizedBox(
-                                            height: screenHeight * 0.01,
-                                          ),
+                                          const Spacer(),
                                         ],
                                       ),
                                     ),
-
-                                    // timeline
-                                    Neumorphic(
-                                      style: NeumorphicStyle(
-                                          color: config.mainBackGroundWhite,
-                                          shape: NeumorphicShape.convex,
-                                          boxShape:
-                                              NeumorphicBoxShape.roundRect(
-                                                  BorderRadius.circular(
-                                                      roundRadiusOfMainWidget)),
-                                          intensity: 1,
-                                          depth: -1.5),
-                                      child: Padding(
-                                        padding: EdgeInsets.all(
-                                            mainWidgetWidth * 0.005),
-                                        child: timelineUnderGlassPanel(
-                                            mainWidgetWidth * 0.99,
-                                            screenHeight,
-                                            blur,
-                                            radioBackLightColor,
-                                            radioGlassColor),
-                                      ),
+                                    buildMainView(
+                                      screenWidth,
+                                      mainWidgetWidth,
+                                      mainWidgetHeightFilm,
+                                      mainWidgetHeight,
                                     ),
-
-                                    SizedBox(
-                                      height: screenHeight * 0.01,
-                                    ),
-                                    // Main [Height] 0.5
-
-                                    if (menuItems[menuPointer] == 'FILMS')
-                                      Neumorphic(
-                                          style: NeumorphicStyle(
-                                              color: config.mainBackGroundWhite,
-                                              shape: NeumorphicShape.convex,
-                                              boxShape:
-                                                  NeumorphicBoxShape.roundRect(
-                                                      BorderRadius.circular(
-                                                          roundRadiusOfMainWidget)),
-                                              intensity: 1,
-                                              depth: -1),
-                                          child: Container(
-                                            height: mainWidgetHeightFilm,
-                                            width: mainWidgetWidth,
-                                            child: LightBoxView(
-                                              widgetSize: Size(
-                                                mainWidgetWidth,
-                                                mainWidgetHeightFilm,
-                                              ),
-                                              selectedDate: selectedDate,
-                                              setTargetAlbum: setTargetAlbum,
-                                              setImagesPointer:
-                                                  setImagesPointer,
-                                              setImagesWithDummiesLength:
-                                                  setImagesWithDummiesLength,
-                                              imagePointerFromParent:
-                                                  imagePointer,
-                                              setEXIFOfPointedImg:
-                                                  setEXIFOfPointedImg,
-                                            ),
-                                          )),
-
-                                    if (menuItems[menuPointer] == 'Trash' ||
-                                        menuItems[menuPointer] ==
-                                            'CONTACT SHEET')
-                                      Neumorphic(
-                                        style: NeumorphicStyle(
-                                            // lightSource: neumorphicLightSource,
-                                            color: config.mainBackGroundWhite,
-                                            shape: NeumorphicShape.convex,
-                                            boxShape:
-                                                NeumorphicBoxShape.roundRect(
-                                                    BorderRadius.circular(
-                                                        roundRadiusOfMainWidget)),
-                                            intensity: 1,
-                                            depth: -0.8),
-                                        child: Container(
-                                          // color: Colors.grey.withOpacity(0.3),
-                                          height: mainWidgetHeight,
-                                          width: mainWidgetWidth,
-                                          child:
-                                              menuItems[menuPointer] == 'Trash'
-                                                  ? TrashView(
-                                                      widgetSize: Size(
-                                                          mainWidgetWidth,
-                                                          mainWidgetHeight),
-                                                    )
-                                                  : menuItems[menuPointer] ==
-                                                          'CONTACT SHEET'
-                                                      ? ContactSheetView(
-                                                          widgetSize: Size(
-                                                            mainWidgetWidth,
-                                                            mainWidgetHeight,
-                                                          ),
-                                                          selectedDate:
-                                                              selectedDate,
-                                                          setTargetAlbum:
-                                                              setTargetAlbum,
-                                                          // scrollOffset:
-                                                          //     scrollOffset,
-                                                          setImagesPointer:
-                                                              setImagesPointer,
-                                                        )
-                                                      : SingleChildScrollView(
-                                                          child: Column(
-                                                            children:
-                                                                List.generate(
-                                                              66,
-                                                              (i) {
-                                                                return GlimpseRowCard(
-                                                                  date: DateTime
-                                                                          .now()
-                                                                      .subtract(
-                                                                    Duration(
-                                                                        days: math.Random()
-                                                                            .nextInt(90)),
-                                                                  ),
-                                                                  rowWidth:
-                                                                      screenWidth *
-                                                                          0.8,
-                                                                  dayOfTheWeekList:
-                                                                      dayOfTheWeekList,
-                                                                );
-                                                              },
-                                                            ),
-                                                          ),
-                                                        ),
-                                        ),
-                                      ),
                                   ],
                                 )),
                           ),
                         ),
-
                         SizedBox(
                           height: screenHeight,
                           width: screenWidth,
@@ -362,77 +233,24 @@ class _MyHomePageState extends State<MyHomePage> {
                                     items: menuItems,
                                     onItemSelected: onMenuItemSelected,
                                     datesOfSelectedAlbum: datesOfSelectedAlbum,
-                                    setTargetDatePointer: setTargetDatePointer,
-                                    // setScrollOffset: setScrollOffset,
-                                    imageWithDummiesPointer: imagePointer,
-                                    setImagesPointer: setImagesPointer,
+                                    setSelectedDateByOffset:
+                                        setSelectedDateByOffset,
+                                    imageWithDummiesPointer:
+                                        imageWithDummiesPointer,
+                                    setImagesWithDummiesPointer:
+                                        setImagesWithDummiesPointer,
                                     imagesWithDummiesLength:
                                         imagesWithDummiesLength,
                                     shutterSpeed: shutterSpeed,
                                     aperture: aperture,
                                     iso: iso,
+                                    selectedDate: selectedDate,
+                                    photosCountPerDay: photosCountPerDay,
+                                    onImagesReset: onImagesReset,
                                   ))
                             ],
                           ),
                         )
-
-                        // Menu Picker [Height] 0.26
-                        // SizedBox(
-                        //   height: screenHeight,
-                        //   width: screenWidth,
-                        //   child: Stack(
-                        //     alignment: Alignment.center,
-                        //     children: [
-                        //       Positioned(
-                        //           bottom: 0,
-                        //           child: ClipRect(
-                        //             child: Container(
-                        //               decoration: BoxDecoration(
-                        //                 // color: Colors.white.withOpacity(0.2),
-                        //                 gradient: LinearGradient(
-                        //                   colors: [
-                        //                     Colors.white.withOpacity(.3),
-                        //                     Colors.white.withOpacity(.5),
-                        //                   ],
-                        //                   begin: Alignment.topCenter,
-                        //                   end: Alignment.bottomCenter,
-                        //                 ),
-                        //               ),
-                        //               // color: Colors.white.withOpacity(.6),
-                        //
-                        //               width: screenWidth,
-                        //               height: screenWidth * 0.55,
-                        //               child: OverflowBox(
-                        //                 maxHeight: double.infinity,
-                        //                 maxWidth: double.infinity,
-                        //                 alignment: Alignment.topCenter,
-                        //                 child: Align(
-                        //                   alignment: Alignment.topCenter,
-                        //                   child: SizedBox(
-                        //                       width: screenWidth,
-                        //                       height: screenWidth,
-                        //                       child: Transform.translate(
-                        //                         offset: Offset(0, -0),
-                        //                         child: CircleMenuPicker(
-                        //                           datesLength:
-                        //                           datesOfSelectedAlbum.length,
-                        //                           setTargetDatePointer:
-                        //                           setTargetDatePointer,
-                        //                           onItemSelected: onItemSelected,
-                        //                           items: menuItems,
-                        //                           radius: screenWidth * 0.5 * 0.9,
-                        //                           menuItemsPath: menuItemsPath,
-                        //                           widgetSize: Size(screenWidth,
-                        //                               screenWidth * 0.5 * 0.9),
-                        //                         ),
-                        //                       )),
-                        //                 ),
-                        //               ),
-                        //             ),
-                        //           ))
-                        //     ],
-                        //   ),
-                        // ),
                       ],
                     ),
                   ),
@@ -441,12 +259,112 @@ class _MyHomePageState extends State<MyHomePage> {
             )));
   }
 
-  // void setScrollOffset(int offset) {
-  //   setState(() {
-  //     scrollOffset = offset;
-  //     print('======[main], setting scrollOffset, ${scrollOffset}');
-  //   });
-  // }
+  Widget buildMainView(double screenWidth, double mainWidgetWidth,
+      double mainWidgetHeightFilm, double mainWidgetHeight) {
+    final currentMenu = menuItems[menuPointer];
+
+    switch (currentMenu) {
+      case 'FILMS':
+        return LightBoxView(
+          widgetSize: Size(mainWidgetWidth, mainWidgetHeightFilm),
+          selectedDate: selectedDate,
+          setTargetAlbumNames: setTargetAlbumNames,
+          setImagesWithDummiesPointer: setImagesWithDummiesPointer,
+          setImagesWithDummiesLength: setImagesWithDummiesLength,
+          imagePointerFromParent: imageWithDummiesPointer,
+          setEXIFOfPointedImg: setEXIFOfPointedImg,
+          shutterSpeed: shutterSpeed,
+          aperture: aperture,
+          iso: iso,
+          onImagesResetEnd: onImagesResetEnd,
+          isImagesReset: isImagesReset,
+          targetAlbumNames: targetAlbumNames,
+        );
+
+      case 'Trash':
+        return _buildNeumorphicWrapper(
+          height: mainWidgetHeight,
+          width: mainWidgetWidth,
+          child: TrashView(
+            widgetSize: Size(mainWidgetWidth, mainWidgetHeight),
+          ),
+        );
+
+      case 'CONTACT SHEET':
+        return _buildNeumorphicWrapper(
+          height: mainWidgetHeight,
+          width: mainWidgetWidth,
+          child: ContactSheetView(
+            widgetSize: Size(mainWidgetWidth, mainWidgetHeight),
+            selectedDate: selectedDate,
+            setTargetAlbumNames: setTargetAlbumNames,
+            setImagesWithDummiesPointer: setImagesWithDummiesPointer,
+          ),
+        );
+
+      case 'Glimpses':
+        return _buildNeumorphicWrapper(
+            child: GlimpseBookView(widgetSize: Size(mainWidgetWidth, mainWidgetHeight)),
+            height: mainWidgetHeight,
+            width: mainWidgetWidth);
+      // return _buildNeumorphicWrapper(
+      //   height: mainWidgetHeight,
+      //   width: mainWidgetWidth,
+      //   child: SingleChildScrollView(
+      //     child: Column(
+      //       children: List.generate(
+      //         66,
+      //             (i) => GlimpseRowCard(
+      //           date: DateTime.now()
+      //               .subtract(Duration(days: math.Random().nextInt(90))),
+      //           rowWidth: screenWidth * 0.8,
+      //           dayOfTheWeekList: dayOfTheWeekList,
+      //         ),
+      //       ),
+      //     ),
+      //   ),
+      // );
+
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildNeumorphicWrapper({
+    required Widget child,
+    required double height,
+    required double width,
+    double borderRadius = 8,
+  }) {
+    return Neumorphic(
+      style: NeumorphicStyle(
+        color: config.mainBackGroundWhite,
+        shape: NeumorphicShape.convex,
+        boxShape: NeumorphicBoxShape.roundRect(
+          BorderRadius.circular(borderRadius),
+        ),
+        intensity: 1,
+        depth: -0.8,
+      ),
+      child: Container(
+        height: height,
+        width: width,
+        child: child,
+      ),
+    );
+  }
+
+  void onImagesResetEnd() {
+    setState(() {
+      isImagesReset = false;
+    });
+  }
+
+  void onImagesReset() {
+    setState(() {
+      isImagesReset = true;
+    });
+  }
 
   Widget timelineUnderGlassPanel(double glassPanelWidth, double screenHeight,
       double blur, Color radioBackLightColor, Color radioGlassColor) {
@@ -662,17 +580,22 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Future<void> setTargetAlbum(String targetAlbum) async {
-    this.targetAlbum = targetAlbum;
-    await setDatesOfSelectedAlbum();
+  Future<void> setTargetAlbumNames(List<String> targetAlbumNames) async {
+    this.targetAlbumNames = targetAlbumNames;
+
+    print(
+        '====== [main] setTargetAlbumNames,this.targetAlbumNames ${this.targetAlbumNames} ');
+    await updateDateRangeFromAlbums(targetAlbumNames);
+  }
+
+  Future<void> updateDateRangeFromAlbums(List<String> targetAlbums) async {
+    await setDatesOfSelectedAlbums(targetAlbums);
     setState(() {
       selectedDate = datesOfSelectedAlbum[0];
-      // scrollOffset = 0;
     });
   }
 
-  // 修改 使之能重用
-  Future<void> setDatesOfSelectedAlbum() async {
+  Future<void> setDatesOfSelectedAlbums(List<String> targetAlbums) async {
     datesOfSelectedAlbum.clear();
     photosCountPerDay.clear();
 
@@ -681,40 +604,40 @@ class _MyHomePageState extends State<MyHomePage> {
       type: RequestType.image,
     );
 
-    // 2. 找出符合名稱的相簿
-    final album = albums.firstWhere(
-      (a) => a.name == targetAlbum,
-      orElse: () => throw Exception('Album not found: $targetAlbum'),
-    );
+    // 2. 遍歷所有目標相簿名稱
+    for (final target in targetAlbums) {
+      final album = albums.firstWhereOrNull((a) => a.name == target);
 
-    // 3. 取得所有照片（不分頁）
-    final count = await album.assetCountAsync;
+      if (album == null) {
+        debugPrint('⚠️ 相簿未找到: $target');
+        continue;
+      }
 
-    print('======setDatesOfSelectedAlbum: count: ${count}');
+      // 3. 取得相簿內所有照片
+      final count = await album.assetCountAsync;
+      final assets = await album.getAssetListPaged(page: 0, size: count);
 
-    // 4. 一次取得全部照片
-    final assets = await album.getAssetListPaged(page: 0, size: count);
+      for (final asset in assets) {
+        final dt = asset.createDateTime;
+        final dateOnly = DateTime(dt.year, dt.month, dt.day);
 
-    for (final asset in assets) {
-      final dt = asset.createDateTime;
-      final dateOnly = DateTime(dt.year, dt.month, dt.day);
-
-      if (!photosCountPerDay.containsKey(dateOnly)) {
-        datesOfSelectedAlbum.add(dateOnly);
-        photosCountPerDay[dateOnly] = 1;
-      } else {
-        photosCountPerDay[dateOnly] = photosCountPerDay[dateOnly]! + 1;
+        if (!photosCountPerDay.containsKey(dateOnly)) {
+          datesOfSelectedAlbum.add(dateOnly);
+          photosCountPerDay[dateOnly] = 1;
+        } else {
+          photosCountPerDay[dateOnly] = photosCountPerDay[dateOnly]! + 1;
+        }
       }
     }
 
-    // 排序日期（從新到舊）
+    // 4. 日期排序（從新到舊）
     datesOfSelectedAlbum.sort((a, b) => b.compareTo(a));
 
     print('====== sorted? : $datesOfSelectedAlbum');
     print('====== photosCountPerDay? : $photosCountPerDay');
   }
 
-  void setTargetDatePointer(int x) {
+  void setSelectedDateByOffset(int x) {
     if (datesOfSelectedAlbum.isEmpty) {
       return;
     }
@@ -730,9 +653,9 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  void setImagesPointer(int indexWithDummies) {
+  void setImagesWithDummiesPointer(int indexWithDummies) {
     setState(() {
-      imagePointer = indexWithDummies;
+      imageWithDummiesPointer = indexWithDummies;
     });
   }
 

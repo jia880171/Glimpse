@@ -13,7 +13,7 @@ import 'film_roll_right_view.dart';
 
 class FilmRollView extends StatefulWidget {
   final Size viewSize;
-  final String targetAlbumName;
+  final List<String> targetAlbumNames;
   final DateTime selectedDate;
   final List<AssetEntity> imagesWithDummies;
   final Map<String, ui.Image> thumbnailCache;
@@ -23,7 +23,7 @@ class FilmRollView extends StatefulWidget {
   final bool isContactSheet;
   final int imagePointerFromParent;
   final Function(AssetEntity image, int index, bool isNeg) onTapPic;
-  final Function(int currentIndex) setImagesPointer;
+  final Function(int currentIndex) setImagesWithDummiesPointer;
   final Function(Map<String?, IfdTag>) setEXIFOfPointedImg;
 
   const FilmRollView(
@@ -35,10 +35,10 @@ class FilmRollView extends StatefulWidget {
       required this.noHeader,
       required this.isNeg,
       required this.isContactSheet,
-      required this.targetAlbumName,
+      required this.targetAlbumNames,
       required this.selectedDate,
       required this.onTapPic,
-      required this.setImagesPointer,
+      required this.setImagesWithDummiesPointer,
       required this.imagePointerFromParent,
       required this.setEXIFOfPointedImg});
 
@@ -93,26 +93,16 @@ class _FilmRollViewState extends State<FilmRollView> {
       _initExifData();
     }
 
-    print(
-        '===== [film_roll] widget.imagePointerFromParent ${widget.imagePointerFromParent}'
-        ',  oldWidget.imagePointerFromParent ${oldWidget.imagePointerFromParent}, length: ${widget.imagesWithDummies.length}'
-        ',currentIndex ${currentIndex}');
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // clear currentIndex when targetAlbumName and selectedDate have changed
-      if (widget.targetAlbumName != oldWidget.targetAlbumName ||
+      if (widget.targetAlbumNames != oldWidget.targetAlbumNames ||
           widget.selectedDate != oldWidget.selectedDate) {
-        print('==== in if');
         jumpToTargetIndex(0);
       } else if (widget.imagePointerFromParent !=
               oldWidget.imagePointerFromParent &&
           widget.imagePointerFromParent != currentIndex) {
-        print('==== in else if');
-
         jumpToTargetIndex(widget.imagePointerFromParent);
-      } else{
-        print('==== in else');
-      }
+      } else {}
     });
   }
 
@@ -131,50 +121,35 @@ class _FilmRollViewState extends State<FilmRollView> {
 
     if (contentOffset < 0) contentOffset = 0;
 
-    int newIndex = (contentOffset / unitFrameHeight).floor() + 1;//???
-
+    int newIndex = (contentOffset / unitFrameHeight).floor() + 1; //???
 
     if (newIndex != currentIndex &&
         newIndex >= 1 &&
-        newIndex < widget.imagesWithDummies.length-1) {
+        newIndex < widget.imagesWithDummies.length - 1) {
       currentIndex = newIndex;
       final exif = await getEXIFOf(currentIndex);
       setState(() {
-        print('====== [filmROll] setImagesPointer, currentIndex:  ${currentIndex}');
-        widget.setImagesPointer(currentIndex);
+        print(
+            '====== [filmROll] setImagesPointer, currentIndex:  ${currentIndex}');
+        widget.setImagesWithDummiesPointer(currentIndex);
         widget.setEXIFOfPointedImg(exif);
       });
     }
   }
 
   Future<Map<String?, IfdTag>> getEXIFOf(int index) async {
-    final imageBytes = await ImageUtils.getImageBytes(widget.imagesWithDummies[index]);
+    final imageBytes =
+        await ImageUtils.getImageBytes(widget.imagesWithDummies[index]);
     final exifData = await readExifFromBytes(imageBytes!);
 
     return exifData!;
   }
 
   Future<void> jumpToTargetIndex(int targetIndex) async {
-    print('====== [film_roll] jump to targetIndex: $targetIndex');
-
     if (_scrollController.hasClients) {
       double scrollOffset = calculateScrollOffset(targetIndex);
 
       final exif = await getEXIFOf(targetIndex);
-
-      //test
-      final shutterSpeed = exif['EXIF ShutterSpeedValue']?.printable != null
-          ? ImageUtils.formatShutterSpeed(
-              exif['EXIF ShutterSpeedValue']!.printable!)
-          : '未知快門';
-
-      final aperture = exif['EXIF ApertureValue']?.printable != null
-          ? ImageUtils.formatAperture(exif['EXIF ApertureValue']!.printable!)
-          : '未知光圈';
-      print(
-          '====== [film_roll] jumpTo ${targetIndex}, shutterSpeed: $shutterSpeed, aperture $aperture');
-
-      //end of test
 
       widget.setEXIFOfPointedImg(exif);
 
@@ -225,7 +200,8 @@ class _FilmRollViewState extends State<FilmRollView> {
       return;
     }
 
-    final imageBytes = await ImageUtils.getImageBytes(widget.imagesWithDummies[0]);
+    final imageBytes =
+        await ImageUtils.getImageBytes(widget.imagesWithDummies[0]);
     final exifData = await readExifFromBytes(imageBytes!);
 
     setState(() {
@@ -236,7 +212,8 @@ class _FilmRollViewState extends State<FilmRollView> {
 
   Widget filmRoll() {
     return Container(
-        color: widget.backLight,
+        color: widget.isNeg ? widget.backLight : config.hardCardPaperW,
+        // color: config.backGroundMainTheme,
         height: widget.viewSize.height,
         width: widget.viewSize.width,
         child: FittedBox(

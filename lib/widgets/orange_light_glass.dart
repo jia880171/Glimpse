@@ -34,75 +34,95 @@ class _OrangeGlassState extends State<OrangeGlass> {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(widget.borderRadiusCircular),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: widget.blur, sigmaY: widget.blur),
-          child: Stack(
-            children: [
-              // subtle orange
-              ShaderMask(
-                shaderCallback: (bounds) {
-                  return RadialGradient(
-                    center: lightAliment,
-                    radius: widget.lightRadius,
-                    colors: [
-                      radioBackLightColor.withOpacity(0.03),
-                      radioBackLightColor.withOpacity(0.01),
-                    ],
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode.softLight,
-                child: Container(
-                  color: Colors.white.withOpacity(0.05),
-                ),
-              ),
 
-              // black shadow
-              ShaderMask(
-                shaderCallback: (bounds) {
-                  return RadialGradient(
-                    center: blackLightAliment,
-                    radius: widget.lightRadius * 0.5,
-                    colors: [
-                      Colors.black.withOpacity(0.001),
-                      Colors.black.withOpacity(0.03),
-                      Colors.black.withOpacity(0.04),
-                      Colors.black.withOpacity(0.05),
-                    ],
-                    stops: const [
-                      0.0,
-                      0.9,
-                      0.95,
-                      0.99]
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode.softLight,
-                child: Container(
-                  color: Colors.white.withOpacity(0.05),
-                ),
-              ),
+    return
+      Positioned.fill(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(widget.borderRadiusCircular),
+          child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: widget.blur, sigmaY: widget.blur),
+              child: Stack(
+                children: [
 
-              // texture overlay
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(5),
-                  child: Opacity(
-                    opacity: 0.0168,
-                    child: Image.asset(
-                      'assets/images/glass2.png',
-                      fit: BoxFit.cover,
-                      colorBlendMode: BlendMode.screen,
-                      color: Colors.white.withOpacity(0),
+                  // subtle orange
+                  ShaderMask(
+                    shaderCallback: (bounds) {
+                      return RadialGradient(
+                        center: const Alignment(0, 1),
+                        radius: widget.lightRadius*0.6,
+                        colors: [
+                          radioBackLightColor.withOpacity(0.15),
+                          radioBackLightColor.withOpacity(0.15),
+                          radioBackLightColor.withOpacity(0.05),
+                        ],
+                      ).createShader(bounds);
+                    },
+                    blendMode: BlendMode.softLight,
+                    child: Container(
+                      color: Colors.white.withOpacity(0.05), // 光感混合用 base 色
                     ),
                   ),
-                ),
-              ),
-            ],
-          ),
+
+                  // red light
+                  ShaderMask(
+                    shaderCallback: (bounds) {
+                      return RadialGradient(
+                        center: const Alignment(0, -1),
+                        radius: widget.lightRadius*0.3,
+                        colors: [
+                          Colors.red.withOpacity(0.02),
+                          Colors.red.withOpacity(0.01),
+                        ],
+                      ).createShader(bounds);
+                    },
+                    blendMode: BlendMode.softLight,
+                    child: Container(
+                      color: Colors.white.withOpacity(0.05), // 光感混合用 base 色
+                    ),
+                  ),
+
+                  // black shadow
+                  // ShaderMask(
+                  //   shaderCallback: (bounds) {
+                  //     return RadialGradient(
+                  //         center: Alignment.topCenter,
+                  //         radius: widget.lightRadius*0.1,
+                  //
+                  //         colors: [
+                  //           Colors.black.withOpacity(0.0),
+                  //           Colors.black.withOpacity(0.1),
+                  //           Colors.black.withOpacity(0.1),
+                  //         ],
+                  //         stops: const [
+                  //           0,
+                  //           0.5,
+                  //           0.8
+                  //         ]).createShader(bounds);
+                  //   },
+                  //   blendMode: BlendMode.softLight,
+                  //   child: Container(
+                  //     color: Colors.white.withOpacity(0.05), // 光感混合用 base 色
+                  //   ),
+                  // ),
+
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(widget.borderRadiusCircular),
+                      child: Opacity(
+                        opacity: 0.09,
+                        child: Image.asset(
+                          'assets/images/glass2.png',
+                          fit: BoxFit.cover,
+                          colorBlendMode: BlendMode.screen,
+                          color: Colors.white.withOpacity(0),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )),
         ),
-      ),
-    );
+      );
+
   }
 }

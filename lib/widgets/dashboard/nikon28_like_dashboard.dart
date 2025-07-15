@@ -1,9 +1,8 @@
-import 'dart:ui';
-
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:glimpse/widgets/dashboard/semi_circle_point_gauge.dart';
 
 import '../../config.dart' as config;
+import '../grey_glass.dart';
 import 'cirle_point_gauge.dart';
 
 const List<String> shutterSpeeds = [
@@ -72,6 +71,8 @@ class Nikon28TiDashboard extends StatelessWidget {
   final String shutterSpeed;
   final String aperture;
   final String iso;
+  final bool isReset;
+  final VoidCallback onImagesResetEnd;
 
   const Nikon28TiDashboard({
     super.key,
@@ -82,143 +83,130 @@ class Nikon28TiDashboard extends StatelessWidget {
     required this.shutterSpeed,
     required this.aperture,
     required this.iso,
+    required this.isReset,
+    required this.onImagesResetEnd,
   });
 
   @override
   Widget build(BuildContext context) {
-    double blur = 0.3;
+    double innerDashboardHeight = widgetSize.height * 0.85;
+    double semiRadius = innerDashboardHeight * 0.5;
+    double middleSectionWidth = widgetSize.height * 0.38 * 2;
+    double circleInMiddleRadius = widgetSize.height * 0.28;
+    double dashboardWidth = widgetSize.width;
 
-    double dashboardHeight = widgetSize.height * 0.9;
-    double semiRadius = dashboardHeight * 0.5;
-    double circleRadius = widgetSize.height * 0.38;
-    double dashboardWidth = semiRadius * 2.3 + circleRadius * 2;
+    if (widgetSize.height.isNaN ||
+        widgetSize.height.isInfinite ||
+        widgetSize.height <= 0) {
+      debugPrint("======Invalid widgetSize.height: ${widgetSize.height}");
+      return const SizedBox.shrink();
+    }
+
 
     return Container(
-      // color: Colors.red,
-      width: dashboardWidth,
-      height: dashboardHeight,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Neumorphic(
-            style: NeumorphicStyle(
-              lightSource: LightSource.topRight,
-              boxShape: NeumorphicBoxShape.roundRect(
-                BorderRadius.circular(dashboardHeight),
-              ),
-              intensity: 1,
-              depth: -1,
-            ),
-            child: Container(
-              width: dashboardWidth,
-              height: dashboardHeight,
-              color: backgroundColor,
-              child: Stack(
-                children: [
-                  Center(
-                    child: SemiCirclePointerGauge(
-                      currentValue: shutterSpeed,
-                      items: shutterSpeeds,
-                      radius: semiRadius,
-                      backgroundColor: backgroundColor,
-                      isRight: false,
-                      itemsToDisplay: shutterSpeedsToDisplay,
-                    ),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          border: Border.all(color: Colors.grey.withOpacity(0.8), width: 1.2),
+          borderRadius: BorderRadius.circular(innerDashboardHeight),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 2,
+            )
+          ],
+        ),
+        child: SizedBox(
+          width: dashboardWidth,
+          height: innerDashboardHeight,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Neumorphic(
+                style: NeumorphicStyle(
+                  lightSource: LightSource.topRight,
+                  boxShape: NeumorphicBoxShape.roundRect(
+                    BorderRadius.circular(innerDashboardHeight),
                   ),
-                  Center(
-                      child: Container(
-                    // color: Colors.red,
-                    width: circleRadius * 2,
-                    height: widgetSize.height,
-                    child: Column(
-                      children: [
-                        CirclePointerGauge(
-                          currentIndex: imagesWithDummiesPointer - 1, // remove header
-                          itemLength: imagesLength - 2, // dummies header and tail
-                          radius: circleRadius,
-                          backgroundColor: backgroundColor,
-                        ),
-                      ],
-                    ),
-                  )),
-                  Center(
-                    child: SemiCirclePointerGauge(
-                      currentValue: aperture,
-                      items: apertures,
-                      radius: semiRadius,
-                      backgroundColor: backgroundColor,
-                      isRight: true,
-                      itemsToDisplay: apertures,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(dashboardHeight),
-              child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+                  intensity: 1,
+                  depth: -1,
+                ),
+                child: Container(
+                  color: config.dashBoardW,
                   child: Stack(
                     children: [
-                      // inner light
-                      Container(
-                        decoration: BoxDecoration(
-                          color: config.nikonRadioBackLight.withOpacity(0.1),
-                          gradient: LinearGradient(
-                            colors: [
-                              // Colors.white.withOpacity(0.5),
-                              Colors.white.withOpacity(0.1),
-                              Colors.white.withOpacity(0.2),
-                              Colors.white.withOpacity(0.3)
-                            ],
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                          ),
+                      Center(
+                        child: SemiCirclePointerGauge(
+                          currentValue: shutterSpeed,
+                          items: shutterSpeeds,
+                          radius: semiRadius,
+                          backgroundColor: backgroundColor,
+                          isRight: false,
+                          itemsToDisplay: shutterSpeedsToDisplay,
                         ),
                       ),
-
-                      // subtle orange
-                      ShaderMask(
-                        shaderCallback: (bounds) {
-                          return RadialGradient(
-                            center: Alignment.bottomCenter,
-                            radius: 1,
-                            colors: [
-                              config.nikonRadioBackLight.withOpacity(0.02),
-                              config.nikonRadioBackLight.withOpacity(0.01),
-                              config.nikonRadioBackLight.withOpacity(0.005),
-                            ],
-                          ).createShader(bounds);
-                        },
-                        blendMode: BlendMode.softLight,
-                        child: Container(
-                          color: Colors.white.withOpacity(0.05), // 光感混合用 base 色
-                        ),
-                      ),
-
-                      Positioned.fill(
-                        child: ClipRRect(
-                          borderRadius:
-                              BorderRadius.circular(widgetSize.height * 0.5),
-                          child: Opacity(
-                            opacity: 0.168,
-                            child: Image.asset(
-                              'assets/images/glass2.png',
-                              fit: BoxFit.cover,
-                              colorBlendMode: BlendMode.screen,
-                              color: Colors.white.withOpacity(0),
+                      Center(
+                          child: Container(
+                            // color: config.hardCardYellowLight,
+                            width: middleSectionWidth,
+                            height: widgetSize.height,
+                            child: Column(
+                              children: [
+                                CirclePointerGauge(
+                                  currentIndex: imagesWithDummiesPointer - 1,
+                                  // remove header
+                                  itemLength: imagesLength - 2,
+                                  // dummies header and tail
+                                  radius: circleInMiddleRadius,
+                                  backgroundColor: backgroundColor,
+                                  isReset: isReset,
+                                  onResetEnd: onImagesResetEnd,
+                                ),
+                              ],
                             ),
-                          ),
+                          )),
+                      Center(
+                        child: SemiCirclePointerGauge(
+                          currentValue: aperture,
+                          items: apertures,
+                          radius: semiRadius,
+                          backgroundColor: backgroundColor,
+                          isRight: true,
+                          itemsToDisplay: apertures,
                         ),
                       ),
                     ],
-                  )),
-            ),
-          )
-        ],
-      ),
-    );
+                  ),
+                ),
+              ),
+
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(innerDashboardHeight),
+                  child: Opacity(
+                    opacity: 0.08,
+                    child: Image.asset(
+                      'assets/images/noise.png',
+                      fit: BoxFit.cover,
+                      color: Colors.white.withOpacity(0.28),
+                      colorBlendMode: BlendMode.multiply,
+                    ),
+                  ),
+                ),
+              ),
+
+              // OrangeGlass(
+              //   lightRadius: 8,
+              //   blur: 0.3,
+              //   borderRadiusCircular: dashboardHeight,
+              // )
+              GreyGlass(
+                lightRadius: 8,
+                blur: 0.2,
+                borderRadiusCircular: innerDashboardHeight,
+              )
+            ],
+          ),
+        ));
   }
 }

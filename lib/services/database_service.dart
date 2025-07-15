@@ -2,6 +2,7 @@ import 'package:glimpse/models/sake.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../models/film_profile.dart';
 import '../models/food.dart';
 import '../models/glimpse.dart';
 import '../models/place.dart';
@@ -25,7 +26,9 @@ class DatabaseService {
         ReceiptSchema,
         PlaceSchema,
         FoodSchema,
-        SakeSchema
+        SakeSchema,
+        AlbumSchema,
+        FilmProfileSchema,
       ],
       directory: dir.path,
     );
