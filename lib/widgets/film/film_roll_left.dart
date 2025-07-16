@@ -46,7 +46,8 @@ class FilmRowLeftSide extends StatelessWidget {
                         '${index}',
                         style: TextStyle(
                             color: config.dateColor,
-                            fontSize: width * 0.3 * 0.36,
+                            // fontSize: width * 0.3 * 0.36,
+                            fontSize: width * 0.3 * 0.6,
                             fontFamily: 'Anton'),
                         overflow: TextOverflow.ellipsis,
                         softWrap: false,

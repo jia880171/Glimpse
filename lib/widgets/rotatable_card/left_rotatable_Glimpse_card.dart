@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:glimpse/models/glimpse.dart';
 import 'package:glimpse/services/database_service.dart';
-import 'package:glimpse/widgets/rotatable_card/rotatable_Glimpse_card_back_view.dart';
 import 'package:glimpse/widgets/rotatable_card/rotatable_Glimpse_card_front_view.dart';
 import 'package:isar/isar.dart';
 
@@ -129,66 +128,62 @@ class LeftRotatableGlimpseCardState extends State<LeftRotatableGlimpseCard>
 
   Widget _buildBack() {
     return SizedBox(
-      child: RotatableGlimpseCardBackView(
-        cardSize: widget.cardSize,
-        imagePath: widget.imagePath,
-        glimpse: _glimpse,
-        exifData: widget.exifData,
+      // child: RotatableGlimpseCardBackView(
+      //   cardSize: widget.cardSize,
+      //   imagePath: widget.imagePath,
+      //   glimpse: _glimpse,
+      //   exifData: widget.exifData,
+      // ),
+
+      child: Card(
+        child: Container(
+          width: widget.cardSize.width,
+          height: widget.cardSize.height,
+          child: Text(widget.index.toString()),
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final Widget transformedCard = _buildTransformedCard();
-    final isFlipped =
-        widget.rotationAlignment == Alignment.centerLeft && cos(_rotationY) < 0;
-    Widget cardContainer;
+    final double rotationY = widget.rotationOverride ?? 0;
+    final bool isFront = cos(rotationY) >= 0;
+    final bool isFlipped =
+        widget.rotationAlignment == Alignment.centerLeft && !isFront;
 
-    if (widget.rotationAlignment == Alignment.centerLeft) {
-      // 若是卡片已翻面，使用右側當軸心，右側對齊畫面中心
-      final double offsetFromLeft = isFlipped
-          ? widget.widgetSize.width / 2 - widget.cardSize.width
-          : widget.widgetSize.width / 2;
+    final Alignment dynamicAlignment =
+    isFlipped ? Alignment.centerRight : widget.rotationAlignment;
 
-      cardContainer = Stack(
+    final double rotationAngle = isFront ? rotationY : rotationY + pi;
+
+    final transformedCard = Transform(
+      alignment: dynamicAlignment,
+      transform: Matrix4.identity()
+        ..setEntry(3, 2, 0.001)
+        ..rotateY(rotationAngle),
+      child: isFront ? _buildFront() : _buildBack(),
+    );
+
+    return SizedBox(
+      width: widget.widgetSize.width,
+      height: widget.widgetSize.height,
+      child: Stack(
         children: [
           Positioned(
-            left: offsetFromLeft,
+            left: isFlipped
+                ? widget.widgetSize.width / 2 - widget.cardSize.width
+                : widget.widgetSize.width / 2,
             top: (widget.widgetSize.height - widget.cardSize.height) / 2,
             width: widget.cardSize.width,
             height: widget.cardSize.height,
             child: transformedCard,
           ),
         ],
-      );
-    } else {
-      cardContainer = Center(child: transformedCard);
-    }
-
-    return Scaffold(
-      backgroundColor: const Color.fromRGBO(246, 244, 229, 0.3),
-      body: SizedBox(
-        width: widget.widgetSize.width,
-        height: widget.widgetSize.height,
-        child: GestureDetector(
-          onHorizontalDragUpdate: (details) {
-            _controller.stop();
-            setState(() {
-              _rotationY -= details.delta.dx * 0.03;
-            });
-          },
-          onHorizontalDragEnd: (details) {
-            final velocity = details.velocity.pixelsPerSecond.dx;
-            if (velocity.abs() > 200) {
-              _startInertiaAnimation(velocity);
-            }
-          },
-          child: cardContainer,
-        ),
       ),
     );
   }
+
 
   Future<void> _processImage() async {
     final rawImage = await decodeAndRotateIfNeeded(widget.image);
