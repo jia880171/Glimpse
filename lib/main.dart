@@ -16,6 +16,7 @@ import 'package:glimpse/widgets/light_box/light_box_view.dart';
 import 'package:glimpse/widgets/timeline_group/horizontal_date_timeline.dart';
 import 'package:glimpse/widgets/timeline_group/timeline_group.dart';
 import 'package:glimpse/widgets/trash.dart';
+import 'package:isar/isar.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 import './config.dart' as config;

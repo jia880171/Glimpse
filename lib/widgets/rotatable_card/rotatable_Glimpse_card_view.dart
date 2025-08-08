@@ -54,6 +54,8 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
   double _rotationY = 0.0; // 當前旋轉角度
   late AnimationController _controller;
   late Animation<double> _animation;
+  late final VoidCallback _animationListener;
+
 
   @override
   void initState() {
@@ -64,17 +66,30 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
       duration: const Duration(milliseconds: 3000000),
     );
 
-    _controller.addListener(() {
-      setState(() {
-        _rotationY += _animation.value;
-      });
-    });
+    _animationListener = () {
+      if (mounted) {
+        setState(() {
+          _rotationY += _animation.value;
+        });
+      }
+    };
 
+    //  每一幀都會觸發
+    _controller.addListener(_animationListener);
+
+    // 只有在動畫狀態變化時才觸發
     _controller.addStatusListener((status) {});
 
     loadGlimpse();
 
     _processImage();
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_animationListener);
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -123,7 +138,7 @@ class RotatableGlimpseCardViewState extends State<RotatableGlimpseCardView>
           backLight: widget.backLight,
           isNeg: widget.isNeg,
           leaveCardMode: widget.leaveCardMode,
-          processedImage: processedImage),
+          processedImage: processedImage, noX: false,),
     );
   }
 

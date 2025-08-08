@@ -6,10 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:glimpse/cirvular_text.dart';
 import 'package:glimpse/models/glimpse.dart';
-import 'package:glimpse/widgets/rotatable_card/rotatable_Glimpse_card_view.dart';
-import 'package:glimpse/views/glimpse_creation_view.dart';
+import 'package:glimpse/views/glimpse_form_view.dart';
 import 'package:glimpse/widgets/clickable_neumorphicIcon.dart';
 import 'package:glimpse/widgets/exif_card.dart';
+import 'package:glimpse/widgets/rotatable_card/rotatable_Glimpse_card_view.dart';
 
 import '../../config.dart' as config;
 
@@ -19,13 +19,13 @@ class RotatableGlimpseCardBackView extends StatefulWidget {
   final Size cardSize;
   final Map<String?, IfdTag> exifData;
 
-  const RotatableGlimpseCardBackView(
-      {Key? key,
-      required this.cardSize,
-      required this.imagePath,
-      this.glimpse,
-      required this.exifData})
-      : super(key: key);
+  const RotatableGlimpseCardBackView({
+    Key? key,
+    required this.cardSize,
+    required this.imagePath,
+    this.glimpse,
+    required this.exifData,
+  }) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => RotatableGlimpseCardBackViewState();
@@ -49,8 +49,7 @@ class RotatableGlimpseCardBackViewState
 
   Widget _buildCardCaseWithCard() {
     return Card(
-        // color: config.backGroundWhite,
-        color: config.hardCard,
+        color: config.hardCard.withOpacity(1.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(11),
         ),
@@ -170,7 +169,7 @@ class RotatableGlimpseCardBackViewState
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => GlimpseCreationView(
+                        builder: (context) => GlimpseFormView(
                           photoPath: widget.imagePath,
                           exifData: widget.exifData,
                         ),
@@ -180,7 +179,8 @@ class RotatableGlimpseCardBackViewState
                     // 回來後自動刷新
                     if (context.mounted) {
                       // 通知父層 widget 刷新
-                      final state = context.findAncestorStateOfType<RotatableGlimpseCardViewState>();
+                      final state = context.findAncestorStateOfType<
+                          RotatableGlimpseCardViewState>();
                       state?.loadGlimpse();
                     }
                   },

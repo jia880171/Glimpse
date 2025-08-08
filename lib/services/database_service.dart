@@ -4,9 +4,12 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/film_profile.dart';
 import '../models/food.dart';
+import '../models/friend.dart';
 import '../models/glimpse.dart';
 import '../models/place.dart';
 import '../models/receipt.dart';
+import '../models/shop_type.dart';
+import '../seeder/isar_seeder.dart';
 
 /// A singleton service to initialize and access the Isar database.
 class DatabaseService {
@@ -29,9 +32,15 @@ class DatabaseService {
         SakeSchema,
         AlbumSchema,
         FilmProfileSchema,
+        ShopTypeSchema,
+        FriendSchema,
       ],
       directory: dir.path,
     );
+
+    // generate seeder for dev[start]
+    await seedIsarData(isar);
+    // generate seeder for dev[end]
   }
 
   /// Returns the shared Isar instance.

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'dart:ui';
 
 import 'package:exif/exif.dart';
 import 'package:flutter/services.dart';
@@ -53,7 +54,9 @@ class RotatableGlimpseCardFrontView extends StatefulWidget {
   final int index;
   final bool isNeg;
   final Function leaveCardMode;
+  final bool? isPlastic;
   final ui.Image? processedImage;
+  final bool noX;
 
   const RotatableGlimpseCardFrontView({
     Key? key,
@@ -66,6 +69,7 @@ class RotatableGlimpseCardFrontView extends StatefulWidget {
     required this.isNeg,
     required this.leaveCardMode,
     this.processedImage,
+    this.isPlastic, required this.noX,
   }) : super(key: key);
 
   @override
@@ -93,25 +97,12 @@ class RotatableGlimpseCardFrontViewState
   late AnimationController _controller;
   late Animation<double> _animation;
 
-  @override
-  Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Center(
-          child: _buildCard(),
-        ),
-      ),
-    );
-  }
+
 
   void setImgInformation() {
     final data = widget.exifData;
     if (data.isNotEmpty) {
-      print('======setImgInformation');
       final makerNoteTag = data['EXIF MakerNote'];
-      print('======setImgInformation, makerNoteTag: ${makerNoteTag}');
 
       if (makerNoteTag != null && makerNoteTag.values is List) {
         final dynamicList = makerNoteTag.values as List;
@@ -144,10 +135,9 @@ class RotatableGlimpseCardFrontViewState
   }
 
   void parseFujiFilmMakerNote(Uint8List bytes) {
-    print('======parseFujiFilmMakerNote');
     final header = ascii.decode(bytes.sublist(0, 8));
     if (!header.startsWith('FUJIFILM')) {
-      print('❌ 不是富士相機的 MakerNote');
+      // print('❌ 不是富士相機的 MakerNote');
       return;
     }
 
@@ -168,7 +158,7 @@ class RotatableGlimpseCardFrontViewState
           print('🎞️ Film Simulation (0x1401): $name');
           filmSimulation = name;
         } else {
-          print('❓ 未知 Film Mode: 0x${val.toRadixString(16)}');
+          // print('❓ 未知 Film Mode: 0x${val.toRadixString(16)}');
         }
       } else if (tag == 0x1003) {
         final name = saturationModeMap[val];
@@ -176,7 +166,7 @@ class RotatableGlimpseCardFrontViewState
           print('🎞️ Film Simulation (Saturation 0x1003): $name');
           filmSimulation = name;
         } else {
-          print('❓ 未知 Saturation Mode: 0x${val.toRadixString(16)}');
+          // print('❓ 未知 Saturation Mode: 0x${val.toRadixString(16)}');
         }
       }
     }
@@ -218,16 +208,30 @@ class RotatableGlimpseCardFrontViewState
     image = widget.image;
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: _buildCard(),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCard() {
     return Card(
-      color: config.hardCard.withOpacity(0),
+      color: Colors.black,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(11),
       ),
       child: SizedBox(
           width: widget.cardSize.width,
           height: widget.cardSize.height,
-          child: Stack(
+          child:
+          Stack(
             children: [
               Stack(
                 children: [
@@ -404,7 +408,8 @@ class RotatableGlimpseCardFrontViewState
                   )),
 
               // x
-              Positioned(
+              if(!widget.noX)
+                Positioned(
                   top: 0,
                   right: 0,
                   child: GestureDetector(
@@ -416,6 +421,7 @@ class RotatableGlimpseCardFrontViewState
                       child: Icon(Icons.highlight_off),
                     ),
                   )),
+
             ],
           )),
     );

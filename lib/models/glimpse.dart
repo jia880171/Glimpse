@@ -35,6 +35,9 @@ class Glimpse {
   late DateTime? exifDateTime;
 
   @Index()
+  late String? scannedImagePath;
+
+  @Index()
   late String? addressCountry;
 
   @Index()

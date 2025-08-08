@@ -77,8 +77,13 @@ const GlimpseSchema = CollectionSchema(
       name: r'photoPath',
       type: IsarType.string,
     ),
-    r'shutterSpeed': PropertySchema(
+    r'scannedImagePath': PropertySchema(
       id: 12,
+      name: r'scannedImagePath',
+      type: IsarType.string,
+    ),
+    r'shutterSpeed': PropertySchema(
+      id: 13,
       name: r'shutterSpeed',
       type: IsarType.string,
     )
@@ -190,6 +195,19 @@ const GlimpseSchema = CollectionSchema(
           name: r'exifDateTime',
           type: IndexType.value,
           caseSensitive: false,
+        )
+      ],
+    ),
+    r'scannedImagePath': IndexSchema(
+      id: -2282998131514024559,
+      name: r'scannedImagePath',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'scannedImagePath',
+          type: IndexType.hash,
+          caseSensitive: true,
         )
       ],
     ),
@@ -341,6 +359,12 @@ int _glimpseEstimateSize(
   }
   bytesCount += 3 + object.photoPath.length * 3;
   {
+    final value = object.scannedImagePath;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.shutterSpeed;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
@@ -367,7 +391,8 @@ void _glimpseSerialize(
   writer.writeString(offsets[9], object.iso);
   writer.writeString(offsets[10], object.lensModel);
   writer.writeString(offsets[11], object.photoPath);
-  writer.writeString(offsets[12], object.shutterSpeed);
+  writer.writeString(offsets[12], object.scannedImagePath);
+  writer.writeString(offsets[13], object.shutterSpeed);
 }
 
 Glimpse _glimpseDeserialize(
@@ -390,7 +415,8 @@ Glimpse _glimpseDeserialize(
   object.iso = reader.readStringOrNull(offsets[9]);
   object.lensModel = reader.readStringOrNull(offsets[10]);
   object.photoPath = reader.readString(offsets[11]);
-  object.shutterSpeed = reader.readStringOrNull(offsets[12]);
+  object.scannedImagePath = reader.readStringOrNull(offsets[12]);
+  object.shutterSpeed = reader.readStringOrNull(offsets[13]);
   return object;
 }
 
@@ -426,6 +452,8 @@ P _glimpseDeserializeProp<P>(
     case 11:
       return (reader.readString(offset)) as P;
     case 12:
+      return (reader.readStringOrNull(offset)) as P;
+    case 13:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1070,6 +1098,72 @@ extension GlimpseQueryWhere on QueryBuilder<Glimpse, Glimpse, QWhereClause> {
         upper: [upperExifDateTime],
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterWhereClause> scannedImagePathIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'scannedImagePath',
+        value: [null],
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterWhereClause>
+      scannedImagePathIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'scannedImagePath',
+        lower: [null],
+        includeLower: false,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterWhereClause> scannedImagePathEqualTo(
+      String? scannedImagePath) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'scannedImagePath',
+        value: [scannedImagePath],
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterWhereClause> scannedImagePathNotEqualTo(
+      String? scannedImagePath) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'scannedImagePath',
+              lower: [],
+              upper: [scannedImagePath],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'scannedImagePath',
+              lower: [scannedImagePath],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'scannedImagePath',
+              lower: [scannedImagePath],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'scannedImagePath',
+              lower: [],
+              upper: [scannedImagePath],
+              includeUpper: false,
+            ));
+      }
     });
   }
 
@@ -2979,6 +3073,159 @@ extension GlimpseQueryFilter
     });
   }
 
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition>
+      scannedImagePathIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'scannedImagePath',
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition>
+      scannedImagePathIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'scannedImagePath',
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition> scannedImagePathEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'scannedImagePath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition>
+      scannedImagePathGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'scannedImagePath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition>
+      scannedImagePathLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'scannedImagePath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition> scannedImagePathBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'scannedImagePath',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition>
+      scannedImagePathStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'scannedImagePath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition>
+      scannedImagePathEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'scannedImagePath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition>
+      scannedImagePathContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'scannedImagePath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition> scannedImagePathMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'scannedImagePath',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition>
+      scannedImagePathIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'scannedImagePath',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition>
+      scannedImagePathIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'scannedImagePath',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition> shutterSpeedIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -3417,6 +3664,18 @@ extension GlimpseQuerySortBy on QueryBuilder<Glimpse, Glimpse, QSortBy> {
     });
   }
 
+  QueryBuilder<Glimpse, Glimpse, QAfterSortBy> sortByScannedImagePath() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'scannedImagePath', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterSortBy> sortByScannedImagePathDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'scannedImagePath', Sort.desc);
+    });
+  }
+
   QueryBuilder<Glimpse, Glimpse, QAfterSortBy> sortByShutterSpeed() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'shutterSpeed', Sort.asc);
@@ -3588,6 +3847,18 @@ extension GlimpseQuerySortThenBy
     });
   }
 
+  QueryBuilder<Glimpse, Glimpse, QAfterSortBy> thenByScannedImagePath() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'scannedImagePath', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterSortBy> thenByScannedImagePathDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'scannedImagePath', Sort.desc);
+    });
+  }
+
   QueryBuilder<Glimpse, Glimpse, QAfterSortBy> thenByShutterSpeed() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'shutterSpeed', Sort.asc);
@@ -3688,6 +3959,14 @@ extension GlimpseQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Glimpse, Glimpse, QDistinct> distinctByScannedImagePath(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'scannedImagePath',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Glimpse, Glimpse, QDistinct> distinctByShutterSpeed(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -3773,6 +4052,12 @@ extension GlimpseQueryProperty
   QueryBuilder<Glimpse, String, QQueryOperations> photoPathProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'photoPath');
+    });
+  }
+
+  QueryBuilder<Glimpse, String?, QQueryOperations> scannedImagePathProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'scannedImagePath');
     });
   }
 
