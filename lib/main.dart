@@ -5,18 +5,19 @@ import 'dart:ui';
 
 import 'package:collection/collection.dart';
 import 'package:exif/exif.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:glimpse/services/database_service.dart';
+import 'package:glimpse/widgets/calendar/tilted_circle_calendar_widget.dart';
 import 'package:glimpse/widgets/dashboard/dashboard.dart';
-import 'package:glimpse/widgets/glimpses/glimpses_book.dart';
+import 'package:glimpse/widgets/glimpses_book/glimpses_book.dart';
 import 'package:glimpse/widgets/light_box/light_box_view.dart';
 import 'package:glimpse/widgets/timeline_group/horizontal_date_timeline.dart';
 import 'package:glimpse/widgets/timeline_group/timeline_group.dart';
 import 'package:glimpse/widgets/trash.dart';
-import 'package:isar/isar.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 import './config.dart' as config;
@@ -89,7 +90,7 @@ class _MyHomePageState extends State<MyHomePage> {
     'CONTACT SHEET',
     'Glimpses',
     'Trash',
-    'Receipt',
+    'Tilted Calendar',
   ];
 
   final List<String> menuItemsPath = [
@@ -98,6 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
     '/glimpses',
     '/trash',
     '/receipt',
+    '/tiledCalendar'
   ];
 
   int menuPointer = 0;
@@ -219,6 +221,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                 )),
                           ),
                         ),
+
                         SizedBox(
                           height: screenHeight,
                           width: screenWidth,
@@ -325,6 +328,12 @@ class _MyHomePageState extends State<MyHomePage> {
       //     ),
       //   ),
       // );
+
+      case 'Tilted Calendar':
+        return _buildNeumorphicWrapper(
+            child: TiltedCircleCalendar(widgetSize: Size(mainWidgetWidth, mainWidgetHeight), rotationSpeed: 5.0,),
+            height: mainWidgetHeight,
+            width: mainWidgetWidth);
 
       default:
         return const SizedBox.shrink();

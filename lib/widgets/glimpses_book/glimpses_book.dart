@@ -8,10 +8,12 @@ import 'package:glimpse/config.dart' as config;
 import 'package:glimpse/models/glimpse.dart';
 import 'package:glimpse/services/database_service.dart';
 import 'package:glimpse/widgets/rotatable_card/left_rotatable_Glimpse_card.dart';
-import 'package:isar/isar.dart';
 
+import '../../models/receipt.dart';
 import '../../services/glimpse_service.dart';
 import '../../views/glimpse_form_view.dart';
+import '../rotatable_card/float_cards_for_package_view_mode.dart';
+import '../rotatable_card/receipt.dart';
 
 class GlimpseBookView extends StatefulWidget {
   final Size widgetSize;
@@ -32,6 +34,7 @@ class _GlimpseBookViewState extends State<GlimpseBookView> {
   bool isDraggingPreviousPage = false;
   bool isAnyCardAnimating = false;
   bool isZoomMode = false;
+  bool isPackageViewMode = false;
 
   late GlimpseService glimpseService;
 
@@ -40,39 +43,6 @@ class _GlimpseBookViewState extends State<GlimpseBookView> {
     super.initState();
     glimpseService = GlimpseService(DatabaseService.isar);
     loadGlimpses();
-  }
-
-  Future<void> loadGlimpsesold() async {
-    final isar = DatabaseService.isar;
-    final loaded = await isar.glimpses.where().sortByCreatedAtDesc().findAll();
-
-    final List<Uint8List?> byteList = [];
-    final List<Map<String?, IfdTag>?> exifDataList = [];
-
-    for (final g in loaded) {
-      try {
-        final file = File(g.photoPath);
-        if (await file.exists()) {
-          final bytes = await file.readAsBytes();
-          byteList.add(bytes);
-          final exif = await readExifFromBytes(bytes);
-          exifDataList.add(exif);
-        } else {
-          byteList.add(null);
-          exifDataList.add(null);
-        }
-      } catch (_) {
-        byteList.add(null);
-        exifDataList.add(null);
-      }
-    }
-
-    setState(() {
-      glimpses = loaded;
-      imageBytes = byteList;
-      exifList = exifDataList;
-      loading = false;
-    });
   }
 
   Future<void> loadGlimpses() async {
@@ -341,7 +311,8 @@ class _GlimpseBookViewState extends State<GlimpseBookView> {
             ),
           ],
 
-          if (currentIndex >= 1)
+          // edit and view the back of card
+          if (currentIndex >= 1) ...[
             Positioned(
                 bottom: widget.widgetSize.height * 0.05,
                 left: widget.widgetSize.width * 0.05,
@@ -358,6 +329,16 @@ class _GlimpseBookViewState extends State<GlimpseBookView> {
                     });
                   },
                 )),
+            Positioned(
+                bottom: widget.widgetSize.height * 0.05,
+                left: widget.widgetSize.width * 0.25,
+                child: ViewBackButton(
+                  widgetSize: Size(widget.widgetSize.width * 0.2,
+                      widget.widgetSize.height * 0.1),
+                  glimpseId: glimpses[currentIndex - 1].id,
+                  setIsPackageViewMode: setIsPackageViewMode,
+                )),
+          ],
 
           if (isZoomMode)
             Positioned(
@@ -367,6 +348,16 @@ class _GlimpseBookViewState extends State<GlimpseBookView> {
                   widgetSize: widget.widgetSize,
                   imageByte: imageBytes[currentIndex],
                   setIsZoomMode: setIsZoomMode,
+                )),
+
+          if (isPackageViewMode)
+            Positioned(
+                top: 0,
+                left: 0,
+                child: FloatCardsForPackageViewMode(
+                  widgetSize: widget.widgetSize,
+                  setIsPackageViewMode: setIsPackageViewMode,
+                  glimpseId: glimpses[currentIndex - 1].id,
                 ))
         ],
       ),
@@ -376,6 +367,12 @@ class _GlimpseBookViewState extends State<GlimpseBookView> {
   void setIsZoomMode() {
     setState(() {
       isZoomMode = isZoomMode == true ? false : true;
+    });
+  }
+
+  void setIsPackageViewMode() {
+    setState(() {
+      isPackageViewMode = isPackageViewMode == true ? false : true;
     });
   }
 
@@ -545,6 +542,78 @@ class _EditButtonState extends State<EditButton> {
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Icon(Icons.edit_note),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ViewBackButton extends StatefulWidget {
+  final Size widgetSize;
+  final int glimpseId;
+  final Function() setIsPackageViewMode;
+
+  const ViewBackButton({
+    super.key,
+    required this.widgetSize,
+    required this.glimpseId,
+    required this.setIsPackageViewMode,
+  });
+
+  @override
+  State<ViewBackButton> createState() => _ViewBackButtonState();
+}
+
+class _ViewBackButtonState extends State<ViewBackButton> {
+  double _scale = 1.0;
+
+  void _onTapDown(TapDownDetails details) {
+    setState(() {
+      _scale = 0.95; // 稍微下沉
+    });
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    setState(() {
+      _scale = 1.0; // 彈回
+    });
+  }
+
+  void _onTapCancel() {
+    setState(() {
+      _scale = 1.0; // 取消時恢復
+    });
+  }
+
+  void _onTap() {
+    widget.setIsPackageViewMode();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _onTap,
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+        child: Container(
+          // color: Colors.red,
+          width: widget.widgetSize.width,
+          height: widget.widgetSize.height,
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(widget.widgetSize.height),
+            ),
+            elevation: 1.5,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Icon(Icons.search),
             ),
           ),
         ),
@@ -825,3 +894,5 @@ class _FloatCardForZoomModeState extends State<FloatCardForZoomMode>
     );
   }
 }
+
+

@@ -1,16 +1,3 @@
-buildscript {
-    ext.kotlin_version = '1.8.0'
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:7.1.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
 allprojects {
     repositories {
         google()
@@ -24,6 +11,21 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(':app')
+}
+subprojects { project ->
+    project.plugins.withId("com.android.library") {
+        project.extensions.configure("android") { androidExtension ->
+            if (androidExtension != null && androidExtension.hasProperty("namespace")) {
+                def currentNamespace = androidExtension.namespace
+                if (currentNamespace == null || currentNamespace.toString().trim().isEmpty()) {
+                    def fallbackNamespace = "${project.group ?: rootProject.name}.${project.name}"
+                            .replace('-', '_')
+                            .replaceAll('[^A-Za-z0-9_.]', '')
+                    androidExtension.namespace = fallbackNamespace
+                }
+            }
+        }
+    }
 }
 
 tasks.register("clean", Delete) {

@@ -271,6 +271,12 @@ const GlimpseSchema = CollectionSchema(
       target: r'Receipt',
       single: true,
     ),
+    r'journal': LinkSchema(
+      id: -8623821456370270994,
+      name: r'journal',
+      target: r'Journal',
+      single: true,
+    ),
     r'places': LinkSchema(
       id: -3758241761208682463,
       name: r'places',
@@ -465,12 +471,19 @@ Id _glimpseGetId(Glimpse object) {
 }
 
 List<IsarLinkBase<dynamic>> _glimpseGetLinks(Glimpse object) {
-  return [object.receipt, object.places, object.foods, object.sakes];
+  return [
+    object.receipt,
+    object.journal,
+    object.places,
+    object.foods,
+    object.sakes
+  ];
 }
 
 void _glimpseAttach(IsarCollection<dynamic> col, Id id, Glimpse object) {
   object.id = id;
   object.receipt.attach(col, col.isar.collection<Receipt>(), r'receipt', id);
+  object.journal.attach(col, col.isar.collection<Journal>(), r'journal', id);
   object.places.attach(col, col.isar.collection<Place>(), r'places', id);
   object.foods.attach(col, col.isar.collection<Food>(), r'foods', id);
   object.sakes.attach(col, col.isar.collection<Sake>(), r'sakes', id);
@@ -3390,6 +3403,19 @@ extension GlimpseQueryLinks
   QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition> receiptIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.linkLength(r'receipt', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition> journal(
+      FilterQuery<Journal> q) {
+    return QueryBuilder.apply(this, (query) {
+      return query.link(q, r'journal');
+    });
+  }
+
+  QueryBuilder<Glimpse, Glimpse, QAfterFilterCondition> journalIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'journal', 0, true, 0, true);
     });
   }
 

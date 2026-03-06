@@ -1,3 +1,4 @@
+import 'package:glimpse/models/journal.dart';
 import 'package:glimpse/models/sake.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
@@ -34,6 +35,7 @@ class DatabaseService {
         FilmProfileSchema,
         ShopTypeSchema,
         FriendSchema,
+        JournalSchema,
       ],
       directory: dir.path,
     );

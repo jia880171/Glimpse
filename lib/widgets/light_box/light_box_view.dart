@@ -168,7 +168,8 @@ class LightBoxViewState extends State<LightBoxView>
                   )),
               Neumorphic(
                   style: NeumorphicStyle(
-                      color: config.backGroundMainTheme,
+                      // // color: config.backGroundMainTheme,
+                      // color: Colors.red,
                       shape: NeumorphicShape.flat,
                       boxShape: NeumorphicBoxShape.roundRect(
                           BorderRadius.circular(widgetSize.width * 0.0168)),

@@ -1,4 +1,5 @@
 import 'package:glimpse/models/food.dart';
+import 'package:glimpse/models/journal.dart';
 import 'package:glimpse/models/place.dart';
 import 'package:glimpse/models/receipt.dart';
 import 'package:glimpse/models/sake.dart';
@@ -52,6 +53,8 @@ class Glimpse {
   DateTime createdAt = DateTime.now();
 
   final receipt = IsarLink<Receipt>(); // to one
+  final journal = IsarLink<Journal>(); // to one
+
   final places = IsarLink<Place>(); // to one
 
   final foods = IsarLinks<Food>(); // to many

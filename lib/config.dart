@@ -21,6 +21,13 @@ const Color dashboardBackGroundMainTheme = Color(0xffaaaea4);
 const Color knobJagged= Color(0xffd6d6d6);
 const Color knobPointer= Color(0xff75755f);
 
+const Color journalCard1= Color(0xffdbcebb);
+const Color journalCard2= Color(0xbdbca090);
+const Color journalCard3= Color(0xff8a8465);
+const Color journalCard4= Color(0xffaf9e87);
+
+
+
 
 // const Color backGroundMainTheme = Colors.white;
 // const Color knobJagged= Color(0xffe1e1e1);
@@ -44,6 +51,8 @@ const Color menuPickerWhite = Color(0xfff5f5f5);
 const Color datePickerWhite = Color(0xffe1e0e0);
 
 const Color trashPointerRed = Color(0xff951919);
+const Color monthRimColor = Color(0xffee9565);
+
 const Color timelinePointerRed = Color(0xffdd2222);
 
 
@@ -100,6 +109,9 @@ const Color backLightB = Colors.black;
 const Color dragButtonOrange = Color.fromARGB(255, 244, 78, 11);
 
 
+const Color tiltedCalendarBackground = Colors.white;
+const Color tiltedCalendarRim = Colors.black;
+const Color ringBackgroundColor = Colors.grey;
 
 
 const Color floatBlue = Color(0xFF9FC99D);

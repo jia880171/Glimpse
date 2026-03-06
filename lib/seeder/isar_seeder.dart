@@ -26,6 +26,7 @@ Future<void> seedIsarData(Isar isar) async {
     Friend()..name = '黛',
     Friend()..name = '憶文',
     Friend()..name = 'PJ',
+    Friend()..name = '太郎',
   ];
 
   // 寫入資料
